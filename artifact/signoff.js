@@ -106,7 +106,7 @@
       }
       if (note) html += `<div class="hint" role="status" style="margin-top:10px">${esc(note)}</div>`;
       let box = document.getElementById('rshSign');
-      if (!box || !editor.contains(box)) { box = document.createElement('div'); box.id = 'rshSign'; const hints = editor.querySelectorAll(':scope > .hint'); const last = hints[hints.length - 1]; editor.insertBefore(box, last || null); }
+      if (!box || !editor.contains(box)) { box = document.createElement('div'); box.id = 'rshSign'; const side = editor.querySelector('.review-side'), home = side || editor; const hints = home.querySelectorAll(':scope > .hint'); const last = hints[hints.length - 1]; home.insertBefore(box, last || null); }
       if (box.innerHTML !== html) box.innerHTML = html;
     } finally { painting = false; }
   }

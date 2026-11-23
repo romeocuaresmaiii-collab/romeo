@@ -1,0 +1,11 @@
+RSH SPORTS MARKETING OS — v9.7.0
+
+Reviews, reorganised (both editions)
+- Three areas side by side: the campaign queue on the left, the campaign's media and text in the
+  middle, and the checks and both approval steps on the right. The right-hand panel stays in view
+  while you scroll the content.
+- Readiness is shown at the top of the right-hand panel.
+- Visual direction and the change history fold away until needed.
+- The long introduction is replaced by a one-line toolbar; the stage counts are more compact.
+No review rule changed: manager review first, current media with five visual checks, then the
+final approval.
