@@ -78,7 +78,7 @@
     return null;
   }
   // Compact rows: [network, yyyymmdd, link, text, impressions|null, interactions|null, format]
-  const compact = rows => rows.filter(r => Array.isArray(r) && r[0] && r[1]).map(r => [String(r[0]).toUpperCase(), Number(String(r[1]).slice(0, 8)), String(r[2] || '').slice(0, 300), String(r[3] || '').replace(/\s+/g, ' ').trim().slice(0, 90), num(r[4]), num(r[5]), String(r[6] || '').toUpperCase()]);
+  const compact = rows => rows.filter(r => Array.isArray(r) && r[0] && r[1]).map(r => [String(r[0]).toUpperCase(), Number(String(r[1]).slice(0, 8)), String(r[2] || '').slice(0, 300), String(r[3] || '').replace(/\s+/g, ' ').trim().slice(0, 90), num(r[4]), num(r[5]), String(r[6] || '').toUpperCase(), /^\d{12}/.test(String(r[1])) ? String(r[1]).slice(8, 12) : '']);
 
   function summarise(rows, endMs) {
     const w = windows(endMs), cf = dayKey(w.curFrom), ct = dayKey(w.curTo), pf = dayKey(w.prevFrom), pt = dayKey(w.prevTo);
@@ -290,9 +290,11 @@
       const mcp = await use('mcp');
       if (!mcp) throw { code: 'no_connector' };
       const w = windows(Date.now());
-      const result = await mcp.callTool(SERVER, TOOL, { brandId: BRAND_ID, from: iso(w.prevFrom, '00:00:00'), to: iso(w.curTo, '23:59:59'), metrics: FIELDS });
-      const raw = findRows(result && (result.payload !== undefined ? result.payload : result), 0) || findRows(result, 0);
-      if (!raw) throw { code: 'unreadable_answer' };
+      // Two 14-day pulls: one 28-day pull came back larger than Metricool allows (“The result exceeds the maximum allowed size”).
+      const pull = async (from, to) => { const res = await mcp.callTool(SERVER, TOOL, { brandId: BRAND_ID, from: iso(from, '00:00:00'), to: iso(to, '23:59:59'), metrics: FIELDS }); return findRows(res && (res.payload !== undefined ? res.payload : res), 0) || findRows(res, 0); };
+      const cur = await pull(w.curFrom, w.curTo), prev = await pull(w.prevFrom, w.prevTo);
+      if (!cur && !prev) throw { code: 'unreadable_answer' };
+      const raw = (cur || []).concat(prev || []);
       state.rows = compact(raw); state.fetchedAt = new Date().toISOString();
       try {
         const fr = findFollowerRows(await mcp.callTool(SERVER, TOOL, { brandId: BRAND_ID, from: iso(w.prevFrom, '00:00:00'), to: iso(w.curTo, '23:59:59'), metrics: FOLLOW_FIELDS }));

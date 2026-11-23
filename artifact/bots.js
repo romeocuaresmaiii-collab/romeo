@@ -350,20 +350,103 @@
     return join([body, cta]);
   }
 
+  /* ---------- 1b. Quill's SEO pack (asks Claude; uses only what the campaign says) ----------
+   * Per campaign: search keywords, alt text, hashtags per channel, a YouTube title and tags, a Pinterest
+   * pin title and description, a TikTok title. Kept in bots/seo. It never changes the approved caption:
+   * hashtags are added to a caption only when someone presses “Add hashtags”. */
+  let seo = {}, seoNote = '';
+  const seoSig = p => [p.title, p.hook, p.caption, p.captionBody, p.cta, p.hashtags, p.platform, p.postType].map(x => String(x || '')).join('|').length + ':' + String(p.title || '').slice(0, 40) + ':' + String(p.caption || '').slice(-40);
+  function seoPrompt(p) {
+    return `You are the SEO writer for RSH Sports, a company that makes custom team uniforms and sports apparel (rshsports.com).
+Write a search and discovery pack for ONE social post. Use ONLY facts in the campaign below. Do not invent prices, discounts, stock, dates, product features, results or quotes. Do not name other brands or vendors. Plain words that teams, coaches, athletes and parents actually search for.
+
+CAMPAIGN
+Title: ${p.title || ''}
+Main channel: ${p.platform || ''} · Format: ${p.postType || ''}
+Hook: ${p.hook || ''}
+Caption: ${p.captionBody || p.caption || ''}
+Call to action: ${p.cta || ''}
+Existing hashtags: ${p.hashtags || ''}
+
+Answer with JSON only, exactly these keys:
+{"keywords":[5 to 8 search phrases, lowercase],
+ "altText":"one sentence describing what the photo or video shows, under 200 characters",
+ "instagram":{"hashtags":[8 to 12 hashtags with #, mix of broad and niche, include #RSHSports]},
+ "facebook":{"hashtags":[2 or 3 hashtags with #]},
+ "tiktok":{"title":"under 90 characters, searchable","hashtags":[4 or 5 hashtags with #]},
+ "youtube":{"title":"under 90 characters, starts with the main keyword","tags":[8 to 12 tags, no #]},
+ "pinterest":{"title":"under 100 characters, keyword first","description":"2 sentences, under 450 characters, keywords used naturally"},
+ "threads":{"hashtags":[1 hashtag with #]},
+ "bluesky":{"hashtags":[1 or 2 hashtags with #]}}`;
+  }
+  const clean = (v, n) => String(v || '').replace(/\s+/g, ' ').trim().slice(0, n);
+  const tagList = (v, hash, n) => (Array.isArray(v) ? v : []).map(t => String(t || '').trim().replace(/^#+/, '').replace(/[^\p{L}\p{N}_ ]/gu, '')).map(t => hash ? t.replace(/\s+/g, '') : t).filter(Boolean).slice(0, n).map(t => hash ? '#' + t : t);
+  async function writeSeo(p) {
+    const sample = await use('sample'); if (!sample) { seoNote = 'Asking Claude is not available in this view, so Quill could not write SEO.'; return false; }
+    try {
+      const r = await sample.json(seoPrompt(p), { modelTier: 'quick' }), x = r && r.value !== undefined ? r.value : r;
+      if (!x || typeof x !== 'object') return false;
+      seo[p.id] = { sig: seoSig(p), at: new Date().toISOString(), keywords: tagList(x.keywords, false, 8), altText: clean(x.altText, 220),
+        instagram: { hashtags: tagList(x.instagram && x.instagram.hashtags, true, 12) }, facebook: { hashtags: tagList(x.facebook && x.facebook.hashtags, true, 3) },
+        tiktok: { title: clean(x.tiktok && x.tiktok.title, 90), hashtags: tagList(x.tiktok && x.tiktok.hashtags, true, 5) },
+        youtube: { title: clean(x.youtube && x.youtube.title, 90), tags: tagList(x.youtube && x.youtube.tags, false, 12) },
+        pinterest: { title: clean(x.pinterest && x.pinterest.title, 100), description: clean(x.pinterest && x.pinterest.description, 450) },
+        threads: { hashtags: tagList(x.threads && x.threads.hashtags, true, 1) }, bluesky: { hashtags: tagList(x.bluesky && x.bluesky.hashtags, true, 2) } };
+      return true;
+    } catch (e) { seoNote = 'Quill could not reach Claude' + (e && e.code ? ` (${e.code})` : '') + '. SEO will be tried again on the next run.'; return false; }
+  }
+  async function seoRun(posts, step) {
+    seoNote = ''; let wrote = 0;
+    const todo = posts.filter(p => !seo[p.id] || seo[p.id].sig !== seoSig(p)).slice(0, 10);
+    for (const p of todo) { step && step(`Quill is writing SEO for “${cut(p.title, 40)}”…`); if (await writeSeo(p)) wrote++; else if (seoNote) break; }
+    if (wrote && db) { try { await db.doc('bots/seo').set({ json: JSON.stringify(seo).slice(0, 240000), updatedAt: new Date().toISOString() }); } catch (_) {} }
+    return { wrote, have: posts.filter(p => seo[p.id]).length, total: posts.length };
+  }
+  const seoFor = (postId, ch) => { const x = seo[postId]; return x ? { ...x, ch: x[ch] || {} } : null; };
+
   /* ---------- 2. Scheduler Bot ---------- */
   function metricoolBusy() {       // "date|HH:MM|channel" already scheduled in Metricool
     const set = new Set(), sch = (window.RSH_LIVE && window.RSH_LIVE.scheduled()) || [];
     for (const s of sch) for (const ch of String(s[1]).split(',')) set.add(`${s[0].slice(0, 10)}|${s[0].slice(11, 16)}|${ch}`);
     return set;
   }
+  // What RSH Sports' own posts show: for each channel, the US Eastern hour whose posts got the most views
+  // (interactions when views are missing). Only hours with at least 2 measured posts count.
+  function etHour(yyyymmdd, hhmm) {
+    const d = new Date(Date.UTC(+String(yyyymmdd).slice(0, 4), +String(yyyymmdd).slice(4, 6) - 1, +String(yyyymmdd).slice(6, 8), +hhmm.slice(0, 2), +hhmm.slice(2, 4)));
+    return Number(new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour: 'numeric', hourCycle: 'h23' }).format(d));
+  }
+  function learnedTimes() {
+    const rows = (window.RSH_LIVE && window.RSH_LIVE.rows && window.RSH_LIVE.rows()) || [], by = {};
+    for (const r of rows) {
+      if (!r || !r[7] || !/^\d{4}$/.test(r[7])) continue;
+      const ch = String(r[0]).toLowerCase(), score = r[4] != null ? r[4] : r[5]; if (score == null || !NAME[ch]) continue;
+      const h = etHour(r[1], r[7]); (by[ch] = by[ch] || {}); (by[ch][h] = by[ch][h] || []).push(score);
+    }
+    const out = {};
+    for (const ch of Object.keys(by)) {
+      const hours = Object.entries(by[ch]).filter(([, v]) => v.length >= 2).map(([h, v]) => ({ h: +h, n: v.length, avg: v.reduce((a, b) => a + b, 0) / v.length })).sort((a, b) => b.avg - a.avg);
+      if (hours.length) out[ch] = { time: String(hours[0].h).padStart(2, '0') + ':00', n: hours[0].n, avg: Math.round(hours[0].avg), tried: hours.length, metric: by[ch] && rows.some(r => String(r[0]).toLowerCase() === ch && r[4] != null) ? 'views' : 'interactions' };
+    }
+    return out;
+  }
   function schedule(items) {
-    const busyM = metricoolBusy(), used = new Set(), slots = settings.times.slice().sort();
+    const busyM = metricoolBusy(), used = new Set(), slots = settings.times.slice().sort(), learned = learnedTimes();
+    const free = (it, t) => !used.has(`${it.date}|${t}|${it.channel}`) && !busyM.has(`${it.date}|${t}|${it.channel}`);
     for (const it of items) {
       if (it.edited && it.time) { used.add(`${it.date}|${it.time}|${it.channel}`); continue; }
-      it.time = slots.find(t => !used.has(`${it.date}|${t}|${it.channel}`) && !busyM.has(`${it.date}|${t}|${it.channel}`)) || slots[slots.length - 1] || '18:00';
+      const L = learned[it.channel];
+      if (L && free(it, L.time)) { it.time = L.time; it.why = `Best hour in your own ${NAME[it.channel]} posts: ${L.n} posts around ${clockTxt(L.time)} averaged ${L.avg.toLocaleString('en-US')} ${L.metric}${L.tried === 1 ? ' (all recent posts went out at this hour, so other hours are untested)' : ` (best of ${L.tried} hours tried)`}.`; }
+      else {
+        // No data for this channel yet: spread channels across the posting times so they don't all land at once.
+        const order = slots.length ? slots.map((_, i) => slots[(i + CHANNELS.findIndex(c => c[0] === it.channel)) % slots.length]) : ['18:00'];
+        it.time = order.find(t => free(it, t)) || order[0]; it.why = `No measured ${NAME[it.channel]} posts yet, so this uses your posting times from Setup.`;
+      }
       used.add(`${it.date}|${it.time}|${it.channel}`);
     }
+    return learned;
   }
+  function clockTxt(t) { const [h, m] = t.split(':').map(Number); return `${(h % 12) || 12}${m ? ':' + String(m).padStart(2, '0') : ''} ${h < 12 ? 'AM' : 'PM'}`; }
 
   /* ---------- 3. Manager Bot ---------- */
   function check(items, posts) {
@@ -400,7 +483,7 @@
       const prev = old.get(p.id + '|' + ch);
       items.push(prev && prev.edited ? { ...prev, date: prev.placed ? prev.date : p.date } : { postId: p.id, channel: ch, date: p.date, time: '', caption: captionFor(p, ch), edited: false, ...(prev && prev.posted ? { posted: prev.posted } : {}) });
     }
-    schedule(items); check(items, posts);
+    const learned = schedule(items); check(items, posts);
     const ready = items.filter(i => i.ready).length;
     const days = [...new Set(items.map(i => i.date))].map(d => new Date(d + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short' }));
     const sample = items[0] ? `“${cut(items[0].caption.replace(/\s+/g, ' '), 110)}”` : '';
@@ -410,7 +493,7 @@
     queueEdits(inRange);
     const jl = Object.values(jobs), jq = jl.filter(j => j.status === 'queued' || j.status === 'sent').length;
     log = [['reel', !settings.autoEdit ? 'Automatic editing is off.' : jq ? `${jq} edit job${jq === 1 ? '' : 's'} with the RSH SPORTS editor${jl.filter(j => j.status === 'attached').length ? `, ${jl.filter(j => j.status === 'attached').length} finished and attached` : ''}.` : 'No video is waiting to be edited.'], ['pixel', !inRange.length ? 'No campaigns in the window.' : needing.length ? `${needing.length} of ${inRange.length} campaigns need files. Next up: “${cut(needing[0].title, 40)}” needs ${assetNeeds(needing[0]).needs.filter(n => n.state === 'miss').map(n => n.label).join(' and ')}. Briefs and prompts are in the plan.` : `All ${inRange.length} campaigns have their files.`], ['quill', items.length ? `${items.length} captions for ${inRange.length} campaign${inRange.length === 1 ? '' : 's'}. First one: ${sample}` : 'No campaigns in the window, so nothing to write.'],
-      ['tempo', items.length ? `${items.length} posts timed across ${days.length} day${days.length === 1 ? '' : 's'} (${[...new Set(days)].join(', ')}), using ${settings.times.map(slotName).join(' and ')} US Eastern. No clashes.` : 'Nothing to schedule.'],
+      ['tempo', items.length ? `${items.length} posts timed across ${new Set(items.map(i => i.date)).size} day${new Set(items.map(i => i.date)).size === 1 ? '' : 's'}. ${Object.keys(learned).length ? 'From your own results: ' + Object.entries(learned).map(([c, L]) => `${NAME[c]} ${clockTxt(L.time)}`).join(', ') + '.' : 'Your past posts have no posting times yet; refresh the live numbers on Home so I can learn your best hours.'} Other channels use your Setup times. No clashes.` : 'Nothing to schedule.'],
       ['ref', !items.length ? 'Nothing to check.' : ready === items.length ? `All ${items.length} checks passed. Ready for Courier.` : `${ready} ready, ${items.length - ready} held back.${top ? ` Most common reason: ${top.charAt(0).toLowerCase() + top.slice(1)} (${stops[top]}).` : ''}`],
       ['courier', ready ? `Not switched on, so nothing was sent. ${ready} post${ready === 1 ? ' is' : 's are'} ready: use Copy to paste into Metricool.` : 'Not switched on, and nothing is ready yet, so nothing was sent to Metricool.']];
     plan = { generatedAt: new Date().toISOString(), from, to, items };
@@ -426,7 +509,7 @@
    * Five bots with their own desk. What each one "feels" and says is worked out from real numbers
    * (posts written, days uncovered, posts held back), so a glance at the office is a status report.
    */
-  const TEAM = [['pixel', 'Pixel', 'Asset Bot', '#db2777'], ['reel', 'Reel', 'Video Editor', '#b45309'], ['quill', 'Quill', 'Caption Bot', '#0071e3'], ['tempo', 'Tempo', 'Scheduler Bot', '#7c3aed'], ['ref', 'Ref', 'Manager Bot', '#d9480f'], ['courier', 'Courier', 'Posting Bot', '#0f9d7a'], ['owl', 'Night Owl', 'Daily run', '#64748b']];
+  const TEAM = [['pixel', 'Pixel', 'Asset Bot', '#db2777'], ['reel', 'Reel', 'Video Editor', '#b45309'], ['quill', 'Quill', 'Caption & SEO Bot', '#0071e3'], ['tempo', 'Tempo', 'Scheduler Bot', '#7c3aed'], ['ref', 'Ref', 'Manager Bot', '#d9480f'], ['courier', 'Courier', 'Posting Bot', '#0f9d7a'], ['owl', 'Night Owl', 'Daily run', '#64748b']];
   // Bot faces are drawn with plain page elements and CSS (no SVG): Claude's sharing review only
   // accepts JPEG, PNG, GIF or WebP images, and a version containing SVG cannot be opened by invited people.
   function botSvg(color, face) {
@@ -442,6 +525,8 @@
       : !items.length ? ['plain', 'Bored', 'neutral', 'Nothing is planned in my window, so I have nothing to write.']
       : edited ? ['plain', 'Taking notes', 'neutral', `You rewrote ${edited} of my ${items.length} captions. I kept your versions.`]
       : ['good', 'Proud', 'happy', `I wrote ${items.length} captions for ${camps} campaign${camps === 1 ? '' : 's'}.`];
+    { const ids = [...new Set(items.map(i => i.postId))], has = ids.filter(id => seo[id]).length;
+      if (plan && items.length) out.quill[3] += seoNote ? ' ' + seoNote : has ? ` SEO written for ${has} of ${ids.length} campaigns.` : ' SEO not written yet: press Run everything.'; }
     out.tempo = !plan ? ['plain', 'Waiting', 'neutral', 'I’ll pick the times once there are captions.']
       : cov && cov.empty.length ? ['bad', 'Worried', 'worried', `Every post has a time, but ${cov.empty.length} of the next 14 days have nothing scheduled in Metricool.`]
       : ['good', 'Calm', 'happy', items.length ? 'Every post has a time and nothing clashes.' : 'The calendar is quiet.'];
@@ -517,7 +602,11 @@
 
   async function work(why) {
     busy = true; wake = why; log = []; render();
-    await runAll(); const lines = log; log = []; await showWork(); log = lines; busy = false; render();
+    await runAll();
+    const inRange = [...new Set(((plan && plan.items) || []).map(i => i.postId))].map(id => (app().data().posts || []).find(x => x.id === id)).filter(Boolean);
+    const sr = await seoRun(inRange, t => { wake = t; render(); });
+    log.splice(2, 0, ['quill', seoNote ? seoNote : `SEO ready for ${sr.have} of ${sr.total} campaign${sr.total === 1 ? '' : 's'}${sr.wrote ? ` (${sr.wrote} written now)` : ''}: keywords, hashtags, YouTube titles and tags, Pinterest titles and alt text. Approved captions are not changed; press “Add hashtags” on a post to use them.`]);
+    const lines = log; log = []; await showWork(); log = lines; busy = false; render();
     if (queued) { const next = queued; queued = ''; await work(next); }
   }
 
@@ -543,12 +632,12 @@
         const p = c.p, an = c.an;
         if (p.date !== lastDay) { lastDay = p.date; list += `<div class="day">${esc(new Date(p.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }))}</div>`; }
         const badge = c.state === 'files' ? '<span class="chk stop">Needs files</span>' : c.state === 'ready' ? '<span class="chk ok">✓ Ready</span>' : '<span class="chk warn">Held back</span>';
-        list += `<details class="camp" data-bot-camp="${esc(p.id)}" ${openCamps.has(p.id) ? 'open' : ''}><summary><span><strong>${esc(p.title)}</strong><span class="small"> · ${esc(p.platform || '')} · ${c.mine.length} channel post${c.mine.length === 1 ? '' : 's'}</span></span><span class="sumr">${badge}<span class="small">${c.ok} of ${c.mine.length} ready</span><span class="nav-caret">⌄</span></span></summary>` + `<div class="assetrow"><div><strong>Files needed</strong> <span class="small">· ${an.files} attached</span><div>${an.needs.map(n => `<span class="need ${n.state}">${n.state === 'have' ? '✓ ' : ''}${esc(n.label)}${n.detail ? ' (' + esc(n.detail) + ')' : ''}</span>`).join('')}</div></div><div style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="btn ghost smallbtn" data-bot-brief="${esc(p.id)}">Copy full brief for AI</button><button type="button" class="btn ghost smallbtn" data-bot-prompt="image" data-bot-post="${esc(p.id)}">Copy image prompt</button><button type="button" class="btn ghost smallbtn" data-bot-prompt="video" data-bot-post="${esc(p.id)}">Copy video brief</button>${jobs[p.id] ? '' : `<button type="button" class="btn smallbtn" data-bot-askvideo="${esc(p.id)}">Have Reel make a video</button>`}<button type="button" class="btn ghost smallbtn" data-bot-editor="${esc(p.id)}">Copy edit job</button></div>${(() => { const j = jobs[p.id]; return j ? `<div class="small" style="flex-basis:100%"><strong>Video editor${j.source === 'zip' ? ` (from “${esc(j.zipName)}”, ${j.files} files)` : ''}:</strong> ${j.status === 'queued' ? 'job waiting to be sent to RSH SPORTS.' : j.status === 'sent' ? 'job sent to RSH SPORTS ' + esc(new Date(j.sentAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })) + '. The video is attached here when it comes back.' : j.status === 'attached' ? `edited video${j.revision > 1 ? ' (revision ' + j.revision + ')' : ''} came back and is attached. <button type="button" class="btn smallbtn" data-bot-watch="${esc(p.id)}" style="padding:3px 10px;margin-left:4px">Watch and review</button>` : j.status === 'failed' ? 'the edit did not finish. ' + esc(j.reason || '') : 'video received, attaching…'}</div>` : needsVideo(p) && settings.autoEdit ? '<div class="small" style="flex-basis:100%"><strong>Video editor:</strong> this campaign needs a video; Reel sends the job on the next run.</div>' : ''; })()}${kitSport(p) ? `<div class="small" style="flex-basis:100%">Kit clip: open your RSH Kit Animator artifact, choose <strong>${esc(kitSport(p).replace(/^./, c => c.toUpperCase()))}</strong>, set the team and colours, record the 4-second clip, then drop the saved MP4 on the Office tab with this campaign selected.</div>` : ''}</div>`;
+        list += `<details class="camp" data-bot-camp="${esc(p.id)}" ${openCamps.has(p.id) ? 'open' : ''}><summary><span><strong>${esc(p.title)}</strong><span class="small"> · ${esc(p.platform || '')} · ${c.mine.length} channel post${c.mine.length === 1 ? '' : 's'}</span></span><span class="sumr">${badge}<span class="small">${c.ok} of ${c.mine.length} ready</span><span class="nav-caret">⌄</span></span></summary>` + nextStep(p, c) + `<div class="assetrow"><div><strong>Files needed</strong> <span class="small">· ${an.files} attached</span><div>${an.needs.map(n => `<span class="need ${n.state}">${n.state === 'have' ? '✓ ' : ''}${esc(n.label)}${n.detail ? ' (' + esc(n.detail) + ')' : ''}</span>`).join('')}</div></div><div style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="btn ghost smallbtn" data-bot-brief="${esc(p.id)}">Copy full brief for AI</button><button type="button" class="btn ghost smallbtn" data-bot-prompt="image" data-bot-post="${esc(p.id)}">Copy image prompt</button><button type="button" class="btn ghost smallbtn" data-bot-prompt="video" data-bot-post="${esc(p.id)}">Copy video brief</button>${jobs[p.id] ? '' : `<button type="button" class="btn smallbtn" data-bot-askvideo="${esc(p.id)}">Have Reel make a video</button>`}<button type="button" class="btn ghost smallbtn" data-bot-editor="${esc(p.id)}">Copy edit job</button></div>${(() => { const j = jobs[p.id]; return j ? `<div class="small" style="flex-basis:100%"><strong>Video editor${j.source === 'zip' ? ` (from “${esc(j.zipName)}”, ${j.files} files)` : ''}:</strong> ${j.status === 'queued' ? 'job waiting to be sent to RSH SPORTS.' : j.status === 'sent' ? 'job sent to RSH SPORTS ' + esc(new Date(j.sentAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })) + '. The video is attached here when it comes back.' : j.status === 'attached' ? `edited video${j.revision > 1 ? ' (revision ' + j.revision + ')' : ''} came back and is attached. <button type="button" class="btn smallbtn" data-bot-watch="${esc(p.id)}" style="padding:3px 10px;margin-left:4px">Watch and review</button>` : j.status === 'failed' ? 'the edit did not finish. ' + esc(j.reason || '') : 'video received, attaching…'}</div>` : needsVideo(p) && settings.autoEdit ? '<div class="small" style="flex-basis:100%"><strong>Video editor:</strong> this campaign needs a video; Reel sends the job on the next run.</div>' : ''; })()}${kitSport(p) ? `<div class="small" style="flex-basis:100%">Kit clip: open your RSH Kit Animator artifact, choose <strong>${esc(kitSport(p).replace(/^./, c => c.toUpperCase()))}</strong>, set the team and colours, record the 4-second clip, then drop the saved MP4 on the Office tab with this campaign selected.</div>` : ''}</div>`;
         for (const it of c.mine) {
           const key = it.postId + '|' + it.channel, open = openItem === key;
           list += `<div class="item" data-bot-item="${esc(key)}"><div style="display:flex;gap:8px;align-items:flex-start">${chBadge(it.channel)}<div><strong>${esc(NAME[it.channel])}</strong><div class="small">${it.caption.length} characters</div>${it.posted ? `<div class="posted">✓ Posted ${esc(new Date(it.posted.at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }))}</div>` : ''}</div></div>
-          <div><input type="time" value="${esc(it.time)}" aria-label="Time for ${esc(NAME[it.channel])} post of ${esc(p.title)}" data-bot-time="${esc(key)}">${settings.labels && settings.labels[it.time] ? `<div class="small" style="margin-top:3px">${esc(settings.labels[it.time])}</div>` : ''}</div>
-          <div>${open ? `<textarea rows="7" data-bot-cap="${esc(key)}" aria-label="Caption for ${esc(NAME[it.channel])}">${esc(it.caption)}</textarea>` : `<div class="cap short">${esc(it.caption)}</div>`}<div>${it.checks.map(c => `<span class="chk ${c[0]}">${c[0] === 'ok' ? '✓ ' : ''}${esc(c[1])}</span>`).join('')}</div></div>
+          <div><input type="time" value="${esc(it.time)}" aria-label="Time for ${esc(NAME[it.channel])} post of ${esc(p.title)}" data-bot-time="${esc(key)}">${it.why ? `<div class="small" style="margin-top:3px;max-width:190px">${esc(it.why)}</div>` : settings.labels && settings.labels[it.time] ? `<div class="small" style="margin-top:3px">${esc(settings.labels[it.time])}</div>` : ''}</div>
+          <div>${open ? `<textarea rows="7" data-bot-cap="${esc(key)}" aria-label="Caption for ${esc(NAME[it.channel])}">${esc(it.caption)}</textarea>` : `<div class="cap short">${esc(it.caption)}</div>`}<div>${it.checks.map(c => `<span class="chk ${c[0]}">${c[0] === 'ok' ? '✓ ' : ''}${esc(c[1])}</span>`).join('')}</div>${seoHtml(it)}</div>
           <div style="display:flex;flex-direction:column;gap:6px">${open ? `<button type="button" class="btn smallbtn" data-bot-savecap="${esc(key)}">Save</button><button type="button" class="btn ghost smallbtn" data-bot-close>Cancel</button>` : `<button type="button" class="btn ghost smallbtn" data-bot-edit="${esc(key)}">Edit</button><button type="button" class="btn ghost smallbtn" data-bot-copy="${esc(key)}">Copy</button>${it.ready ? `<button type="button" class="btn ghost smallbtn" data-bot-save="${esc(key)}">Save file</button>${ACC[it.channel] ? `<a class="btn ghost smallbtn" href="${esc(ACC[it.channel][2])}" target="_blank" rel="noopener noreferrer">Open ${esc(NAME[it.channel])} ↗</a>` : ''}${it.posted ? `<button type="button" class="btn ghost smallbtn" data-bot-unpost="${esc(key)}">Undo posted</button>` : `<button type="button" class="btn smallbtn" data-bot-posted="${esc(key)}">Mark as posted</button>`}` : ''}`}</div></div>`;
         }
         list += '</details>';
@@ -637,11 +726,12 @@
     const p = (app().data().posts || []).find(x => x.id === it.postId) || {}, files = [p.creativeAsset].concat(p.creativeAssets || []).filter(Boolean);
     const vid = files.some(a => /^video\//.test(a.mime || '')), title = String(p.title || '').slice(0, 90), ch = it.channel;
     const info = { autoPublish: true, draft: mode === 'draft', providers: [{ network: ch }], text: it.caption, firstCommentText: '', publicationDate: { dateTime: `${it.date}T${it.time}:00`, timezone: 'America/New_York' }, media: it.mediaUrl ? [it.mediaUrl] : [], mediaAltText: [], descendants: [], shortener: false, smartLinkData: { ids: [] }, hasNotReadNotes: false };
+    const so = seoFor(it.postId, ch); if (so && so.altText && info.media.length) info.mediaAltText = [so.altText];
     if (ch === 'instagram') info.instagramData = { type: vid ? 'REEL' : 'POST', showReelOnFeed: true, isAiGenerated: !!ai };
     if (ch === 'facebook') info.facebookData = { type: vid ? 'REEL' : 'POST', title: vid ? title : '' };
-    if (ch === 'tiktok') info.tiktokData = { privacyOption: 'PUBLIC_TO_EVERYONE', title, isAigc: !!ai };
-    if (ch === 'youtube') info.youtubeData = { title, type: 'short', privacy: 'public', madeForKids: false, isAiGeneratedContent: !!ai };
-    if (ch === 'pinterest') info.pinterestData = { boardId: settings.pinBoard || '', pinTitle: title, pinLink: (String(it.caption).match(/https:\/\/\S+/) || [''])[0], isAiGenerated: !!ai };
+    if (ch === 'tiktok') info.tiktokData = { privacyOption: 'PUBLIC_TO_EVERYONE', title: (so && so.ch.title) || title, isAigc: !!ai };
+    if (ch === 'youtube') info.youtubeData = { title: (so && so.ch.title) || title, tags: (so && so.ch.tags) || [], category: 'SPORTS', type: 'short', privacy: 'public', madeForKids: false, isAiGeneratedContent: !!ai };
+    if (ch === 'pinterest') info.pinterestData = { boardId: settings.pinBoard || '', pinTitle: (so && so.ch.title) || title, pinLink: (String(it.caption).match(/https:\/\/\S+/) || [''])[0], isAiGenerated: !!ai };
     if (ch === 'threads') info.threadsData = {};
     if (ch === 'bluesky') info.blueskyData = {};
     return { blogId: BRAND, date: `${it.date}T${it.time}:00${nyOffset(it.date, it.time)}`, info: JSON.stringify(info) };
@@ -721,8 +811,35 @@
     return { ok: true, queued: true };
   }
 
+  function seoHtml(it) {
+    const so = seoFor(it.postId, it.channel); if (!so) return '';
+    const key = it.postId + '|' + it.channel, tags = (so.ch.hashtags || []).filter(t => !it.caption.toLowerCase().includes(t.toLowerCase()));
+    const rows = [];
+    if (so.ch.title) rows.push(`<div><b>${it.channel === 'youtube' ? 'YouTube title' : it.channel === 'pinterest' ? 'Pin title' : 'Title'}:</b> ${esc(so.ch.title)}</div>`);
+    if (so.ch.description) rows.push(`<div><b>Pin description:</b> ${esc(so.ch.description)}</div>`);
+    if (so.ch.tags && so.ch.tags.length) rows.push(`<div><b>Tags:</b> ${esc(so.ch.tags.join(', '))}</div>`);
+    if (so.ch.hashtags && so.ch.hashtags.length) rows.push(`<div><b>Hashtags:</b> ${esc(so.ch.hashtags.join(' '))} ${tags.length ? `<button type="button" class="btn ghost smallbtn" data-bot-addtags="${esc(key)}">Add hashtags</button>` : '<span class="small">✓ in caption</span>'}</div>`);
+    if (so.keywords.length) rows.push(`<div><b>Keywords:</b> ${esc(so.keywords.join(', '))}</div>`);
+    if (so.altText) rows.push(`<div><b>Alt text:</b> ${esc(so.altText)}</div>`);
+    return `<details class="seo" style="margin-top:6px"><summary class="small"><strong>SEO by Quill</strong> · sent with the post where the channel supports it</summary><div class="small" style="display:grid;gap:4px;margin-top:6px">${rows.join('')}</div></details>`;
+  }
+  // Ref's advice for a held-back campaign: the one thing to do next, with a button that opens that step.
+  function nextStep(p, c) {
+    if (c.state === 'ready') return '';
+    if (c.ok === c.mine.length) { const miss = (c.an.needs || []).filter(n => n.state !== 'have' && !/^optional/i.test(n.label)).map(n => n.label); return `<div class="nextstep" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:8px 0 4px;padding:8px 10px;border-radius:10px;background:var(--soft,#f5f5f7)"><span><strong>Ref, Manager Bot:</strong> Every post here is ready to place on the Calendar.${miss.length ? ' Pixel would still like ' + esc(miss.join(', ')) + ' for a better fit on some channels (not required).' : ''}</span></div>`; }
+    const t = app().track(p), stops = [...new Set(c.mine.flatMap(i => (i.checks || []).filter(x => x[0] === 'stop').map(x => x[1])))];
+    const what = t.stage !== 'ready' && t.advice ? String(t.advice) : t.stage === 'brief' ? 'Finish the brief (hook, caption and call to action).'
+      : t.stage === 'media' ? (t.assets ? 'Do the five visual checks on the attached file.' : 'Attach the photo or video. Drop it in the Office, or a .zip so Reel has it edited.')
+      : t.stage === 'manager' ? 'Manager review is waiting. Open it and approve or send back.'
+      : t.stage === 'anthony' || t.stage === 'final' ? 'Waiting for Anthony’s final approval.'
+      : stops.filter(x => !/^Waiting|^No media|^Brief|^Visual/.test(x)).join(' · ') || 'Fix the checks below.';
+    return `<div class="nextstep" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:8px 0 4px;padding:8px 10px;border-radius:10px;background:var(--soft,#f5f5f7)"><span><strong>Ref, Manager Bot:</strong> ${esc(what)}</span><button type="button" class="btn smallbtn" data-bot-opencamp="${esc(p.id)}">Open campaign →</button></div>`;
+  }
   function find(key) { return ((plan && plan.items) || []).find(i => i.postId + '|' + i.channel === key); }
   async function onClick(e) {
+    const at = e.target.closest('[data-bot-addtags]');
+    if (at) { const it = find(at.dataset.botAddtags), so = it && seoFor(it.postId, it.channel); if (it && so) { const add = (so.ch.hashtags || []).filter(t => !it.caption.toLowerCase().includes(t.toLowerCase())); if (add.length) { it.caption = it.caption.replace(/\s+$/, '') + (/(#[\p{L}\p{N}_]+)\s*$/u.test(it.caption) ? ' ' : '\n\n') + add.join(' '); it.edited = true; await save(); render(); } } return; }
+    const oc = e.target.closest('[data-bot-opencamp]'); if (oc) { e.preventDefault(); if (app().openNext) app().openNext(oc.dataset.botOpencamp); return; }
     const tb = e.target.closest('[data-bot-tab]'); if (tb) { tab = tb.dataset.botTab; return render(); }
     const fl = e.target.closest('[data-bot-filter]'); if (fl) { filter = fl.dataset.botFilter; return render(); }
     if (e.target.closest('[data-bot-expand]')) { const ids = [...document.querySelectorAll('#rshBots details.camp')].map(d => d.dataset.botCamp), all = ids.length && ids.every(i => openCamps.has(i)); for (const i of ids) { if (all) openCamps.delete(i); else openCamps.add(i); } return render(); }
@@ -783,10 +900,11 @@
     db = await use('db');
     if (db) {
       try { const s = await db.doc('bots/settings').get(); if (s.exists) settings = { ...DEFAULTS, ...JSON.parse(s.data().json) }; } catch (_) {}
+      try { const s = await db.doc('bots/seo').get(); if (s.exists) seo = JSON.parse(s.data().json) || {}; } catch (_) {}
       try { const p = await db.doc('bots/plan').get(); if (p.exists) plan = JSON.parse(p.data().json); } catch (_) {}
       await collect();
     }
     render();
   }
-  window.RSH_BOTS = { attachForPost, driveUpload, fileFor, autoLink, needsFile, readyItems, placedOn, place, unplace, setMediaUrl, sendToMetricool, metricoolPost, NAME, freshVideos, watch, onChange: f => listeners.push(f), handoff, collect, start, captionFor, assetNeeds, imagePrompt, videoBrief, editJob };
+  window.RSH_BOTS = { seoFor, seoRun, learnedTimes, schedule, attachForPost, driveUpload, fileFor, autoLink, needsFile, readyItems, placedOn, place, unplace, setMediaUrl, sendToMetricool, metricoolPost, NAME, freshVideos, watch, onChange: f => listeners.push(f), handoff, collect, start, captionFor, assetNeeds, imagePrompt, videoBrief, editJob };
 })();
