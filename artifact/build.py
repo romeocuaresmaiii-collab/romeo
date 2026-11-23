@@ -100,7 +100,7 @@ s = once(s, "tracker:['Campaign Checklist',", "bots:['24/7 Bots','Captions, timi
 
 # 4. Wording that would be untrue here.
 s = once(s, f'<strong>LOCAL APP · V{version}</strong><div class="small">Activate the local Data Vault in Setup & Backup to preserve browser work. Export a backup before upgrading. Metricool is connected in ChatGPT only, not this local app.</div>',
-         f'<strong>ARTIFACT EDITION · V{version} · BUILD 28</strong><div class="small">Your workspace and uploaded media are saved automatically to this artifact’s private storage. Approvals are local records, not authenticated. No Metricool sync or publishing.</div>')
+         f'<strong>ARTIFACT EDITION · V{version} · BUILD 29</strong><div class="small">Your workspace and uploaded media are saved automatically to this artifact’s private storage. Approvals are local records, not authenticated. No Metricool sync or publishing.</div>')
 s = once(s, "'Use python3 server.py in the extracted v%s folder, then open http://127.0.0.1:8765. Buttons and media uploads require the local server.'" % version, "'Open this page from your Claude artifacts.'")
 
 for old, new in (('Local editorial plans are separate from the read-only Metricool monthly archive.', 'Team plans, with what is scheduled and published in Metricool.'), ('Metricool connected to ChatGPT only', 'Live results from Metricool'), ('Local workspace · demo/pilot', 'RSH Sports workspace')):
@@ -111,5 +111,8 @@ for old, new in (('Local editorial plans are separate from the read-only Metrico
 assert s.count('<script>\n' + shim) == 1
 s = s.replace('<script>\n' + shim, '<script>\n' + live + '\n</script>\n<script>\n' + score + '\n</script>\n<script>\n' + camp + '\n</script>\n<script>\n' + exper + '\n</script>\n<script>\n' + signoff + '\n</script>\n<script>\n' + cal + '\n</script>\n<script>\n' + homejs + '\n</script>\n<script>\n' + tracker + '\n</script>\n<script>\n' + bots + '\n</script>\n<script>\n' + shim)
 
+# Claude's sharing review accepts only JPEG, PNG, GIF or WebP images (MP4/WebM video, MP3/WAV audio).
+# A version with anything else cannot be opened by invited people, so fail the build instead.
+assert '<svg' not in s.lower() and 'image/svg' not in s.lower(), 'SVG is not allowed in the artifact page'
 (OUT / 'RSH Sports Marketing OS.html').write_text(s, encoding='utf-8')
 print('built', len(s), 'bytes; bundled media:', len(bundled), '; weekly packs:', len(packs))

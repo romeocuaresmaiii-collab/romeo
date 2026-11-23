@@ -43,7 +43,33 @@
   #rshBots .desk.asleep{background:#f4f5f8}
   #rshBots .holo{height:22px;display:flex;justify-content:center;align-items:center}
   #rshBots .holo span{font-size:10.5px;font-weight:800;padding:3px 9px;border-radius:999px;background:#e6f0fd;color:#0058b0;border:1px solid #c5dbf7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
-  #rshBots .bot{width:74px;height:74px;margin:2px auto 0;display:block}
+  #rshBots .bot{width:74px;height:74px;margin:2px auto 0;display:block;position:relative}
+  #rshBots .bot i{position:absolute;display:block;font-style:normal}
+  #rshBots .bot .ant{left:35.5px;top:6px;width:3px;height:10px;background:var(--c);border-radius:2px}
+  #rshBots .bot .ant::before{content:"";position:absolute;left:-2.1px;top:-4px;width:7.2px;height:7.2px;border-radius:50%;background:var(--c)}
+  #rshBots .bot.f-working .ant::before{background:#ffd43b}
+  #rshBots .bot .ear{top:28px;width:5px;height:13px;border-radius:2.5px;background:var(--c)}
+  #rshBots .bot .ear.l{left:7px}#rshBots .bot .ear.r{left:62px}
+  #rshBots .bot .head{left:13px;top:15px;width:48px;height:38px;border-radius:13px;background:var(--c)}
+  #rshBots .bot .head::before{content:"";position:absolute;left:5px;top:6px;width:38px;height:27px;border-radius:9px;background:#fff}
+  #rshBots .bot .torso{left:21px;top:56px;width:32px;height:13px;border-radius:6px;background:var(--c);opacity:.85}
+  #rshBots .bot .eye{top:15px;width:8px;height:8px;border-radius:50%;background:#1d1d1f}
+  #rshBots .bot .eye.l{left:11.5px}#rshBots .bot .eye.r{left:28.5px}
+  #rshBots .bot .eye::after{content:"";position:absolute;left:4.3px;top:1.2px;width:2.6px;height:2.6px;border-radius:50%;background:#fff}
+  #rshBots .bot.f-working .eye{top:16px;width:10px;height:5px;border-radius:2.5px}
+  #rshBots .bot.f-working .eye.l{left:10px}#rshBots .bot.f-working .eye.r{left:28px}
+  #rshBots .bot.f-working .eye::after,#rshBots .bot.f-asleep .eye::after{display:none}
+  #rshBots .bot.f-asleep .eye{top:18px;width:9px;height:2.4px;border-radius:2px}
+  #rshBots .bot.f-asleep .eye.l{left:11px}#rshBots .bot.f-asleep .eye.r{left:28px}
+  #rshBots .bot .mouth{left:18px;top:28px;width:12px;height:2.4px;border-radius:2px;background:#1d1d1f}
+  #rshBots .bot.f-happy .mouth{left:17px;top:26px;width:14px;height:6px;background:transparent;border:2.4px solid #1d1d1f;border-top:0;border-radius:0 0 9px 9px;box-sizing:border-box}
+  #rshBots .bot.f-worried .mouth{left:18px;top:28px;width:12px;height:5px;background:transparent;border:2.4px solid #1d1d1f;border-bottom:0;border-radius:8px 8px 0 0;box-sizing:border-box}
+  #rshBots .bot.f-asleep .mouth{left:21.6px;top:27px;width:4.8px;height:4.8px;border-radius:50%}
+  #rshBots .bot .brow{display:none;top:10px;width:9px;height:2.2px;border-radius:2px;background:#1d1d1f}
+  #rshBots .bot.f-worried .brow,#rshBots .bot.f-strict .brow{display:block}
+  #rshBots .bot .brow.l{left:10.5px}#rshBots .bot .brow.r{left:28.5px}
+  #rshBots .bot.f-worried .brow.l{transform:rotate(-18deg)}#rshBots .bot.f-worried .brow.r{transform:rotate(18deg)}
+  #rshBots .bot.f-strict .brow.l{transform:rotate(18deg)}#rshBots .bot.f-strict .brow.r{transform:rotate(-18deg)}
   #rshBots .desk.idle .bot{animation:rshBob 3.6s ease-in-out infinite}
   #rshBots .desk.working .bot{animation:rshType .42s ease-in-out infinite}
   #rshBots .desk.asleep .bot{opacity:.62}
@@ -67,7 +93,8 @@
   #rshBots .log-h{display:flex;gap:8px;align-items:baseline;margin-bottom:4px}
   #rshBots .log-row{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-top:1px solid #eef0f4}
   #rshBots .log-av{flex:none;width:34px;height:34px}
-  #rshBots .log-av .bot{width:34px;height:34px;margin:0;animation:none!important;opacity:1!important}
+  #rshBots .log-av{overflow:hidden}
+  #rshBots .log-av .bot{margin:0;animation:none!important;opacity:1!important;transform:scale(.46);transform-origin:0 0}
   #rshBots .dropz{border:2px dashed #b9c8dc;border-radius:14px;background:#fff;padding:12px 14px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:12px;transition:border-color .15s,background .15s}
   #rshBots .dropz.over{border-color:#0071e3;background:#eef5ff}
   #rshBots .dropz select{font:inherit;font-size:12.5px;padding:7px 9px;border:1px solid #d2d2d7;border-radius:9px;background:#fff;color:#1d1d1f;max-width:260px}
@@ -240,13 +267,10 @@
    * (posts written, days uncovered, posts held back), so a glance at the office is a status report.
    */
   const TEAM = [['pixel', 'Pixel', 'Asset Bot', '#db2777'], ['quill', 'Quill', 'Caption Bot', '#0071e3'], ['tempo', 'Tempo', 'Scheduler Bot', '#7c3aed'], ['ref', 'Ref', 'Manager Bot', '#d9480f'], ['courier', 'Courier', 'Posting Bot', '#0f9d7a'], ['owl', 'Night Owl', 'Daily run', '#64748b']];
+  // Bot faces are drawn with plain page elements and CSS (no SVG): Claude's sharing review only
+  // accepts JPEG, PNG, GIF or WebP images, and a version containing SVG cannot be opened by invited people.
   function botSvg(color, face) {
-    const eyes = face === 'asleep' ? '<path d="M24 34h9M41 34h9" stroke="#1d1d1f" stroke-width="2.4" stroke-linecap="round" fill="none"/>'
-      : face === 'working' ? '<rect x="23" y="31" width="10" height="5" rx="2.5" fill="#1d1d1f"/><rect x="41" y="31" width="10" height="5" rx="2.5" fill="#1d1d1f"/>'
-      : '<circle cx="28.5" cy="34" r="4" fill="#1d1d1f"/><circle cx="45.5" cy="34" r="4" fill="#1d1d1f"/><circle cx="29.8" cy="32.6" r="1.3" fill="#fff"/><circle cx="46.8" cy="32.6" r="1.3" fill="#fff"/>';
-    const brows = face === 'worried' ? '<path d="M23 27l9-3M51 27l-9-3" stroke="#1d1d1f" stroke-width="2.2" stroke-linecap="round" fill="none"/>' : face === 'strict' ? '<path d="M23 24l9 3M51 24l-9 3" stroke="#1d1d1f" stroke-width="2.2" stroke-linecap="round" fill="none"/>' : '';
-    const mouth = face === 'happy' ? '<path d="M30 43q7 6 14 0" stroke="#1d1d1f" stroke-width="2.4" stroke-linecap="round" fill="none"/>' : face === 'worried' ? '<path d="M31 46q6-5 12 0" stroke="#1d1d1f" stroke-width="2.4" stroke-linecap="round" fill="none"/>' : face === 'asleep' ? '<circle cx="37" cy="44.5" r="2.4" fill="#1d1d1f"/>' : '<path d="M31 44h12" stroke="#1d1d1f" stroke-width="2.4" stroke-linecap="round" fill="none"/>';
-    return `<svg class="bot" viewBox="0 0 74 74" aria-hidden="true"><line x1="37" y1="6" x2="37" y2="15" stroke="${color}" stroke-width="3" stroke-linecap="round"/><circle cx="37" cy="5.5" r="3.6" fill="${face === 'working' ? '#ffd43b' : color}"/><rect x="13" y="15" width="48" height="38" rx="13" fill="${color}"/><rect x="18" y="21" width="38" height="27" rx="9" fill="#fff"/>${brows}${eyes}${mouth}<rect x="21" y="56" width="32" height="13" rx="6" fill="${color}" opacity=".85"/><rect x="7" y="28" width="5" height="13" rx="2.5" fill="${color}"/><rect x="62" y="28" width="5" height="13" rx="2.5" fill="${color}"/></svg>`;
+    return `<span class="bot f-${face}" style="--c:${color}" aria-hidden="true"><i class="ant"></i><i class="ear l"></i><i class="ear r"></i><i class="head"><i class="brow l"></i><i class="brow r"></i><i class="eye l"></i><i class="eye r"></i><i class="mouth"></i></i><i class="torso"></i></span>`;
   }
   function team() {
     const items = (plan && plan.items) || [], ready = items.filter(i => i.ready).length, held = items.length - ready, camps = new Set(items.map(i => i.postId)).size, edited = items.filter(i => i.edited).length;
