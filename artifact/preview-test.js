@@ -58,6 +58,15 @@ const out = []; const ok = (n, c, d) => { out.push(c); console.log((c ? 'PASS  '
   ok('Campaign results start empty and explain how to fill them', /0 of 11 campaigns linked/.test(campBefore) && /No results by sport, audience or season yet/.test(campBefore));
   ok('Linking a campaign to its published post saves the link and its real figures', !!camp.local && camp.local.impressions === 200 && camp.local.interactions === 20 && !!camp.cloud && camp.cloud.link === camp.local.link, JSON.stringify(camp.local).slice(0, 160));
   ok('Results are grouped by sport, audience, season phase and goal', /1 of 11 campaigns linked/.test(camp.text) && /By sport/.test(camp.text) && /By season phase/.test(camp.text) && /In season/.test(camp.text) && /Wrestling|Basketball/.test(camp.text));
+  await p.evaluate(() => document.querySelector('[data-view="experiments"]').click());
+  const gx = await p.evaluate(() => { const ws = JSON.parse(localStorage.getItem('rsh_growth_command_v1')).growthTests; const eng = ws.find(t => t.platform === 'TikTok' && t.kpi === 'engagement').id, fol = ws.find(t => t.kpi === 'follows').id; return { eng, folText: document.querySelector(`article[data-experiment="${fol}"] .gx-live`).textContent, boxes: document.querySelectorAll('#gxList .gx-live').length, cards: document.querySelectorAll('#gxList article').length }; });
+  await p.selectOption(`article[data-experiment="${gx.eng}"] [data-gx-live="a"]`, { index: 1 });
+  await p.selectOption(`article[data-experiment="${gx.eng}"] [data-gx-live="b"]`, { index: 15 });
+  await p.click(`[data-gx-live-apply="${gx.eng}"]`); await p.waitForTimeout(400);
+  const gxAfter = await p.evaluate(id => { const t = JSON.parse(localStorage.getItem('rsh_growth_command_v1')).growthTests.find(x => x.id === id); return { t: [t.aNumerator, t.aDenominator, t.bNumerator, t.bDenominator], source: t.source, result: document.querySelector(`article[data-experiment="${id}"] .sample`).textContent, redecorated: !!document.querySelector(`article[data-experiment="${id}"] .gx-live select`) }; }, gx.eng);
+  ok('Every experiment offers results from published posts, or says why it cannot', gx.boxes === gx.cards && gx.cards === 5 && /does not report per post/.test(gx.folText));
+  ok('An engagement test is filled with the two posts’ real figures (A 20/200, B 5/100)', gxAfter.t.join(',') === '20,200,5,100' && /Metricool figures read/.test(gxAfter.source) && /A leads/.test(gxAfter.result) && gxAfter.redecorated, gxAfter.t.join(',') + ' · ' + gxAfter.result.slice(0, 80));
+  await p.evaluate(() => document.querySelector('[data-view="overview"]').click());
   const views = await p.$$eval('[data-view]', e => [...new Set(e.map(x => x.dataset.view))].filter(v => /^[a-z]+$/.test(v)));
   const before = errs.length;
   for (const v of views) { await p.evaluate(v => document.querySelector(`[data-view="${v}"]`).click(), v); await p.waitForTimeout(200); }
