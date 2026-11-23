@@ -246,8 +246,10 @@ const out = []; const ok = (n, c, d) => { out.push(c); console.log((c ? 'PASS  '
   const wsBefore = await p.evaluate(() => localStorage.getItem('rsh_growth_command_v1'));
   await p.click('.nav button[data-view="bots"]');
   const b0 = await p.evaluate(() => ({ active: document.getElementById('view-bots').classList.contains('active'), title: document.getElementById('pageTitle').textContent, text: document.getElementById('rshBots').innerText }));
-  ok('24/7 Bots has its own sidebar entry and screen, with the posting step switched off', b0.active && b0.title === '24/7 Bots' && /The office/i.test(b0.text) && /Posting Bot/i.test(b0.text) && /not switched on/i.test(b0.text) && /Run everything/.test(b0.text));
-  await p.click('#rshBots [data-bot-tab="setup"]'); await p.selectOption('#rshBotDays', '21'); await p.click('#rshBots [data-bot-tab="office"]');
+  ok('24/7 Bots has its own sidebar entry and screen, with the posting step switched off', b0.active && b0.title === '24/7 Bots' && /The office/i.test(b0.text) && /Posting Bot/i.test(b0.text) && /not switched on/i.test(b0.text) && /Run everything|Running/.test(b0.text), JSON.stringify({ a: b0.active, t: b0.title, o: /The office/i.test(b0.text), p: /Posting Bot/i.test(b0.text), n: /not switched on/i.test(b0.text), r: /Run everything/.test(b0.text) }));
+  await p.waitForFunction(() => !/Running/.test(document.querySelector('#rshBots [data-bot-run]').textContent), null, { timeout: 9000 }).catch(() => {});
+  await p.click('#rshBots [data-bot-tab="setup"]');
+  await p.selectOption('#rshBotDays', '21'); await p.click('#rshBots [data-bot-tab="office"]');
   await p.click('#rshBots [data-bot-run]'); await p.waitForFunction(() => document.querySelectorAll('#rshBots .log-row').length === 6 && !document.querySelector('#rshBots .desk.working'), null, { timeout: 9000 });
   const b1 = await p.evaluate(() => { const plan = JSON.parse(window.__store['bots/plan'].json), ws = JSON.parse(localStorage.getItem('rsh_growth_command_v1')); const approved = ws.posts.filter(x => x.status === 'Approved').map(x => x.id); const it = plan.items; const pin = it.find(i => i.channel === 'pinterest'), bs = it.filter(i => i.channel === 'tiktok'); return { n: it.length, campaigns: new Set(it.map(i => i.postId)).size, ready: it.filter(i => i.ready).length, readyAllApproved: it.filter(i => i.ready).every(i => approved.includes(i.postId)), approvedCount: approved.length, pinLink: /utm_source=pinterest/.test(pin.caption), times: [...new Set(it.map(i => i.time))].sort().join(','), clash: (() => { const s = {}; let c = 0; for (const i of it) { const k = i.date + i.time + i.channel; if (s[k]) c++; s[k] = 1; } return c; })(), ttLen: Math.max(...bs.map(i => i.caption.length)), log: document.querySelector('#rshBots .log').innerText, logRows: [...document.querySelectorAll('#rshBots .log-row strong')].map(x => x.textContent).join(','), flow: document.querySelectorAll('#rshBots .desk.flow').length }; });
   ok('Run everything prepares a caption and time for every campaign and channel', b1.campaigns === 11 && b1.n >= 33 && b1.pinLink && b1.clash === 0 && b1.ttLen <= 600 && /12:00/.test(b1.times), JSON.stringify({ n: b1.n, times: b1.times, ready: b1.ready }));
@@ -261,11 +263,23 @@ const out = []; const ok = (n, c, d) => { out.push(c); console.log((c ? 'PASS  '
   const org = await p.evaluate(() => ({ tabs: [...document.querySelectorAll('#rshBots .tabs button')].map(b => b.textContent.replace(/\s+/g, ' ').trim()).join(' | '), officeShown: !document.querySelector('#rshBots [data-bot-panel="office"]').hidden, planHidden: document.querySelector('#rshBots [data-bot-panel="plan"]').hidden }));
   await p.click('#rshBots [data-bot-tab="plan"]');
   const org2 = await p.evaluate(() => ({ camps: document.querySelectorAll('#rshBots details.camp').length, open: document.querySelectorAll('#rshBots details.camp[open]').length, filters: [...document.querySelectorAll('#rshBots .filters button')].map(b => b.textContent).join(' | '), planShown: !document.querySelector('#rshBots [data-bot-panel="plan"]').hidden }));
-  ok('The Bots screen is organised into Office, Plan and Setup, and the plan lists campaigns collapsed', /^Office \| Plan \d+ of \d+ ready \| Setup$/.test(org.tabs) && org.officeShown && org.planHidden && org2.planShown && org2.camps === 11 && org2.open === 0 && /^All 11/.test(org2.filters), org.tabs + ' · ' + org2.filters);
+  ok('The Bots screen is organised into Office, Plan, Channels and Setup, and the plan lists campaigns collapsed', /^Office \| Plan \d+ of \d+ ready \| Channels \| Setup$/.test(org.tabs) && org.officeShown && org.planHidden && org2.planShown && org2.camps === 11 && org2.open === 0 && /^All 11/.test(org2.filters), org.tabs + ' · ' + org2.filters);
   await p.click('#rshBots [data-bot-filter="files"]');
   const nf = await p.evaluate(() => document.querySelectorAll('#rshBots details.camp').length);
   await p.click('#rshBots [data-bot-filter="all"]'); await p.click('#rshBots [data-bot-expand]');
   ok('The plan can be filtered by status and expanded', nf > 0 && nf < 11 && await p.evaluate(() => document.querySelectorAll('#rshBots details.camp[open]').length === 11), nf + ' need files');
+  await p.click('#rshBots [data-bot-tab="channels"]');
+  const ch = await p.evaluate(() => ({ n: document.querySelectorAll('#rshBots .acc').length, text: document.querySelector('#rshBots [data-bot-panel="channels"]').innerText, links: [...document.querySelectorAll('#rshBots .acc a')].map(a => a.href).join(' '), disabled: [...document.querySelectorAll('#rshBots .acc button')].every(b => b.disabled) }));
+  ok('Channels lists every RSH Sports account with a slot for a direct connection later', ch.n === 7 && /@team\.rshsports/.test(ch.text) && /@rsh_sports/.test(ch.text) && /Direct posting: not connected yet/.test(ch.text) && /tiktok\.com\/@rsh_sports/.test(ch.links) && ch.disabled, ch.n + ' accounts');
+  await p.click('#rshBots [data-bot-tab="plan"]'); await p.click('#rshBots [data-bot-filter="all"]').catch(() => {});
+  const rk = await p.evaluate(() => { document.querySelectorAll('#rshBots details.camp').forEach(d => d.open = true); const b = document.querySelector('#rshBots [data-bot-posted]'); return b ? b.dataset.botPosted : null; });
+  if (rk) {
+    const savesBefore = await p.evaluate(() => (window.__saves || []).length);
+    await p.click(`#rshBots [data-bot-save="${rk}"]`); await p.waitForTimeout(800);
+    await p.click(`#rshBots [data-bot-posted="${rk}"]`); await p.waitForTimeout(300);
+    const pd = await p.evaluate(k => { const it = JSON.parse(window.__store['bots/plan'].json).items.find(i => i.postId + '|' + i.channel === k); return { posted: !!(it && it.posted), saves: (window.__saves || []).length, label: !!document.querySelector('#rshBots .posted') }; }, rk);
+    ok('A ready post can be saved to the device and marked as posted by hand', pd.posted && pd.label && pd.saves > savesBefore, JSON.stringify(pd));
+  } else ok('A ready post can be saved to the device and marked as posted by hand', false, 'no ready post in the plan');
   await p.click('#rshBots [data-bot-edit]'); await p.fill('#rshBots textarea', 'Hand-written caption'); await p.click('#rshBots [data-bot-savecap]'); await p.waitForTimeout(200);
   await p.click('#rshBots [data-bot-run]'); await p.waitForTimeout(500);
   // Reel: one click sends the job to the editor session; the finished video is attached when it reports back

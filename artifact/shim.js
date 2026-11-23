@@ -462,7 +462,12 @@
     return new Promise((resolve, reject) => { const url = URL.createObjectURL(file), img = new Image(); img.onload = () => { const info = { width: img.naturalWidth, height: img.naturalHeight }; URL.revokeObjectURL(url); resolve(info); }; img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('The selected file is not a readable image.')); }; img.src = url; });
   }
 
-  window.RSH_HOST = { merge3, version: VERSION, fetch: hostFetch, imageSize, read: k => ls.get(k), persist, mediaUrl, exportFile, ask, toast };
+  async function fileBlob(a) {
+    const u = mediaUrl(a);
+    const url = u.indexOf('#rsh-parts-') === 0 ? await joinParts(u.slice('#rsh-parts-'.length)) : u;
+    const r = await realFetch(url); if (!r.ok) throw new Error('file not found'); return r.blob();
+  }
+  window.RSH_HOST = { fileBlob, merge3, version: VERSION, fetch: hostFetch, imageSize, read: k => ls.get(k), persist, mediaUrl, exportFile, ask, toast };
 
   /* ---------- start: load storage, then start the app ---------- */
   (async function start() {
