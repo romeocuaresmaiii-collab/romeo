@@ -297,6 +297,9 @@ const out = []; const ok = (n, c, d) => { out.push(c); console.log((c ? 'PASS  '
     await p.click(`#rshBots [data-bot-watch="${zc}"]`); await p.waitForTimeout(1500);
     const rv2 = await p.evaluate(id => ({ onReviews: document.getElementById('view-approvals').classList.contains('active'), selected: !!document.querySelector(`#approvalQueue [data-review-select="${id}"].active`), video: !!document.querySelector('#reviewMediaGallery video'), reviewed: window.__store['editJobs/' + id].reviewed === true, home: document.getElementById('rshQuick').textContent }), zc);
     ok('Watch and review opens Reviews on that campaign with the video, and marks it seen', rv2.onReviews && rv2.selected && rv2.video && rv2.reviewed && /1 new video to review/.test(rv2.home), JSON.stringify(rv2).slice(0, 200));
+    await p.evaluate(async id => { const nid = '12'.repeat(16); const a = new Uint8Array(3000); a.set([0, 0, 0, 24, 102, 116, 121, 112], 0); await fetch('/__put/' + nid, { method: 'POST', body: a }); const j = { ...window.__store['editJobs/' + id] }; delete j.parts; window.__store['editJobs/' + id] = { ...j, status: 'done', assetId: nid, bytes: 3000, name: 'v2.mp4' }; await window.RSH_BOTS.collect(); }, zc);
+    const rv3 = await p.evaluate(id => ({ files: (JSON.parse(localStorage.getItem('rsh_growth_command_v1')).posts.find(x => x.id === id).creativeAssets || []).map(a => a.id), job: window.__store['editJobs/' + id] }), zc);
+    ok('A revised video replaces the earlier cut on the campaign', rv3.files.join() === '12'.repeat(16) && rv3.job.revision === 2 && rv3.job.status === 'attached' && rv3.job.reviewed === false, rv3.files.join());
     await p.click('.nav button[data-view="bots"]');
   } else console.log('SKIP  zip job tests (set JSZIP_PATH)');
   // dropping a file on the Bots screen attaches it to the chosen campaign and wakes the team
