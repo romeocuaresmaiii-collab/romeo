@@ -46,6 +46,7 @@ const out = []; const ok = (n, c, d) => { out.push(c); console.log((c ? 'PASS  '
   ok('Followers show the latest value per channel and the change (total 248, +21)', /Followers · 248 across 7 channels/.test(live.text) && /\+21/.test(live.text), (live.text.match(/Followers[^]*?All channels[^\n]*\n?[^\n]*\n?[^\n]*/) || [''])[0].replace(/\s+/g, ' ').slice(0, 200));
   ok('Upcoming scheduled posts are listed', /1 post scheduled/.test(live.text) && /The Round Nobody Claps For/.test(live.text) && /Reel · Instagram, TikTok/.test(live.text));
   ok('The Executive Brief shows the same live results', await p.evaluate(() => /Followers · 248/.test(document.getElementById('rshLiveExecutive').textContent)));
+  ok('The brief states the same figures in plain language', /This week in brief/.test(live.text) && /Impressions rose 67% \(2,100 → 3,500\) and interactions rose 214% \(98 → 308\)/.test(live.text) && /248 followers across 7 channels, \+21/.test(live.text) && /Facebook has posts going out but Metricool reports no impressions/.test(live.text) && /1 post scheduled for the next 7 days/.test(live.text) && /11 campaigns are with the team for manager review/.test(live.text), (live.text.match(/This week in brief[^]*?Posts published/) || [''])[0].replace(/\s+/g, ' ').slice(0, 900));
   ok('Logo renders', await p.evaluate(() => [...document.images].some(i => /rsh_logo/.test(i.src) && i.naturalWidth > 0)));
   const views = await p.$$eval('[data-view]', e => [...new Set(e.map(x => x.dataset.view))].filter(v => /^[a-z]+$/.test(v)));
   const before = errs.length;

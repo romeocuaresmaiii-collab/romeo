@@ -49,6 +49,12 @@
   .rsh-live .sched:first-of-type{border-top:0}
   .rsh-live .sched .when{flex:none;width:96px;font-weight:700;color:#1d1d1f;font-variant-numeric:tabular-nums}
   .rsh-live .sched .what{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rsh-live .brief{margin-top:16px;border:1px solid #e5e5ea;border-radius:14px;background:#fff;padding:14px 16px}
+  .rsh-live .brief-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+  .rsh-live .brief-item{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-top:1px solid #f0f0f3;font-size:13px;line-height:1.5;color:#1d1d1f}
+  .rsh-live .brief-item:first-of-type{border-top:0}
+  .rsh-live .brief-tag{flex:none;width:92px;font-size:10.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;padding:3px 0;border-radius:6px;text-align:center;margin-top:1px}
+  .rsh-live .brief-tag.good{background:#eaf7ee;color:#1a7f37}.rsh-live .brief-tag.act{background:#fff3e0;color:#b45309}.rsh-live .brief-tag.info{background:#f0f0f3;color:#515154}
   .rsh-live .live-foot{margin-top:12px;font-size:11.5px;color:#6e6e73;line-height:1.5}`;
   document.head.appendChild(css);
 
@@ -119,6 +125,52 @@
     return `<div class="live-box"><h3>Scheduled in Metricool · next 7 days</h3>${next.length ? `<div class="small" style="margin-bottom:6px">${next.length} post${next.length === 1 ? '' : 's'} scheduled${drafts ? `, ${drafts} still draft` : ''}. Times are US Eastern.</div>${list}${next.length > 7 ? `<div class="small" style="margin-top:6px">…and ${next.length - 7} more.</div>` : ''}` : '<div class="small">Nothing is scheduled in Metricool for the next 7 days.</div>'}</div>`;
   }
 
+  // Plain-language findings for Anthony, each computed directly from the figures on this page.
+  function findings(s) {
+    const out = [], pct = (a, b) => b ? Math.round((a - b) / b * 100) : null, sign = n => (n > 0 ? '+' : '') + n;
+    const pi = pct(s.cur.impressions, s.prev.impressions), pn = pct(s.cur.interactions, s.prev.interactions);
+    if (pi !== null && pn !== null) {
+      const up = pi >= 0 && pn >= 0, mixed = (pi < 0) !== (pn < 0);
+      out.push([up ? 'good' : mixed ? 'info' : 'act', up ? 'Growing' : mixed ? 'Mixed' : 'Declining',
+        `Impressions ${pi >= 0 ? 'rose' : 'fell'} ${Math.abs(pi)}% (${fmt(s.prev.impressions)} → ${fmt(s.cur.impressions)}) and interactions ${pn >= 0 ? 'rose' : 'fell'} ${Math.abs(pn)}% (${fmt(s.prev.interactions)} → ${fmt(s.cur.interactions)}) compared with the previous ${DAYS} days.` + (pi < 0 && pn > 0 ? ' Fewer people saw the posts, but those who did engaged more.' : '')]);
+    }
+    const f = state.followers;
+    if (f && f.length) {
+      const total = f.reduce((a, r) => a + (r[4] || 0), 0), gain = total - f.reduce((a, r) => a + (r[2] || 0), 0);
+      const grew = f.filter(r => r[4] > r[2]).sort((a, b) => (b[4] - b[2]) - (a[4] - a[2])).map(r => `${NETS[r[0]] || r[0]} ${sign(r[4] - r[2])}`), flat = f.filter(r => r[4] === r[2]).map(r => NETS[r[0]] || r[0]), lost = f.filter(r => r[4] < r[2]).map(r => `${NETS[r[0]] || r[0]} ${sign(r[4] - r[2])}`);
+      out.push([gain > 0 ? 'good' : gain < 0 ? 'act' : 'info', 'Audience', `${fmt(total)} followers across ${f.length} channels, ${sign(gain)} since ${shortDate(f.reduce((m, r) => Math.min(m, r[1]), 99999999))}.` + (grew.length ? ` Growth came from ${grew.join(', ')}.` : '') + (flat.length ? ` No change on ${flat.join(', ')}.` : '') + (lost.length ? ` Lost: ${lost.join(', ')}.` : '')]);
+    }
+    if (s.tops[0]) { const t = s.tops[0]; out.push(['good', 'Best post', `${NETS[t[0]] || t[0]} ${formatName(t[6])} on ${shortDate(t[1])}${t[3] ? ` (“${t[3].slice(0, 60)}${t[3].length > 60 ? '…' : ''}”)` : ''}: ${fmt(t[5] || 0)} interactions from ${fmt(t[4])} impressions.`]); }
+    const quiet = Object.keys(s.nets).filter(k => s.nets[k].cur.posts && !s.nets[k].cur.measured).map(k => NETS[k] || k);
+    if (quiet.length) out.push(['info', 'No data', `${quiet.join(' and ')} ${quiet.length === 1 ? 'has' : 'have'} posts going out but Metricool reports no impressions for ${quiet.length === 1 ? 'it' : 'them'}, so ${quiet.length === 1 ? 'its' : 'their'} results cannot be judged here.`]);
+    const sc = state.scheduled;
+    if (sc) {
+      const today = new Date(), key = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      const wk = new Date(today); wk.setDate(wk.getDate() + 7);
+      const up = sc.filter(p => p[0].slice(0, 10) >= key(today)), next = up.filter(p => p[0].slice(0, 10) <= key(wk)), drafts = next.filter(p => p[4]);
+      if (!up.length) out.push(['act', 'Schedule', 'Nothing is scheduled in Metricool from today onward.']);
+      else {
+        const last = up[up.length - 1][0].slice(0, 10), lastDate = new Date(last + 'T12:00:00'), gapDays = Math.round((wk - lastDate) / 86400000);
+        const lastLabel = lastDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+        out.push([drafts.length || gapDays > 0 ? 'act' : 'good', 'Schedule', `${next.length} post${next.length === 1 ? '' : 's'} scheduled for the next 7 days.` + (drafts.length ? ` ${drafts.length} ${drafts.length === 1 ? 'is' : 'are'} still in draft and will not publish until finished (next: ${new Date(drafts[0][0] + ':00').toLocaleString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit' })} Eastern).` : '') + (gapDays > 0 ? ` The schedule ends on ${lastLabel}; nothing is planned after that yet.` : '')]);
+      }
+    }
+    try {
+      const ws = JSON.parse((window.RSH_HOST && window.RSH_HOST.read('rsh_growth_command_v1')) || '{}'), posts = Array.isArray(ws.posts) ? ws.posts : [];
+      const mgr = posts.filter(p => p.status === 'Review' && !(p.approvalMeta && p.approvalMeta.pmReviewedAt)).length, ant = posts.filter(p => p.status === 'Review' && p.approvalMeta && p.approvalMeta.pmReviewedAt && !p.approvalMeta.anthonyConfirmedAt).length;
+      if (ant) out.push(['act', 'Your decision', `${ant} campaign${ant === 1 ? ' is' : 's are'} waiting for Anthony’s final approval in Reviews.`]);
+      if (mgr) out.push(['info', 'In review', `${mgr} campaign${mgr === 1 ? ' is' : 's are'} with the team for manager review; none of these need Anthony yet.`]);
+    } catch (_) {}
+    return out;
+  }
+  function briefBox(s) {
+    const items = findings(s); if (!items.length) return '';
+    return `<div class="brief"><div class="brief-head"><h3 style="margin:0">This week in brief</h3><button class="btn ghost smallbtn" type="button" data-live-copy>Copy summary</button></div>${items.map(i => `<div class="brief-item"><span class="brief-tag ${i[0]}">${esc(i[1])}</span><span>${esc(i[2])}</span></div>`).join('')}</div>`;
+  }
+  function briefText(s) {
+    return `RSH Sports — social summary (${shortDate(dayKey(s.w.curFrom))} – ${shortDate(dayKey(s.w.curTo))})\n` + findings(s).map(i => `• ${i[1]}: ${i[2]}`).join('\n') + '\nSource: Metricool, updated ' + new Date(state.fetchedAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + '.';
+  }
+
   function render() { document.querySelectorAll('.rsh-live').forEach(renderInto); }
   function renderInto(host) {
     const when = state.fetchedAt ? new Date(state.fetchedAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
@@ -133,7 +185,7 @@
       const change = (a, b) => !b ? '<span class="delta flat">—</span>' : (() => { const p = (a - b) / b * 100; return `<span class="delta ${Math.abs(p) < 0.5 ? 'flat' : p > 0 ? 'up' : 'down'}">${p > 0 ? '+' : ''}${p.toFixed(0)}%</span>`; })();
       const unmeasured = s.cur.posts - s.cur.measured;
       const bestText = s.best ? (() => { const [n, f] = s.best.key.split('|'); return `<strong>Strongest format right now:</strong> ${esc(NETS[n] || n)} ${esc(formatName(f))}s, with a median of ${fmt(s.best.median)} impressions per post across ${s.best.count} posts in the last ${DAYS} days. This describes what happened; it does not prove why.`; })() : '';
-      body = `
+      body = `${briefBox(s)}
       <div class="live-tiles">
         <div class="live-tile"><div class="small">Posts published</div><div class="n">${fmt(s.cur.posts)}</div>${delta(s.cur.posts, s.prev.posts)}</div>
         <div class="live-tile"><div class="small">Impressions / views</div><div class="n">${fmt(s.cur.impressions)}</div>${delta(s.cur.impressions, s.prev.impressions)}</div>
@@ -159,6 +211,11 @@
       </div>
       ${state.note ? `<div class="hint" role="status" style="margin-top:12px">${esc(state.note)}</div>` : ''}${body}`;
     const btn = host.querySelector('[data-live-refresh]'); if (btn) btn.addEventListener('click', () => refresh(true));
+    const copy = host.querySelector('[data-live-copy]');
+    if (copy) copy.addEventListener('click', () => {
+      const text = briefText(summarise(state.rows, state.fetchedAt)), done = ok => { copy.textContent = ok ? 'Copied' : 'Copy failed'; setTimeout(() => { copy.textContent = 'Copy summary'; }, 1800); };
+      try { navigator.clipboard.writeText(text).then(() => done(true), () => done(false)); } catch (_) { done(false); }
+    });
   }
 
   function findFollowerRows(result) {
