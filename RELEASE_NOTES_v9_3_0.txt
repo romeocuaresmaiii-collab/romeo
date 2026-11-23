@@ -1,0 +1,13 @@
+RSH SPORTS MARKETING OS — v9.3.0
+
+Create is easier to follow
+- Three steps at the top: write the post, attach photos or video, check and send to review.
+- The page now reads: creator, attachments, your recent drafts. Campaign playbooks and the manual
+  brief builder are still there under "More ways to start", and open by themselves when another
+  screen sends a draft to the brief form.
+
+Artifact edition
+- "This week in brief": plain-language findings worked out from the live figures, with a copy button.
+- Market Audit opens with an updated scorecard: each of the ten capabilities scored on 18 November
+  and now, what 10/10 requires, and the next step, plus the order to do the work in. The headline
+  score is the average of the ten ratings. These are self-assessed ratings, not an external rating.
