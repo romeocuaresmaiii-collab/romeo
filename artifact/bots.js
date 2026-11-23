@@ -20,6 +20,7 @@
   const NAME = Object.fromEntries(CHANNELS.map(c => [c[0], c[1]])), LIMIT = Object.fromEntries(CHANNELS.map(c => [c[0], c[2]]));
   const DEFAULTS = { channels: ['instagram', 'facebook', 'tiktok'], times: ['12:00', '18:00'], days: 14 };
   let db = null, settings = { ...DEFAULTS }, plan = null, busy = false, note = '', log = [], openItem = null;
+  let phase = null, wake = '', assetSig = null, queued = '';      // which bot is at work right now; why the team started; attachments seen so far
 
   const css = document.createElement('style');
   css.textContent = `
@@ -28,6 +29,31 @@
   #rshBots .st b{display:block;font-size:13px}
   #rshBots .st .tag2{display:inline-block;margin-top:5px;font-size:10.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;padding:2px 8px;border-radius:999px}
   #rshBots .st.on .tag2{background:#eaf7ee;color:#1a7f37}#rshBots .st.off .tag2{background:#f0f0f3;color:#6e6e73}
+  #rshBots .office{margin-top:16px;border-radius:18px;padding:18px 16px 14px;background:linear-gradient(180deg,#eef4fb 0%,#f7f9fc 58%,#e9edf3 58%,#e3e8ef 100%);border:1px solid #dfe6ee;position:relative;overflow:hidden}
+  #rshBots .office-top{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+  #rshBots .office-top .sign{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#51607a}
+  #rshBots .desks{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+  @media(max-width:1100px){#rshBots .desks{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}}
+  #rshBots .desk{background:#fff;border:1px solid #dfe6ee;border-radius:16px;padding:12px 12px 10px;text-align:center;min-width:0;position:relative;cursor:default;transition:box-shadow .2s,transform .2s}
+  #rshBots .desk.working{box-shadow:0 0 0 2px #0071e3,0 10px 24px rgba(0,113,227,.18);transform:translateY(-2px)}
+  #rshBots .desk.asleep{background:#f4f5f8}
+  #rshBots .holo{height:22px;display:flex;justify-content:center;align-items:center}
+  #rshBots .holo span{font-size:10.5px;font-weight:800;padding:3px 9px;border-radius:999px;background:#e6f0fd;color:#0058b0;border:1px solid #c5dbf7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+  #rshBots .bot{width:74px;height:74px;margin:2px auto 0;display:block}
+  #rshBots .desk.idle .bot{animation:rshBob 3.6s ease-in-out infinite}
+  #rshBots .desk.working .bot{animation:rshType .42s ease-in-out infinite}
+  #rshBots .desk.asleep .bot{opacity:.62}
+  #rshBots .zz{position:absolute;top:30px;right:22%;font-size:13px;font-weight:800;color:#8a94a6;animation:rshZz 2.4s ease-in-out infinite}
+  #rshBots .desk h4{margin:6px 0 0;font-size:14px;color:#1d1d1f}
+  #rshBots .desk .role{font-size:11px;color:#6e6e73;font-weight:600}
+  #rshBots .mood{display:inline-block;margin-top:7px;font-size:10.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;padding:2px 9px;border-radius:999px}
+  #rshBots .mood.good{background:#eaf7ee;color:#1a7f37}#rshBots .mood.bad{background:#fff3e0;color:#b45309}#rshBots .mood.busy{background:#e6f0fd;color:#0058b0}#rshBots .mood.off{background:#eceef2;color:#6e6e73}#rshBots .mood.plain{background:#f0f0f3;color:#515154}
+  #rshBots .say{margin-top:8px;font-size:12px;line-height:1.4;color:#1d1d1f;background:#f7f9fc;border:1px solid #e5eaf1;border-radius:12px;padding:8px 9px;text-align:left;min-height:52px}
+  #rshBots .desk.asleep .say{color:#6e6e73}
+  @keyframes rshBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+  @keyframes rshType{0%,100%{transform:translateY(0) rotate(-1.5deg)}50%{transform:translateY(-2px) rotate(1.5deg)}}
+  @keyframes rshZz{0%{opacity:0;transform:translate(0,4px)}40%{opacity:1}100%{opacity:0;transform:translate(8px,-12px)}}
+  @media (prefers-reduced-motion:reduce){#rshBots .bot,#rshBots .zz{animation:none!important}#rshBots .desk{transition:none}}
   #rshBots .setup{display:flex;flex-wrap:wrap;gap:16px;margin-top:16px;align-items:flex-end}
   #rshBots .setup label.h{display:block;font-size:11px;font-weight:700;color:#515154;margin-bottom:4px}
   #rshBots .setup input[type=text],#rshBots .setup select{font:inherit;font-size:12.5px;padding:7px 9px;border:1px solid #d2d2d7;border-radius:9px;background:#fff;color:#1d1d1f}
@@ -142,6 +168,73 @@
     catch (e) { note = 'The plan could not be saved' + (e && e.code ? ' [' + e.code + ']' : '') + '. It stays on screen until you leave.'; }
   }
 
+  /* ---------- the team ----------
+   * Five bots with their own desk. What each one "feels" and says is worked out from real numbers
+   * (posts written, days uncovered, posts held back), so a glance at the office is a status report.
+   */
+  const TEAM = [['quill', 'Quill', 'Caption Bot', '#0071e3'], ['tempo', 'Tempo', 'Scheduler Bot', '#7c3aed'], ['ref', 'Ref', 'Manager Bot', '#d9480f'], ['courier', 'Courier', 'Posting Bot', '#0f9d7a'], ['owl', 'Night Owl', 'Daily run', '#64748b']];
+  function botSvg(color, face) {
+    const eyes = face === 'asleep' ? '<path d="M24 34h9M41 34h9" stroke="#1d1d1f" stroke-width="2.4" stroke-linecap="round" fill="none"/>'
+      : face === 'working' ? '<rect x="23" y="31" width="10" height="5" rx="2.5" fill="#1d1d1f"/><rect x="41" y="31" width="10" height="5" rx="2.5" fill="#1d1d1f"/>'
+      : '<circle cx="28.5" cy="34" r="4" fill="#1d1d1f"/><circle cx="45.5" cy="34" r="4" fill="#1d1d1f"/><circle cx="29.8" cy="32.6" r="1.3" fill="#fff"/><circle cx="46.8" cy="32.6" r="1.3" fill="#fff"/>';
+    const brows = face === 'worried' ? '<path d="M23 27l9-3M51 27l-9-3" stroke="#1d1d1f" stroke-width="2.2" stroke-linecap="round" fill="none"/>' : face === 'strict' ? '<path d="M23 24l9 3M51 24l-9 3" stroke="#1d1d1f" stroke-width="2.2" stroke-linecap="round" fill="none"/>' : '';
+    const mouth = face === 'happy' ? '<path d="M30 43q7 6 14 0" stroke="#1d1d1f" stroke-width="2.4" stroke-linecap="round" fill="none"/>' : face === 'worried' ? '<path d="M31 46q6-5 12 0" stroke="#1d1d1f" stroke-width="2.4" stroke-linecap="round" fill="none"/>' : face === 'asleep' ? '<circle cx="37" cy="44.5" r="2.4" fill="#1d1d1f"/>' : '<path d="M31 44h12" stroke="#1d1d1f" stroke-width="2.4" stroke-linecap="round" fill="none"/>';
+    return `<svg class="bot" viewBox="0 0 74 74" aria-hidden="true"><line x1="37" y1="6" x2="37" y2="15" stroke="${color}" stroke-width="3" stroke-linecap="round"/><circle cx="37" cy="5.5" r="3.6" fill="${face === 'working' ? '#ffd43b' : color}"/><rect x="13" y="15" width="48" height="38" rx="13" fill="${color}"/><rect x="18" y="21" width="38" height="27" rx="9" fill="#fff"/>${brows}${eyes}${mouth}<rect x="21" y="56" width="32" height="13" rx="6" fill="${color}" opacity=".85"/><rect x="7" y="28" width="5" height="13" rx="2.5" fill="${color}"/><rect x="62" y="28" width="5" height="13" rx="2.5" fill="${color}"/></svg>`;
+  }
+  function team() {
+    const items = (plan && plan.items) || [], ready = items.filter(i => i.ready).length, held = items.length - ready, camps = new Set(items.map(i => i.postId)).size, edited = items.filter(i => i.edited).length;
+    const noMedia = new Set(items.filter(i => (i.checks || []).some(c => c[1] === 'No media attached')).map(i => i.postId)).size;
+    const waiting = new Set(items.filter(i => (i.checks || []).some(c => /Waiting for/.test(c[1]))).map(i => i.postId)).size;
+    let cov = null; try { cov = window.RSH_CALENDAR && window.RSH_CALENDAR.coverage(); } catch (_) {}
+    const out = {};
+    out.quill = !plan ? ['plain', 'Eager', 'happy', 'Give me your planned campaigns and I’ll write a version for every channel.']
+      : !items.length ? ['plain', 'Bored', 'neutral', 'Nothing is planned in my window, so I have nothing to write.']
+      : edited ? ['plain', 'Taking notes', 'neutral', `You rewrote ${edited} of my ${items.length} captions. I kept your versions.`]
+      : ['good', 'Proud', 'happy', `I wrote ${items.length} captions for ${camps} campaign${camps === 1 ? '' : 's'}.`];
+    out.tempo = !plan ? ['plain', 'Waiting', 'neutral', 'I’ll pick the times once there are captions.']
+      : cov && cov.empty.length ? ['bad', 'Worried', 'worried', `Every post has a time, but ${cov.empty.length} of the next 14 days have nothing scheduled in Metricool.`]
+      : ['good', 'Calm', 'happy', items.length ? 'Every post has a time and nothing clashes.' : 'The calendar is quiet.'];
+    out.ref = !plan ? ['plain', 'Watching', 'neutral', 'Nothing gets past me without both approvals.']
+      : !items.length ? ['plain', 'Watching', 'neutral', 'Nothing to check yet.']
+      : !held ? ['good', 'Satisfied', 'happy', `All ${items.length} posts passed. Good work, team.`]
+      : ['bad', ready ? 'Strict' : 'Frustrated', 'strict', `I’m holding back ${held} of ${items.length} posts.` + (noMedia ? ` ${noMedia} campaign${noMedia === 1 ? ' has' : 's have'} no media.` : '') + (waiting ? ` ${waiting} still need${waiting === 1 ? 's' : ''} a review or approval.` : '')];
+    out.courier = ['off', 'Asleep', 'asleep', `Not switched on. ${ready ? `${ready} post${ready === 1 ? ' is' : 's are'} ready when you want me to take them to Metricool for review.` : 'Wake me when posts are ready to go to Metricool for review.'}`];
+    out.owl = ['off', 'Asleep', 'asleep', 'Not switched on. I would run the whole team every morning.'];
+    const task = { quill: 'Writing captions…', tempo: 'Picking times…', ref: 'Checking every post…' };
+    if (phase && out[phase]) out[phase] = ['busy', 'Working', 'working', task[phase]];
+    return out;
+  }
+  function office() {
+    const t = team();
+    return `<div class="office" aria-label="The bot team"><div class="office-top"><span class="sign">The office</span><span class="small">${wake ? esc(wake) : 'Attach a file to a campaign and the team starts by itself.'}</span></div>
+      <div class="desks">${TEAM.map(([id, name, role, color]) => { const [tone, mood, face, line] = t[id]; const state = face === 'asleep' ? 'asleep' : face === 'working' ? 'working' : 'idle';
+        return `<div class="desk ${state}" data-bot="${id}"><div class="holo">${state === 'working' ? `<span>${esc(line)}</span>` : ''}</div>${state === 'asleep' ? '<span class="zz" aria-hidden="true">z z</span>' : ''}${botSvg(color, face)}<h4>${esc(name)}</h4><div class="role">${esc(role)}</div><span class="mood ${tone}">${esc(mood)}</span><div class="say">${state === 'working' ? 'On it.' : esc(line)}</div></div>`; }).join('')}</div></div>`;
+  }
+  const pause = ms => new Promise(r => setTimeout(r, ms));
+  async function showWork() {          // purely visual: the plan is already prepared and saved
+    const quick = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    for (const b of ['quill', 'tempo', 'ref']) { phase = b; render(); await pause(quick ? 60 : 850); }
+    phase = null;
+  }
+  // The team starts on its own when a new file is attached to any campaign.
+  const signature = () => (app().data().posts || []).map(p => [p.creativeAsset].concat(Array.isArray(p.creativeAssets) ? p.creativeAssets : []).filter(Boolean).map(a => a.id).sort().join(',')).join('|');
+  async function onCampaignsChanged() {
+    const now = signature(); if (assetSig === null) { assetSig = now; return; }
+    if (now === assetSig) { if (plan && !busy && !phase) render(); return; }
+    const before = new Set(assetSig.split(/[|,]/)), added = now.split(/[|,]/).filter(x => x && !before.has(x)); assetSig = now;
+    if (!added.length) { if (!busy) render(); return; }
+    const p = (app().data().posts || []).find(q => [q.creativeAsset].concat(q.creativeAssets || []).some(a => a && added.includes(a.id)));
+    const why = `New file on “${p ? p.title : 'a campaign'}”. The team got to work.`;
+    if (busy) { queued = why; return; }           // a file arrived mid-run: go again as soon as this run ends
+    await work(why);
+  }
+
+  async function work(why) {
+    busy = true; wake = why; log = []; render();
+    await runAll(); const lines = log; log = []; await showWork(); log = lines; busy = false; render();
+    if (queued) { const next = queued; queued = ''; await work(next); }
+  }
+
   /* ---------- rendering ---------- */
   function render() {
     const host = document.getElementById('rshBots'); if (!host || !app()) return;
@@ -173,13 +266,7 @@
           <p style="margin-top:6px">The bots read your campaigns and prepare a caption and a time for every channel. They change nothing in your campaigns, calendar or Metricool.</p></div>
           <button type="button" class="btn" data-bot-run ${busy ? 'disabled' : ''}>${busy ? 'Running…' : '▶ Run everything'}</button>
         </div>
-        <div class="steps">
-          ${step(1, 'Caption Bot', 'Adapts each campaign’s wording per channel.', true, 'Working')}
-          ${step(2, 'Scheduler Bot', 'Gives every post a time, avoiding clashes.', true, 'Working')}
-          ${step(3, 'Manager Bot', 'Checks approvals, media, timing and length.', true, 'Working')}
-          ${step(4, 'Posting Bot', 'Would send ready posts to Metricool as drafts for review.', false, 'Not switched on')}
-          ${step(5, 'Daily run', 'Would run the bots on their own every day.', false, 'Not switched on')}
-        </div>
+        ${office()}
         <div class="setup">
           <div><label class="h">Also post each campaign to</label><div class="chs">${CHANNELS.map(c => `<label><input type="checkbox" data-bot-ch="${c[0]}" ${settings.channels.includes(c[0]) ? 'checked' : ''}> ${esc(c[1])}</label>`).join('')}</div><div class="small" style="margin-top:4px">A campaign always goes to its own channel as well.</div></div>
           <div><label class="h" for="rshBotTimes">Posting times, US Eastern</label><input type="text" id="rshBotTimes" value="${esc(settings.times.join(', '))}" size="16" placeholder="12:00, 18:00"><div class="small" style="margin-top:4px">24-hour, separated by commas.</div></div>
@@ -197,7 +284,7 @@
 
   function find(key) { return ((plan && plan.items) || []).find(i => i.postId + '|' + i.channel === key); }
   async function onClick(e) {
-    if (e.target.closest('[data-bot-run]')) { if (busy) return; busy = true; render(); await runAll(); busy = false; return render(); }
+    if (e.target.closest('[data-bot-run]')) { if (busy) return; return work('You pressed Run everything.'); }
     const ed = e.target.closest('[data-bot-edit]'); if (ed) { openItem = ed.dataset.botEdit; return render(); }
     if (e.target.closest('[data-bot-close]')) { openItem = null; return render(); }
     const sv = e.target.closest('[data-bot-savecap]');
@@ -219,6 +306,8 @@
     host.addEventListener('click', onClick); host.addEventListener('change', onChange);
     document.querySelectorAll('[data-view="bots"]').forEach(b => b.addEventListener('click', () => setTimeout(render, 0)));
     render();
+    assetSig = signature();
+    window.addEventListener('rsh:saved', () => { onCampaignsChanged(); });   // fires after every saved change to the campaigns
     db = await use('db');
     if (db) {
       try { const s = await db.doc('bots/settings').get(); if (s.exists) settings = { ...DEFAULTS, ...JSON.parse(s.data().json) }; } catch (_) {}

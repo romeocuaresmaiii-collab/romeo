@@ -150,6 +150,7 @@
   function persist(key, json) {
     ls.set(key, json);
     if (key !== KEY) return;
+    try { setTimeout(() => window.dispatchEvent(new CustomEvent('rsh:saved')), 0); } catch (_) {}   // lets add-on panels react to any saved change
     if (json === ls.get(BASE)) { ls.set(KEY + ':dirty', ''); return; }       // nothing new compared with the saved copy
     ls.set(KEY + ':dirty', '1');
     if (!db) { pill('error', 'Saved in this browser only'); return; }

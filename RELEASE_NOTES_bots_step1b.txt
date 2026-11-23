@@ -1,0 +1,12 @@
+RSH SPORTS MARKETING OS — artifact edition, build 23
+
+24/7 Bots: the office
+- Five bots, each at its own desk: Quill (captions), Tempo (scheduler), Ref (manager), Courier
+  (posting) and Night Owl (daily run). Original characters drawn for this app.
+- Each bot shows a mood and says one line. Both are worked out from the real numbers: captions
+  written, days with nothing scheduled, posts held back and why. Courier and Night Owl are asleep
+  because posting to Metricool and the daily run are not switched on.
+- While the team runs, each bot in turn lights up and shows what it is doing.
+- The team starts by itself whenever a file is attached to any campaign, including by a teammate.
+  A file that arrives mid-run triggers another run when the first finishes.
+Still read-only: the bots prepare a plan and change nothing in campaigns, the calendar or Metricool.
