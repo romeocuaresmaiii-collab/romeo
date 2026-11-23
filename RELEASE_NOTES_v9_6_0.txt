@@ -1,0 +1,11 @@
+RSH SPORTS MARKETING OS — v9.6.0
+
+Artifact edition: safe for the whole team at once
+- Before saving, the app reads the team's saved copy. If a teammate saved in the meantime, the two
+  sets of changes are merged campaign by campaign and field by field, instead of one overwriting
+  the other. Additions, deletions and log entries from both people are kept.
+- Teammates' saves appear in an open page without reloading. The page waits until you have left
+  the field you are typing in before redrawing.
+- Opening the app with unsaved changes from an earlier visit merges them into the team copy.
+- Only when two people change the same field of the same campaign does one value win (the later
+  save). Attachments and signed approvals were already stored separately and are unaffected.

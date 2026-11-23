@@ -8,7 +8,8 @@ const page0 = fs.readFileSync(path.join(DIST, 'RSH Sports Marketing OS.html'), '
 const seed = fs.existsSync(path.join(DIST, 'seed.json')) ? fs.readFileSync(path.join(DIST, 'seed.json'), 'utf8') : 'null';
 const mock = `<script>(function(){const store={'live/comments':{fetchedAt:new Date().toISOString(),posts:JSON.stringify([['INSTAGRAM',Number(new Date().toISOString().slice(0,10).replace(/-/g,'')),'https://www.instagram.com/p/x/','Coach question post',3],['TIKTOK',20200101,'https://www.tiktok.com/x','Older clip',2]])}};const seed=${seed};if(seed&&!location.search.includes('empty'))store['workspace/main']=seed;Object.assign(store,window.__preStore||{});window.__store=store;window.__saves=[];window.__uploads=[];
 const snap=(p)=>({id:p.split('/').pop(),exists:p in store,data:()=>store[p],metadata:{fromCache:false,hasPendingWrites:false}});
-const doc=p=>({id:p.split('/').pop(),path:p,get:async()=>snap(p),set:async d=>{store[p]=JSON.parse(JSON.stringify(d))},update:async d=>{Object.assign(store[p],d)},delete:async()=>{delete store[p]}});window.__RSH_TEST_PART_BYTES=40000;
+const subs={};const tell=p=>(subs[p]||[]).forEach(f=>setTimeout(()=>f(snap(p)),0));window.__remoteSet=(p,d)=>{store[p]=d;tell(p)};
+const doc=p=>({id:p.split('/').pop(),path:p,get:async()=>snap(p),onSnapshot:(f)=>{(subs[p]=subs[p]||[]).push(f);return()=>{}},set:async d=>{store[p]=JSON.parse(JSON.stringify(d));tell(p)},update:async d=>{Object.assign(store[p],d)},delete:async()=>{delete store[p]}});window.__RSH_TEST_PART_BYTES=40000;
 const coll=(c,o)=>({orderBy:(f,dir)=>coll(c,{...o,f,dir}),limit:n=>coll(c,{...o,n}),where:()=>coll(c,o),doc:id=>doc(c+'/'+id),get:async()=>{let ds=Object.keys(store).filter(k=>k.startsWith(c+'/')).map(snap);if(o&&o.f)ds.sort((a,b)=>(a.data()[o.f]-b.data()[o.f])*(o.dir==='desc'?-1:1));if(o&&o.n)ds=ds.slice(0,o.n);return{docs:ds,size:ds.length,empty:!ds.length}}});
 const caps={db:{doc,collection:c=>coll(c,{})},assets:{upload:async(b,o)=>{if(location.search.includes('hang'))return new Promise(()=>{});if(location.search.includes('refuse'))throw {code:'not_granted',message:'test'};const id=[...crypto.getRandomValues(new Uint8Array(16))].map(x=>x.toString(16).padStart(2,'0')).join('');window.__uploads.push({id,size:b.size,type:o&&o.type});await fetch('/__put/'+id,{method:'POST',body:b});return{id,url:'/_blob/'+id,sizeBytes:b.size,contentType:o.type}},list:async()=>({assets:window.__uploads.map(u=>({id:u.id})),usage:{}})},downloads:{save:async r=>{window.__saves.push({filename:r.filename,size:(r.data.size||r.data.length)});return{status:'saved'}}}};
 const day=n=>{const d=new Date();d.setDate(d.getDate()-n);return String(d.getFullYear()*10000+(d.getMonth()+1)*100+d.getDate())+'230000'};
@@ -39,7 +40,7 @@ const out = []; const ok = (n, c, d) => { out.push(c); console.log((c ? 'PASS  '
   const p = await open(1440, 900);
   ok('App starts and reports the right build', /Connected/.test(await p.textContent('#rshBuildLabel')), (await p.textContent('#rshBuildLabel')).trim());
   ok('Workspace loads from artifact storage', (await WS(p)).posts.length === 11, (await WS(p)).posts.length + ' campaigns');
-  ok('Save status is shown', /Saved to this artifact/.test(await p.textContent('#rshSyncPill')), await p.textContent('#rshSyncPill'));
+  ok('Save status is shown', /team copy up to date/.test(await p.textContent('#rshSyncPill')), await p.textContent('#rshSyncPill'));
   await p.waitForFunction(() => /Updated/.test((document.querySelector('#rshLive [data-live-stamp]') || {}).textContent || '') && !!window.__store['live/scheduled'], null, { timeout: 8000 }).catch(() => {});
   const live = await p.evaluate(() => { const h = document.getElementById('rshLive'); return { text: h ? h.innerText : '', calls: window.__mcpCalls || [], saved: !!window.__store['live/metricool'] }; });
   ok('Live results load from the Metricool connector and are saved', live.calls.length === 3 && live.calls[0].tool === 'getAnalyticsDataByMetrics' && live.calls[0].input.brandId === '5695688' && live.saved);
@@ -96,7 +97,7 @@ const out = []; const ok = (n, c, d) => { out.push(c); console.log((c ? 'PASS  '
   // edit -> persisted to the database
   await p.fill('#reviewNotes', 'Artifact test note'); await p.click('#reviewSaveNotes'); await p.waitForTimeout(2500);
   const cloud = await p.evaluate(() => JSON.parse(window.__store['workspace/main'].json));
-  ok('Edits are written to artifact storage', cloud.posts.find(x => x.id === withMedia).approvalMeta.notes === 'Artifact test note' && /Saved to this artifact/.test(await p.textContent('#rshSyncPill')));
+  ok('Edits are written to artifact storage', cloud.posts.find(x => x.id === withMedia).approvalMeta.notes === 'Artifact test note' && /team copy up to date/.test(await p.textContent('#rshSyncPill')));
   // approval guard still holds
   const bare = cloud.posts.find(x => !(x.creativeAssets || []).length && !x.creativeAsset).id;
   await p.click(`[data-review-select="${bare}"]`);
@@ -149,6 +150,28 @@ const out = []; const ok = (n, c, d) => { out.push(c); console.log((c ? 'PASS  '
   ok('A video over the single-file limit is stored in parts', !!big && Array.isArray(big.parts) && big.parts.length >= 3, big ? big.parts.length + ' parts' : (await p.textContent('#visualUploadMsg')).slice(0, 140));
   const same = big && await p.evaluate(async () => { const v = [...document.querySelectorAll('video')].find(x => (x.getAttribute('src') || '').startsWith('blob:')); if (!v) return 'no player with joined video'; const b = new Uint8Array(await (await fetch(v.src)).arrayBuffer()); return b.length === 130000 && b.reduce((a, c) => (a + c) % 1000000007, 0) === window.__bigSum ? true : 'bytes differ: ' + b.length; });
   ok('The parts are joined back into the identical file for the player', same === true, String(same));
+  // several people editing at once
+  const mg = await p.evaluate(() => {
+    const base = { settings: { brand: 'RSH' }, posts: [{ id: 'a', title: 'A', caption: 'one', owner: 'Max' }, { id: 'b', title: 'B' }, { id: 'c', title: 'C' }], approvalLog: [{ action: 'old' }] };
+    const mine = JSON.parse(JSON.stringify(base)); mine.posts[0].caption = 'my caption'; mine.posts.push({ id: 'd', title: 'Mine new' }); mine.posts.splice(2, 1); mine.approvalLog.unshift({ action: 'mine' });
+    const theirs = JSON.parse(JSON.stringify(base)); theirs.posts[0].owner = 'Jasper'; theirs.posts[1].title = 'B edited'; theirs.posts.push({ id: 'e', title: 'Theirs new' }); theirs.approvalLog.unshift({ action: 'theirs' }); theirs.settings.brand = 'RSH Sports';
+    const m = window.RSH_HOST.merge3(base, mine, theirs);
+    return { a: m.posts.find(x => x.id === 'a'), b: m.posts.find(x => x.id === 'b').title, ids: m.posts.map(x => x.id).sort().join(''), log: m.approvalLog.map(x => x.action).sort().join(','), brand: m.settings.brand };
+  });
+  ok('Two people’s changes merge record by record (edits, additions, a deletion and log entries all kept)', mg.a.caption === 'my caption' && mg.a.owner === 'Jasper' && mg.b === 'B edited' && mg.ids === 'abde' && mg.log === 'mine,old,theirs' && mg.brand === 'RSH Sports', JSON.stringify(mg));
+  await p.evaluate(() => document.querySelector('[data-view="approvals"]').click());
+  const pair = await p.evaluate(() => { const ws = JSON.parse(localStorage.getItem('rsh_growth_command_v1')); const free = ws.posts.filter(x => x.status === 'Review' && !(x.approvalMeta || {}).pmReviewedAt); return { mineId: free[0].id, theirId: free[1].id }; });
+  // a teammate saves a change to another campaign while this page is open
+  await p.evaluate(id => { const cur = JSON.parse(window.__store['workspace/main'].json); cur.posts.find(x => x.id === id).title = 'Teammate renamed this'; window.__remoteSet('workspace/main', { json: JSON.stringify(cur), updatedAt: new Date().toISOString() }); }, pair.theirId);
+  await p.waitForFunction(id => JSON.parse(localStorage.getItem('rsh_growth_command_v1')).posts.find(x => x.id === id).title === 'Teammate renamed this', pair.theirId, { timeout: 6000 }).then(() => ok('A teammate’s save appears in the open page without reloading', true), () => ok('A teammate’s save appears in the open page without reloading', false));
+  // both edit at nearly the same time: teammate's save lands silently (no notification), then I save
+  await p.click(`[data-review-select="${pair.mineId}"]`);
+  await p.fill('#reviewNotes', 'My note while a teammate also saved');
+  await p.evaluate(id => { const cur = JSON.parse(window.__store['workspace/main'].json); cur.posts.find(x => x.id === id).hook = 'TEAMMATE HOOK'; window.__store['workspace/main'] = { json: JSON.stringify(cur), updatedAt: new Date().toISOString() }; }, pair.theirId);
+  await p.click('#reviewSaveNotes'); await p.waitForTimeout(2600);
+  const both = await p.evaluate(ids => { const c = JSON.parse(window.__store['workspace/main'].json), l = JSON.parse(localStorage.getItem('rsh_growth_command_v1')); return { cloudMine: c.posts.find(x => x.id === ids.mineId).approvalMeta.notes, cloudTheirs: c.posts.find(x => x.id === ids.theirId).hook, localTheirs: l.posts.find(x => x.id === ids.theirId).hook, title: c.posts.find(x => x.id === ids.theirId).title }; }, pair);
+  ok('Saving at the same time keeps both people’s changes', both.cloudMine === 'My note while a teammate also saved' && both.cloudTheirs === 'TEAMMATE HOOK' && both.localTheirs === 'TEAMMATE HOOK' && both.title === 'Teammate renamed this', JSON.stringify(both));
+
   // signed final approval
   await p.evaluate(() => document.querySelector('[data-view="approvals"]').click());
   await p.click(`[data-review-select="${withMedia}"]`); await p.waitForSelector('#rshSign');

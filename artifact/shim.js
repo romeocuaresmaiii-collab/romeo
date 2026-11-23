@@ -99,47 +99,124 @@
     });
   }
 
-  /* ---------- workspace persistence ---------- */
-  const WS_DOC = 'workspace/main';
-  let pendingJson = null, writing = false, saveTimer = null;
+  /* ---------- workspace persistence (safe for several people at once) ----------
+   * Everyone shares one saved workspace. Before saving, this browser reads the saved copy; if a
+   * teammate saved in the meantime, the two sets of changes are merged record by record (campaign
+   * by campaign, field by field) instead of one overwriting the other. Other people's saves are
+   * also picked up while the page is open. Only when two people change the SAME field of the SAME
+   * record does one value win (the later save).
+   */
+  const WS_DOC = 'workspace/main', BASE = KEY + ':base';
+  let pendingJson = null, writing = false, saveTimer = null, remoteWaiting = null, lastWritten = null;
   const withTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))]);
+  const same = (x, y) => JSON.stringify(x) === JSON.stringify(y);
+  const isObj = v => v && typeof v === 'object' && !Array.isArray(v);
+  const idList = v => Array.isArray(v) && v.length > 0 && v.every(x => isObj(x) && typeof x.id === 'string');
+
+  function mergeFields(b, m, t) {                       // one record: field-by-field
+    const out = {}; for (const k of new Set(Object.keys(m).concat(Object.keys(t)))) {
+      const inM = k in m, inT = k in t, inB = b && k in b;
+      if (inM && inT) out[k] = same(m[k], b ? b[k] : undefined) ? t[k] : m[k];
+      else if (inM) { if (!inB || !same(m[k], b[k])) out[k] = m[k]; }          // they removed it; keep only if I changed it
+      else { if (!inB || !same(t[k], b[k])) out[k] = t[k]; }                    // I removed it; keep only if they changed it
+    } return out;
+  }
+  function mergeValue(b, m, t) {
+    if (same(m, b)) return t; if (same(t, b)) return m; if (same(m, t)) return m;
+    if ((idList(m) || (Array.isArray(m) && !m.length)) && (idList(t) || (Array.isArray(t) && !t.length))) {
+      const bm = new Map((idList(b) ? b : []).map(x => [x.id, x])), tm = new Map(t.map(x => [x.id, x])), mm = new Map(m.map(x => [x.id, x])), out = [];
+      for (const x of m) { const bi = bm.get(x.id), ti = tm.get(x.id); if (ti) out.push(bi ? mergeFields(bi, x, ti) : x); else if (!bi || !same(x, bi)) out.push(x); }
+      for (const x of t) { if (mm.has(x.id)) continue; const bi = bm.get(x.id); if (!bi || !same(x, bi)) out.push(x); }
+      return out;
+    }
+    if (Array.isArray(m) && Array.isArray(t)) {         // lists without ids (logs, notes): keep everyone's new entries
+      const key = x => JSON.stringify(x), mine = new Set(m.map(key)), base = new Set((Array.isArray(b) ? b : []).map(key));
+      return t.filter(x => !mine.has(key(x)) && !base.has(key(x))).concat(m);
+    }
+    if (isObj(m) && isObj(t)) { const out = {}; for (const k of new Set(Object.keys(m).concat(Object.keys(t)))) { const v = mergeValue(isObj(b) ? b[k] : undefined, m[k], t[k]); if (v !== undefined) out[k] = v; } return out; }
+    return m;
+  }
+  function merge3(base, mine, theirs) {
+    if (!base) {                                        // no common starting point known: keep their copy, add my records it lacks
+      const out = { ...theirs };
+      for (const k of Object.keys(mine)) if (!(k in theirs)) out[k] = mine[k]; else if (idList(mine[k]) && Array.isArray(theirs[k])) { const have = new Set(theirs[k].map(x => x && x.id)); out[k] = theirs[k].concat(mine[k].filter(x => !have.has(x.id))); }
+      return out;
+    }
+    return mergeValue(base, mine, theirs);
+  }
+  const parse = j => { try { return JSON.parse(j); } catch (_) { return null; } };
+  const typing = () => { const a = document.activeElement; return !!a && (/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) || a.isContentEditable); };
 
   function persist(key, json) {
     ls.set(key, json);
     if (key !== KEY) return;
+    if (json === ls.get(BASE)) { ls.set(KEY + ':dirty', ''); return; }       // nothing new compared with the saved copy
     ls.set(KEY + ':dirty', '1');
     if (!db) { pill('error', 'Saved in this browser only'); return; }
     pendingJson = json; pill('saving', 'Saving…');
     clearTimeout(saveTimer); saveTimer = setTimeout(flush, 1500);
   }
+  // Put a workspace into the running app (a teammate's save, or a merge result).
+  function adopt(json, message) {
+    const obj = parse(json); if (!obj) return false;
+    ls.set(BASE, json); ls.set(KEY, json); ls.set(KEY + ':dirty', '');
+    if (window.RSH_APP && window.RSH_APP.load) { if (!window.RSH_APP.load(obj)) return false; }
+    if (message) toast(message, 4500);
+    return true;
+  }
   async function flush() {
     if (writing || pendingJson === null || !db) return;
-    writing = true; const json = pendingJson; pendingJson = null;
+    writing = true; let json = pendingJson; pendingJson = null; let merged = false;
     try {
+      const snap = await withTimeout(db.doc(WS_DOC).get(), 10000), body = snap.exists ? snap.data() : null, theirs = body && typeof body.json === 'string' ? body.json : null;
+      const baseJson = ls.get(BASE);
+      if (theirs && theirs !== baseJson && theirs !== json) {            // a teammate saved since this browser last synced
+        const m = merge3(parse(baseJson), parse(json), parse(theirs));
+        if (m) { const mj = JSON.stringify(m); merged = mj !== json; json = mj; }
+      }
       if (json.length > 240000) throw Object.assign(new Error('too large'), { code: 'too_large' });
+      lastWritten = json;
       await db.doc(WS_DOC).set({ json, updatedAt: new Date().toISOString(), appVersion: VERSION });
-      if (pendingJson === null) { ls.set(KEY + ':dirty', ''); pill('saved', 'Saved to this artifact'); }
+      ls.set(BASE, json);
+      if (merged && pendingJson === null) adopt(json, 'A teammate’s changes were merged with yours.');
+      if (pendingJson === null) { ls.set(KEY + ':dirty', ''); pill('saved', 'Saved · team copy up to date'); }
     } catch (e) {
       const why = e && e.code === 'too_large' ? 'Workspace is too large to save here' : (e && (e.code === 'permission_denied' || e.code === 'not_granted')) ? 'View only: changes are not saved' : 'Not saved yet: will retry on your next change';
       pill('error', why);
-      if (pendingJson === null && !(e && (e.code === 'too_large' || e.code === 'permission_denied' || e.code === 'not_granted'))) pendingJson = json;
+      if (pendingJson === null && !(e && (e.code === 'too_large' || e.code === 'permission_denied' || e.code === 'not_granted'))) pendingJson = ls.get(KEY);
     } finally {
       writing = false;
-      if (pendingJson !== null && ls.get(KEY + ':dirty')) { clearTimeout(saveTimer); saveTimer = setTimeout(flush, pendingJson === json ? 15000 : 1500); }
+      if (pendingJson !== null && ls.get(KEY + ':dirty')) { clearTimeout(saveTimer); saveTimer = setTimeout(flush, 1500); }
     }
   }
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && pendingJson !== null) { clearTimeout(saveTimer); flush(); } });
+
+  // A teammate saved while this page is open.
+  function onRemote(json) {
+    if (!json || json === ls.get(BASE) || json === lastWritten) return;
+    if (pendingJson !== null || writing || ls.get(KEY + ':dirty')) { clearTimeout(saveTimer); saveTimer = setTimeout(flush, 300); return; }   // I have edits: merge on save
+    if (typing()) { remoteWaiting = json; pill('saving', 'Teammate update waiting…'); return; }                                            // do not redraw under someone typing
+    remoteWaiting = null;
+    if (adopt(json, 'Updated with a teammate’s changes.')) pill('saved', 'Saved · team copy up to date');
+  }
+  document.addEventListener('focusout', () => { if (remoteWaiting) setTimeout(() => { if (remoteWaiting && !typing()) onRemote(remoteWaiting); }, 400); });
+  function watchTeam() {
+    if (!db) return;
+    try { db.doc(WS_DOC).onSnapshot(snap => { if (!snap.exists || (snap.metadata && snap.metadata.hasPendingWrites)) return; const d = snap.data(); if (d && typeof d.json === 'string') onRemote(d.json); }, () => {}); } catch (_) {}
+  }
 
   async function hydrate() {
     if (!db) return 'browser';
     let snap;
     try { snap = await withTimeout(db.doc(WS_DOC).get(), 10000); } catch (_) { return 'unreachable'; }
-    const body = snap && snap.exists ? snap.data() : null;
+    const body = snap && snap.exists ? snap.data() : null, cloud = body && typeof body.json === 'string' && parse(body.json) ? body.json : null;
     const local = ls.get(KEY), dirty = !!ls.get(KEY + ':dirty');
-    if (local && dirty) { pendingJson = local; return 'local-newer'; }   // unsaved edits from this browser win
-    if (body && typeof body.json === 'string') {
-      try { JSON.parse(body.json); ls.set(KEY, body.json); ls.set(KEY + ':dirty', ''); return 'cloud'; } catch (_) { return 'cloud-invalid'; }
+    if (local && dirty && cloud) {                      // unsaved edits from this browser: merge them into the team copy, never overwrite it
+      const m = merge3(parse(ls.get(BASE)), parse(local), parse(cloud));
+      if (m) { const mj = JSON.stringify(m); ls.set(KEY, mj); ls.set(BASE, cloud); if (mj === cloud) { ls.set(KEY + ':dirty', ''); return 'cloud'; } pendingJson = mj; return 'local-newer'; }
     }
+    if (cloud) { ls.set(KEY, cloud); ls.set(BASE, cloud); ls.set(KEY + ':dirty', ''); return 'cloud'; }
+    if (body && typeof body.json === 'string') return 'cloud-invalid';
     if (local) { pendingJson = local; return 'local-only'; }
     return 'empty';
   }
@@ -384,7 +461,7 @@
     return new Promise((resolve, reject) => { const url = URL.createObjectURL(file), img = new Image(); img.onload = () => { const info = { width: img.naturalWidth, height: img.naturalHeight }; URL.revokeObjectURL(url); resolve(info); }; img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('The selected file is not a readable image.')); }; img.src = url; });
   }
 
-  window.RSH_HOST = { version: VERSION, fetch: hostFetch, imageSize, read: k => ls.get(k), persist, mediaUrl, exportFile, ask, toast };
+  window.RSH_HOST = { merge3, version: VERSION, fetch: hostFetch, imageSize, read: k => ls.get(k), persist, mediaUrl, exportFile, ask, toast };
 
   /* ---------- start: load storage, then start the app ---------- */
   (async function start() {
@@ -395,7 +472,8 @@
     const source = await hydrate();
     loading.remove();
     try { window.__rshBoot(); if (window.RSH_LIVE) window.RSH_LIVE.start(); if (window.RSH_SCORE) window.RSH_SCORE.start(); if (window.RSH_CAMPAIGNS) window.RSH_CAMPAIGNS.start(); if (window.RSH_EXPERIMENTS) window.RSH_EXPERIMENTS.start(); if (window.RSH_SIGNOFF) window.RSH_SIGNOFF.start(); } catch (e) { if (window.RSH_DIAGNOSTICS) window.RSH_DIAGNOSTICS.report('startup', e); throw e; }
-    if (source === 'cloud') pill('saved', 'Saved to this artifact');
+    watchTeam();
+    if (source === 'cloud') pill('saved', 'Saved · team copy up to date');
     else if (source === 'browser') pill('error', 'Saved in this browser only');
     else if (source === 'unreachable') pill('error', 'Storage not reached: showing this browser’s copy');
     else if (source === 'cloud-invalid') pill('error', 'Saved copy could not be read');
