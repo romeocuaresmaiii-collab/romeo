@@ -12,6 +12,7 @@
   #rshQuick{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
   #rshQuick button{border:1px solid #e5e5ea;background:#fff;color:#1d1d1f;border-radius:12px;padding:10px 16px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
   #rshQuick button.primary{background:#0071e3;border-color:#0071e3;color:#fff}
+  #rshQuick button.newvid{background:#1a7f37;border-color:#1a7f37;color:#fff}
   #rshQuick button:hover{border-color:#b9d4f5}
   #rshQuick button:focus-visible{outline:2px solid #0071e3;outline-offset:2px}
   #rshQuick .count{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:999px;background:#fff3e0;color:#b45309;font-size:11px}
@@ -30,7 +31,8 @@
     const mine = posts.filter(p => p.status === 'Review' && !(p.approvalMeta && p.approvalMeta.pmReviewedAt)).length;
     const drafts = posts.filter(p => p.status === 'Draft').length;
     const open = window.RSH_TRACKER ? window.RSH_TRACKER.openCount() : 0;
-    bar.innerHTML = `<button type="button" class="primary" data-quick="studio">＋ Create a post</button>
+    const vids = window.RSH_BOTS ? window.RSH_BOTS.freshVideos() : [];
+    bar.innerHTML = (vids.length ? `<button type="button" class="newvid" data-quick-video="${vids[0].postId}">▶ ${vids.length} new video${vids.length === 1 ? '' : 's'} to review</button>` : '') + `<button type="button" class="primary" data-quick="studio">＋ Create a post</button>
       <button type="button" data-quick="tracker">Checklist${open ? `<span class="count">${open} need work</span>` : ''}</button>
       <button type="button" data-quick="approvals">Reviews${mine ? `<span class="count">${mine} waiting</span>` : ''}</button>
       <button type="button" data-quick="calendar">Calendar${drafts ? `<span class="count">${drafts} draft${drafts === 1 ? '' : 's'}</span>` : ''}</button>
@@ -51,7 +53,8 @@
     const home = document.getElementById('view-overview'); if (!home || !app() || document.getElementById('rshQuick')) return;
     // 1. quick actions replace the two introductory cards
     const bar = document.createElement('div'); bar.id = 'rshQuick'; bar.setAttribute('aria-label', 'Quick actions'); home.insertBefore(bar, home.firstChild);
-    bar.addEventListener('click', e => { const b = e.target.closest('[data-quick]'); if (b) app().navigate(b.dataset.quick); });
+    bar.addEventListener('click', e => { const v = e.target.closest('[data-quick-video]'); if (v && window.RSH_BOTS) return window.RSH_BOTS.watch(v.dataset.quickVideo); const b = e.target.closest('[data-quick]'); if (b) app().navigate(b.dataset.quick); });
+    if (window.RSH_BOTS && window.RSH_BOTS.onChange) window.RSH_BOTS.onChange(quick);
     const hero = home.querySelector(':scope > .card.hero'), cta = home.querySelector(':scope > .smart-home-cta');
     // 2. order: quick actions, live summary, campaigns needing a next step, campaign results, then everything else
     const live = document.getElementById('rshLive'), pipe = document.getElementById('productionPipeline'), camp = document.getElementById('rshCampaigns');

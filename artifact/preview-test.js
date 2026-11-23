@@ -292,6 +292,12 @@ const out = []; const ok = (n, c, d) => { out.push(c); console.log((c ? 'PASS  '
     await p.evaluate(async id => { const ids = ['cd'.repeat(16), 'ef'.repeat(16)]; const a = new Uint8Array(4000); a.set([0, 0, 0, 24, 102, 116, 121, 112], 0); const bb = new Uint8Array(2500).fill(9); await fetch('/__put/' + ids[0], { method: 'POST', body: a }); await fetch('/__put/' + ids[1], { method: 'POST', body: bb }); window.__store['editJobs/' + id] = { ...window.__store['editJobs/' + id], status: 'done', assetId: ids[0], parts: [{ id: ids[0], start: 0, end: 4000 }, { id: ids[1], start: 4000, end: 6500 }], mime: 'video/mp4', bytes: 6500, name: 'final.mp4' }; await window.RSH_BOTS.collect(); }, zc);
     const zb = await p.evaluate(id => { const a = (JSON.parse(localStorage.getItem('rsh_growth_command_v1')).posts.find(x => x.id === id).creativeAssets || [])[0] || {}; return { parts: (a.parts || []).length, mime: a.mime, status: window.__store['editJobs/' + id].status }; }, zc);
     ok('The finished video comes back in pieces and is attached to its campaign as one video', zb.parts === 2 && zb.mime === 'video/mp4' && zb.status === 'attached', JSON.stringify(zb));
+    const nv = await p.evaluate(() => ({ office: [...document.querySelectorAll('#rshBots .nv')].map(x => x.textContent).join(' | '), home: document.getElementById('rshQuick').textContent }));
+    ok('A returned video is announced in the office and on Home', /New video ready to review/.test(nv.office) && /2 new videos to review/.test(nv.home), nv.home.slice(0, 80));
+    await p.click(`#rshBots [data-bot-watch="${zc}"]`); await p.waitForTimeout(1500);
+    const rv2 = await p.evaluate(id => ({ onReviews: document.getElementById('view-approvals').classList.contains('active'), selected: !!document.querySelector(`#approvalQueue [data-review-select="${id}"].active`), video: !!document.querySelector('#reviewMediaGallery video'), reviewed: window.__store['editJobs/' + id].reviewed === true, home: document.getElementById('rshQuick').textContent }), zc);
+    ok('Watch and review opens Reviews on that campaign with the video, and marks it seen', rv2.onReviews && rv2.selected && rv2.video && rv2.reviewed && /1 new video to review/.test(rv2.home), JSON.stringify(rv2).slice(0, 200));
+    await p.click('.nav button[data-view="bots"]');
   } else console.log('SKIP  zip job tests (set JSZIP_PATH)');
   // dropping a file on the Bots screen attaches it to the chosen campaign and wakes the team
   await p.click('#rshBots [data-bot-tab="office"]');
