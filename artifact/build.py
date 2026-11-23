@@ -67,6 +67,15 @@ s = once(s, "const visualAssetUrl=a=>(a?.storage==='media'?'/api/media/':'/api/a
 s = once(s, "const exportFile=(name,text,mime)=>{const b=new Blob([text],{type:mime}),url=URL.createObjectURL(b),a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),3000)};", 'const exportFile=(name,text,mime)=>{RSH_HOST.exportFile(name,text)};')
 s = once(s, "const t=prompt('Record a dated competitor observation:',c.notes||'');if(t!==null){c.notes=t;c.added=new Date().toISOString().slice(0,10);save();notice('Notes updated')}", "RSH_HOST.ask('Record a dated competitor observation:',c.notes||'').then(t=>{if(t!==null){c.notes=t;c.added=new Date().toISOString().slice(0,10);save();notice('Notes updated')}})")
 
+# Every server request goes to the host layer explicitly.
+n_fetch = len(re.findall(r'(?<![\w.])fetch\(', s.split(shim)[0]))
+head, tail_ = s.split(shim)
+head = re.sub(r'(?<![\w.])fetch\(', 'RSH_HOST.fetch(', head)
+s = head + shim + tail_
+assert n_fetch >= 8, n_fetch
+s = once(s, "function visualFileDimensions(file){return new Promise(", "function visualFileDimensions(file){return RSH_HOST.imageSize(file)}function visualFileDimensionsLocal(file){return new Promise(")
+s = once(s, "if(f.size<256||f.size>(f.type.startsWith('image/')?12_000_000:120_000_000)){el('visualUploadMsg').textContent='File too large: '+f.name+'. Images max 12 MB; videos max 120 MB.';return}", "if(f.size<256||f.size>(f.type.startsWith('image/')?12_000_000:20_000_000)){el('visualUploadMsg').textContent='File too large: '+f.name+'. Here images max 12 MB; videos max 20 MB.';return}")
+
 # 4. Wording that would be untrue here.
 s = once(s, f'<strong>LOCAL APP · V{version}</strong><div class="small">Activate the local Data Vault in Setup & Backup to preserve browser work. Export a backup before upgrading. Metricool is connected in ChatGPT only, not this local app.</div>',
          f'<strong>ARTIFACT EDITION · V{version}</strong><div class="small">Your workspace and uploaded media are saved automatically to this artifact’s private storage. Approvals are local records, not authenticated. No Metricool sync or publishing.</div>')

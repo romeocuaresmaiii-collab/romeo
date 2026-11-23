@@ -66,10 +66,25 @@ const out = []; const ok = (n, c, d) => { out.push(c); console.log((c ? 'PASS  '
   await p.click('#rshHostConfirm button');
   // media upload
   await p.evaluate(() => document.querySelector('[data-view="studio"]').click());
-  const png = Buffer.concat([Buffer.from('89504e470d0a1a0a0000000d49484452', 'hex'), Buffer.alloc(600)]);
-  const hasInput = await p.$('#visualFile');
-  if (hasInput) { await p.setInputFiles('#visualFile', { name: 'test.png', mimeType: 'image/png', buffer: png }).catch(() => {}); await p.waitForTimeout(800); }
-  console.log('NOTE  uploads recorded by stand-in store: ' + JSON.stringify(await p.evaluate(() => window.__uploads)));
+  const target = (await WS(p)).posts.find(x => !(x.creativeAssets || []).length && !x.creativeAsset).id;
+  await p.selectOption('#visualPostSelect', target);
+  await p.evaluate(async () => {
+    const c = document.createElement('canvas'); c.width = 640; c.height = 640; const g = c.getContext('2d'); g.fillStyle = '#246'; g.fillRect(0, 0, 640, 640); g.fillStyle = '#fff'; g.fillRect(100, 100, 300, 200);
+    const blob = await new Promise(r => c.toBlob(r, 'image/png'));
+    const dt = new DataTransfer(); dt.items.add(new File([blob], 'test-photo.png', { type: 'image/png' }));
+    const inp = document.getElementById('visualFile'); inp.files = dt.files; inp.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  await p.click('#visualUpload'); await p.waitForTimeout(1200);
+  const up = await p.evaluate(() => window.__uploads);
+  const attached = ((await WS(p)).posts.find(x => x.id === target).creativeAssets || []);
+  ok('Attaching a photo stores it and links it to the campaign', up.length === 1 && attached.length === 1 && attached[0].id === up[0].id, (await p.textContent('#visualUploadMsg')).slice(0, 120));
+  ok('Attached photo is requested from the artifact file store', await p.evaluate(id => [...document.images].some(i => i.src.includes('/_blob/' + id)), up[0] && up[0].id));
+  await p.evaluate(async () => {
+    const dt = new DataTransfer(); dt.items.add(new File([new Uint8Array(5000)], 'clip.mov', { type: 'video/quicktime' }));
+    const inp = document.getElementById('visualFile'); inp.files = dt.files;
+  });
+  await p.click('#visualUpload'); await p.waitForTimeout(600);
+  ok('MOV is refused with a clear reason', /Export the video as MP4/.test(await p.textContent('#visualUploadMsg')), (await p.textContent('#visualUploadMsg')).slice(0, 140));
   // phone width
   const m = await open(400, 800);
   const over = await m.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);

@@ -14,7 +14,7 @@
   const KEY = 'rsh_growth_command_v1';
   const BUNDLED_MEDIA = __BUNDLED_MEDIA__;       // id -> relative file published beside the page
   const WEEKLY_PACKS = __WEEKLY_PACKS__;         // read-only weekly evidence packs shipped with the app
-  const MEDIA_TYPES = { 'image/jpeg': 12e6, 'image/png': 12e6, 'image/webp': 12e6, 'video/mp4': 20e6, 'video/webm': 20e6, 'video/quicktime': 20e6 };
+  const MEDIA_TYPES = { 'image/jpeg': 12e6, 'image/png': 12e6, 'image/webp': 12e6, 'video/mp4': 20e6, 'video/webm': 20e6 };
   const VAULT_KEEP = 12;
 
   let db = null, assets = null, downloads = null;
@@ -203,14 +203,36 @@
     }
 
     if (path === '/api/media' && method === 'POST') {
-      if (!assets) return json(400, { error: 'Uploading files is not available in this view. Open the artifact as its owner or an editor.' });
       const file = init.body, mime = (file && file.type || '').toLowerCase();
-      if (!(file instanceof Blob) || !(mime in MEDIA_TYPES)) return json(415, { error: 'Upload PNG, JPEG, WebP, MP4, WebM or MOV only' });
-      if (file.size < 256 || file.size > MEDIA_TYPES[mime]) return json(413, { error: 'File exceeds its limit here: 12 MB per image or 20 MB per video' });
-      try {
-        const r = await assets.upload(file, { type: mime });
-        return json(201, { id: r.id, mime, bytes: r.sizeBytes, name: file.name || 'upload', storage: 'media' });
-      } catch (e) { return json(400, { error: 'Could not store media: ' + ((e && e.code) || 'upload failed') }); }
+      if (mime === 'video/quicktime') return json(415, { error: 'MOV videos cannot be stored in this artifact. Export the video as MP4 and attach that' });
+      if (!(file instanceof Blob) || !(mime in MEDIA_TYPES)) return json(415, { error: 'Attach PNG, JPEG, WebP, MP4 or WebM files' });
+      if (file.size < 256 || file.size > MEDIA_TYPES[mime]) return json(413, { error: 'File is over the limit here: 12 MB per image, 20 MB per video' });
+      // The file store may not have been ready when the page started: ask again now.
+      if (!assets && window.claude && typeof window.claude.use === 'function') { try { assets = await window.claude.use('assets'); } catch (_) {} }
+      if (!assets) return json(400, { error: 'This view cannot store files (no file store). Open the artifact in a browser at claude.ai, signed in as its owner' });
+      const WHY = {
+        not_granted: 'file storage was not allowed for this page. Reload, and allow it if Claude asks',
+        capability_disabled: 'file storage is switched off in this view. Try the artifact in a desktop browser at claude.ai',
+        capability_removed: 'file storage is switched off in this view. Try the artifact in a desktop browser at claude.ai',
+        too_large: 'the file is over 20 MB', unsupported_type: 'this file type is not accepted. Use PNG, JPEG, WebP, MP4 or WebM',
+        quota_or_state: 'the artifact storage is full or not accepting files right now', rate_limited: 'too many uploads at once. Wait a moment and try again',
+        upstream_auth: 'your sign-in could not be confirmed. Reload the page and try again', invalid_request: 'the file could not be read',
+      };
+      const plain = new Blob([await file.arrayBuffer()], { type: mime });
+      let lastErr = null;
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const r = await assets.upload(plain, { type: mime });
+          if (!r || typeof r.id !== 'string') throw { code: 'no_id' };
+          return json(201, { id: r.id, mime, bytes: r.sizeBytes || file.size, name: file.name || 'upload', storage: 'media' });
+        } catch (e) {
+          lastErr = e; if (!(e && e.code === 'store_unavailable')) break;
+          await new Promise(res => setTimeout(res, 1500));
+        }
+      }
+      const code = (lastErr && lastErr.code) || 'unknown';
+      console.warn('[RSH host] upload failed', code, lastErr && lastErr.message);
+      return json(400, { error: 'Upload failed: ' + (WHY[code] || 'the file store did not accept it') + ' [' + code + (lastErr && lastErr.message ? ': ' + String(lastErr.message).slice(0, 90) : '') + ']' });
     }
     if (path === '/api/backup/check' && method === 'POST') {
       const ids = referenced(JSON.parse(init.body)); const missing = [];
@@ -224,7 +246,7 @@
   }
 
   const realFetch = window.fetch.bind(window);
-  window.fetch = function (input, init) {
+  const hostFetch = function (input, init) {
     const raw = typeof input === 'string' ? input : (input && input.url) || '';
     let u; try { u = new URL(raw, location.href); } catch (_) { return realFetch(input, init); }
     if (!u.pathname.startsWith('/api/') || u.origin !== location.origin) return realFetch(input, init);
@@ -242,7 +264,12 @@
     }
   }
 
-  window.RSH_HOST = { version: VERSION, read: k => ls.get(k), persist, mediaUrl, exportFile, ask, toast };
+  async function imageSize(file) {
+    if (typeof createImageBitmap === 'function') { try { const bmp = await createImageBitmap(file); const info = { width: bmp.width, height: bmp.height }; if (bmp.close) bmp.close(); return info; } catch (_) {} }
+    return new Promise((resolve, reject) => { const url = URL.createObjectURL(file), img = new Image(); img.onload = () => { const info = { width: img.naturalWidth, height: img.naturalHeight }; URL.revokeObjectURL(url); resolve(info); }; img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('The selected file is not a readable image.')); }; img.src = url; });
+  }
+
+  window.RSH_HOST = { version: VERSION, fetch: hostFetch, imageSize, read: k => ls.get(k), persist, mediaUrl, exportFile, ask, toast };
 
   /* ---------- start: load storage, then start the app ---------- */
   (async function start() {
@@ -259,6 +286,5 @@
     else if (source === 'cloud-invalid') pill('error', 'Saved copy could not be read');
     else if (source === 'empty') pill('saved', 'New workspace');
     else { pill('saving', 'Saving…'); flush(); }
-    if (!assets) for (const id of ['visualFile']) { const f = document.getElementById(id); if (f) f.title = 'Uploading needs owner or editor access'; }
   })();
 })();
