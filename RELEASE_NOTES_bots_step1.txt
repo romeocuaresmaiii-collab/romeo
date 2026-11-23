@@ -1,0 +1,14 @@
+RSH SPORTS MARKETING OS — artifact edition, build 22
+
+24/7 Bots, step 1 (new sidebar entry under "Automation"; no existing screen was changed)
+- Caption Bot: adapts each planned campaign's own hook, caption, call to action and hashtags for
+  each channel (Instagram, Facebook, TikTok, YouTube, Pinterest, Threads, Bluesky). No new claims.
+- Scheduler Bot: gives every post a time on the campaign's planned day from your chosen posting
+  times, avoiding clashes with other planned posts and with what is already in Metricool.
+- Manager Bot: holds back any post whose campaign lacks both approvals, has no media or checks,
+  is in the past, clashes, or is too long for the channel; flags store links without tracking.
+- "Run everything" runs the three bots and shows the plan. Captions and times can be edited by
+  hand and are kept on the next run. Copy puts a post on the clipboard for Metricool.
+- The bots read campaigns only. Their plan is stored separately; no campaign, approval, calendar
+  entry or Metricool post is created or changed.
+Not switched on: Posting Bot (sending to Metricool) and the daily run. Both need explicit approval.

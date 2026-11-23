@@ -237,6 +237,21 @@ const out = []; const ok = (n, c, d) => { out.push(c); console.log((c ? 'PASS  '
   ok('Other people see who the approver is but get no approve button', await other.evaluate(() => { const b = document.getElementById('rshSign'); return !!b && /Signed by Test Owner/.test(b.textContent) && !b.querySelector('[data-sign-approve]') && !b.querySelector('[data-sign-register]'); }), await other.evaluate(() => (document.getElementById('rshSign') || {}).textContent || 'no box').then(t => t.slice(0, 140)));
   await other.close();
 
+  // 24/7 Bots: its own screen, reads campaigns, changes nothing else
+  const wsBefore = await p.evaluate(() => localStorage.getItem('rsh_growth_command_v1'));
+  await p.click('.nav button[data-view="bots"]');
+  const b0 = await p.evaluate(() => ({ active: document.getElementById('view-bots').classList.contains('active'), title: document.getElementById('pageTitle').textContent, text: document.getElementById('rshBots').innerText }));
+  ok('24/7 Bots has its own sidebar entry and explains itself before the first run', b0.active && b0.title === '24/7 Bots' && /The bots have not run yet/.test(b0.text) && /Posting Bot/.test(b0.text) && /not switched on/i.test(b0.text), b0.title + ' · ' + b0.active);
+  await p.selectOption('#rshBotDays', '21');
+  await p.click('#rshBots [data-bot-run]'); await p.waitForFunction(() => /Manager Bot checked every post/.test(document.getElementById('rshBots').innerText), null, { timeout: 8000 });
+  const b1 = await p.evaluate(() => { const plan = JSON.parse(window.__store['bots/plan'].json), ws = JSON.parse(localStorage.getItem('rsh_growth_command_v1')); const approved = ws.posts.filter(x => x.status === 'Approved').map(x => x.id); const it = plan.items; const pin = it.find(i => i.channel === 'pinterest'), bs = it.filter(i => i.channel === 'tiktok'); return { n: it.length, campaigns: new Set(it.map(i => i.postId)).size, ready: it.filter(i => i.ready).length, readyAllApproved: it.filter(i => i.ready).every(i => approved.includes(i.postId)), approvedCount: approved.length, pinLink: /utm_source=pinterest/.test(pin.caption), times: [...new Set(it.map(i => i.time))].sort().join(','), clash: (() => { const s = {}; let c = 0; for (const i of it) { const k = i.date + i.time + i.channel; if (s[k]) c++; s[k] = 1; } return c; })(), ttLen: Math.max(...bs.map(i => i.caption.length)), log: document.querySelector('#rshBots .log').innerText }; });
+  ok('Run everything prepares a caption and time for every campaign and channel', b1.campaigns === 11 && b1.n >= 33 && b1.pinLink && b1.clash === 0 && b1.ttLen <= 600 && /12:00/.test(b1.times), JSON.stringify({ n: b1.n, times: b1.times, ready: b1.ready }));
+  ok('Only posts from fully approved campaigns are marked ready', b1.readyAllApproved && b1.ready > 0 && b1.ready < b1.n, b1.ready + ' ready of ' + b1.n + ' with ' + b1.approvedCount + ' approved campaign(s)');
+  ok('Running the bots changes nothing in the campaigns', await p.evaluate(before => localStorage.getItem('rsh_growth_command_v1') === before, wsBefore) && /nothing was sent to Metricool/.test(b1.log));
+  await p.click('#rshBots [data-bot-edit]'); await p.fill('#rshBots textarea', 'Hand-written caption'); await p.click('#rshBots [data-bot-savecap]'); await p.waitForTimeout(200);
+  await p.click('#rshBots [data-bot-run]'); await p.waitForTimeout(500);
+  ok('A caption edited by hand is kept when the bots run again', await p.evaluate(() => { const it = JSON.parse(window.__store['bots/plan'].json).items[0]; return it.caption === 'Hand-written caption' && it.edited; }));
+
   // file store unavailable -> files are saved through the database instead
   for (const mode of ['refuse', 'noassets']) {
     const f = await open(1300, 900, '?' + mode);
