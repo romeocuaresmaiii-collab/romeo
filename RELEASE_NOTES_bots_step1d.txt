@@ -1,0 +1,12 @@
+RSH SPORTS MARKETING OS — artifact edition, build 25
+
+24/7 Bots: Pixel, the Asset Bot
+- A sixth bot at the start of the line. For each campaign it lists the files still needed
+  (one photo, a 3 to 5 photo carousel set, a vertical video, optional extras per channel) and
+  shows which are already attached.
+- "Copy image prompt" and "Copy video brief" on every campaign give a ready-to-paste prompt for
+  an AI image or video tool, built from the campaign's own visual direction. Every prompt carries
+  the rules: sport-correct gear, no third-party logos, no real identifiable people, no text in
+  the image or footage.
+- Pixel does not generate images or video. A person makes the file in the tool, checks it, and
+  drops it into the office; the rest of the team then runs.

@@ -33,7 +33,10 @@
   #rshBots .office{margin-top:16px;border-radius:18px;padding:18px 16px 14px;background:linear-gradient(180deg,#eef4fb 0%,#f7f9fc 58%,#e9edf3 58%,#e3e8ef 100%);border:1px solid #dfe6ee;position:relative;overflow:hidden}
   #rshBots .office-top{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
   #rshBots .office-top .sign{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#51607a}
-  #rshBots .desks{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+  #rshBots .desks{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}
+  #rshBots .assetrow{padding:11px 14px;border-bottom:1px solid #ececf0;background:#fff;font-size:12.5px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+  #rshBots .assetrow .need{display:inline-block;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:999px;margin:3px 4px 0 0}
+  #rshBots .need.have{background:#eaf7ee;color:#1a7f37}#rshBots .need.miss{background:#fdecea;color:#b42318}#rshBots .need.opt{background:#f0f0f3;color:#515154}
   @media(max-width:1100px){#rshBots .desks{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}}
   #rshBots .desk{background:#fff;border:1px solid #dfe6ee;border-radius:16px;padding:12px 12px 10px;text-align:center;min-width:0;position:relative;cursor:default;transition:box-shadow .2s,transform .2s}
   #rshBots .desk.working{box-shadow:0 0 0 2px #0071e3,0 10px 24px rgba(0,113,227,.18);transform:translateY(-2px)}
@@ -97,6 +100,38 @@
   const firstSentences = (s, n) => (String(s || '').replace(/\s+/g, ' ').match(/[^.!?]+[.!?]+/g) || [String(s || '')]).slice(0, n).join(' ').trim();
   const slug = s => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40);
   const clock = t => { const [h, m] = t.split(':').map(Number); return new Date(2000, 0, 1, h, m).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }); };
+
+  /* ---------- 0. Asset Bot ----------
+   * Works out which files each campaign still needs and writes a ready-to-paste prompt for an AI
+   * image or video tool. It does not generate the image or video itself: a person makes the file
+   * in the tool, checks it, and drops it into the office. The campaign's locked wording about
+   * sport-correct gear and no third-party logos travels with every prompt.
+   */
+  function assetNeeds(p) {
+    const files = [p.creativeAsset].concat(Array.isArray(p.creativeAssets) ? p.creativeAssets : []).filter(Boolean).filter((a, i, all) => all.findIndex(x => x.id === a.id) === i);
+    const vids = files.filter(a => /^video\//.test(a.mime || '')).length, imgs = files.length - vids, type = String(p.postType || '').toLowerCase(), ratio = p.aspectRatio || '4:5', needs = [];
+    if (/reel|video/.test(type)) needs.push({ label: 'a vertical 9:16 video, 8–20 seconds', state: vids ? 'have' : 'miss' });
+    else if (/carousel/.test(type)) needs.push({ label: `3 to 5 matching ${ratio} photos`, state: imgs >= 3 ? 'have' : 'miss', detail: imgs ? `${imgs} so far` : '' });
+    else if (/story/.test(type)) needs.push({ label: 'one vertical 9:16 photo or short video', state: files.length ? 'have' : 'miss' });
+    else needs.push({ label: `one ${ratio} photo`, state: imgs ? 'have' : 'miss' });
+    const chans = targets(p);
+    if (!vids && chans.some(c => c === 'tiktok' || c === 'youtube')) needs.push({ label: 'optional: a vertical video so it can also go to ' + chans.filter(c => c === 'tiktok' || c === 'youtube').map(c => NAME[c]).join(' and '), state: 'opt' });
+    if (chans.includes('pinterest') && ratio !== '2:3') needs.push({ label: 'optional: a 2:3 version for Pinterest', state: 'opt' });
+    return { needs, missing: needs.some(n => n.state === 'miss'), files: files.length };
+  }
+  const RULES = 'Realistic, natural light. Sport-correct gear and setting. No third-party logos, brand marks or wordmarks on shoes, socks, apparel, bags or equipment. No real, identifiable people. Suitable for parents, coaches and athletes.';
+  function imagePrompt(p) {
+    const type = String(p.postType || '').toLowerCase(), base = String(p.visualPrompt || p.visualConcept || '').trim();
+    return [base || `A premium, photorealistic ${p.sport || 'sports'} photo for ${p.platform || 'social media'}: ${sentence(p.hook)}`,
+      /carousel/.test(type) ? 'Make this a matching set of 3 to 5 images with the same athlete, setting and light: 1) a cover with clear space for the headline, 2 to 4) supporting moments, last) a calm closing frame.' : '',
+      `Aspect ratio ${p.aspectRatio || '4:5'}. Leave clean space for text; do not put any text in the image.`, base ? '' : RULES].filter(Boolean).join('\n\n');
+  }
+  function videoBrief(p) {
+    return [`Create a 10 to 15 second vertical 9:16 video for ${p.platform || 'social media'} about ${p.sport || 'the sport'}.`,
+      p.visualConcept ? `Scene: ${String(p.visualConcept).trim()}` : '',
+      `Shots: 1) Opening, first 2 seconds: the moment that matches the hook “${sentence(p.hook)}”. 2) Middle: the main action, one clear movement, steady framing. 3) Ending, last 2 seconds: hold on a clean frame with room for the call to action.`,
+      'No text or captions in the footage; text is added in editing. No music with lyrics.', RULES].filter(Boolean).join('\n\n');
+  }
 
   /* ---------- 1. Caption Bot ---------- */
   function bodyOf(p) {
@@ -172,7 +207,8 @@
     const sample = items[0] ? `“${cut(items[0].caption.replace(/\s+/g, ' '), 110)}”` : '';
     const stops = {}; for (const i of items) for (const c of i.checks) if (c[0] === 'stop') stops[c[1]] = (stops[c[1]] || 0) + 1;
     const top = Object.keys(stops).sort((a, b) => stops[b] - stops[a])[0];
-    log = [['quill', items.length ? `${items.length} captions for ${inRange.length} campaign${inRange.length === 1 ? '' : 's'}. First one: ${sample}` : 'No campaigns in the window, so nothing to write.'],
+    const needing = inRange.filter(q => assetNeeds(q).missing);
+    log = [['pixel', !inRange.length ? 'No campaigns in the window.' : needing.length ? `${needing.length} of ${inRange.length} campaigns need files. Next up: “${cut(needing[0].title, 40)}” needs ${assetNeeds(needing[0]).needs.filter(n => n.state === 'miss').map(n => n.label).join(' and ')}. Briefs and prompts are in the plan.` : `All ${inRange.length} campaigns have their files.`], ['quill', items.length ? `${items.length} captions for ${inRange.length} campaign${inRange.length === 1 ? '' : 's'}. First one: ${sample}` : 'No campaigns in the window, so nothing to write.'],
       ['tempo', items.length ? `${items.length} posts timed across ${days.length} day${days.length === 1 ? '' : 's'} (${[...new Set(days)].join(', ')}), using ${settings.times.map(slotName).join(' and ')} US Eastern. No clashes.` : 'Nothing to schedule.'],
       ['ref', !items.length ? 'Nothing to check.' : ready === items.length ? `All ${items.length} checks passed. Ready for Courier.` : `${ready} ready, ${items.length - ready} held back.${top ? ` Most common reason: ${top.charAt(0).toLowerCase() + top.slice(1)} (${stops[top]}).` : ''}`],
       ['courier', ready ? `Not switched on, so nothing was sent. ${ready} post${ready === 1 ? ' is' : 's are'} ready: use Copy to paste into Metricool.` : 'Not switched on, and nothing is ready yet, so nothing was sent to Metricool.']];
@@ -189,7 +225,7 @@
    * Five bots with their own desk. What each one "feels" and says is worked out from real numbers
    * (posts written, days uncovered, posts held back), so a glance at the office is a status report.
    */
-  const TEAM = [['quill', 'Quill', 'Caption Bot', '#0071e3'], ['tempo', 'Tempo', 'Scheduler Bot', '#7c3aed'], ['ref', 'Ref', 'Manager Bot', '#d9480f'], ['courier', 'Courier', 'Posting Bot', '#0f9d7a'], ['owl', 'Night Owl', 'Daily run', '#64748b']];
+  const TEAM = [['pixel', 'Pixel', 'Asset Bot', '#db2777'], ['quill', 'Quill', 'Caption Bot', '#0071e3'], ['tempo', 'Tempo', 'Scheduler Bot', '#7c3aed'], ['ref', 'Ref', 'Manager Bot', '#d9480f'], ['courier', 'Courier', 'Posting Bot', '#0f9d7a'], ['owl', 'Night Owl', 'Daily run', '#64748b']];
   function botSvg(color, face) {
     const eyes = face === 'asleep' ? '<path d="M24 34h9M41 34h9" stroke="#1d1d1f" stroke-width="2.4" stroke-linecap="round" fill="none"/>'
       : face === 'working' ? '<rect x="23" y="31" width="10" height="5" rx="2.5" fill="#1d1d1f"/><rect x="41" y="31" width="10" height="5" rx="2.5" fill="#1d1d1f"/>'
@@ -216,8 +252,12 @@
       : !held ? ['good', 'Satisfied', 'happy', `All ${items.length} posts passed. Good work, team.`]
       : ['bad', ready ? 'Strict' : 'Frustrated', 'strict', `I’m holding back ${held} of ${items.length} posts.` + (noMedia ? ` ${noMedia} campaign${noMedia === 1 ? ' has' : 's have'} no media.` : '') + (waiting ? ` ${waiting} still need${waiting === 1 ? 's' : ''} a review or approval.` : '')];
     out.courier = ['off', 'Asleep', 'asleep', `Not switched on. ${ready ? `${ready} post${ready === 1 ? ' is' : 's are'} ready when you want me to take them to Metricool for review.` : 'Wake me when posts are ready to go to Metricool for review.'}`];
+    const all = (app().data().posts || []).filter(q => q.date && (!plan || (q.date >= plan.from && q.date <= plan.to))), missing = all.filter(q => assetNeeds(q).missing).length;
+    out.pixel = !all.length ? ['plain', 'Idle', 'neutral', 'No campaigns to prepare assets for.']
+      : missing ? ['bad', 'Busy', 'worried', `${missing} of ${all.length} campaign${all.length === 1 ? '' : 's'} still need${missing === 1 ? 's' : ''} files. I wrote a brief and a ready-to-paste prompt for each.`]
+      : ['good', 'Happy', 'happy', `Every campaign has the files it needs.`];
     out.owl = ['off', 'Asleep', 'asleep', 'Not switched on. I would run the whole team every morning.'];
-    const task = { quill: 'Writing captions…', tempo: 'Picking times…', ref: 'Checking every post…' };
+    const task = { pixel: 'Writing asset briefs…', quill: 'Writing captions…', tempo: 'Picking times…', ref: 'Checking every post…' };
     if (phase && out[phase]) out[phase] = ['busy', 'Working', 'working', task[phase]];
     return out;
   }
@@ -229,9 +269,9 @@
       <div class="dropz" data-bot-drop><div class="t"><strong>Start here: drop a photo or video</strong><br><span class="small" data-bot-dropmsg>${drop.msg ? esc(drop.msg) : 'Drop it on this box, paste it, or choose a file. It is attached to the campaign you pick, exactly as in Create.'}</span></div>
         <select aria-label="Campaign to attach the file to" data-bot-dropcamp>${pick.length ? pick.map(p => `<option value="${esc(p.id)}">${esc(p.date.slice(5))} · ${esc(cut(p.title, 38))}</option>`).join('') : '<option value="">No campaigns yet</option>'}</select>
         <button type="button" class="btn ghost smallbtn" data-bot-choose ${drop.busy || !pick.length ? 'disabled' : ''}>${drop.busy ? 'Attaching…' : 'Choose file'}</button><input type="file" data-bot-file accept="image/png,image/jpeg,image/webp,video/mp4,video/webm" multiple hidden></div>
-      <div class="flowlab"><span>Campaigns and files</span><i></i><span>captions</span><i></i><span>times</span><i></i><span>checks</span><i></i><span>Metricool</span></div>
+      <div class="flowlab"><span>Campaigns and files</span><i></i><span>asset briefs</span><i></i><span>captions</span><i></i><span>times</span><i></i><span>checks</span><i></i><span>Metricool</span></div>
       <div class="desks">${TEAM.map(([id, name, role, color], n) => { const [tone, mood, face, line] = t[id]; const state = face === 'asleep' ? 'asleep' : face === 'working' ? 'working' : 'idle';
-        return `<div class="desk ${state}${n < 3 ? ' flow' : ''}" data-bot="${id}"><div class="holo">${state === 'working' ? `<span>${esc(line)}</span>` : ''}</div>${state === 'asleep' ? '<span class="zz" aria-hidden="true">z z</span>' : ''}${botSvg(color, face)}<h4>${esc(name)}</h4><div class="role">${esc(role)}</div><span class="mood ${tone}">${esc(mood)}</span><div class="say">${state === 'working' ? 'On it.' : esc(line)}</div></div>`; }).join('')}</div></div>`;
+        return `<div class="desk ${state}${n < 4 ? ' flow' : ''}" data-bot="${id}"><div class="holo">${state === 'working' ? `<span>${esc(line)}</span>` : ''}</div>${state === 'asleep' ? '<span class="zz" aria-hidden="true">z z</span>' : ''}${botSvg(color, face)}<h4>${esc(name)}</h4><div class="role">${esc(role)}</div><span class="mood ${tone}">${esc(mood)}</span><div class="say">${state === 'working' ? 'On it.' : esc(line)}</div></div>`; }).join('')}</div></div>`;
   }
   // Attach dropped files through the app's own attach step in Create, so every rule there still applies.
   async function attach(files, postId) {
@@ -252,7 +292,7 @@
   const pause = ms => new Promise(r => setTimeout(r, ms));
   async function showWork() {          // purely visual: the plan is already prepared and saved
     const quick = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    for (const b of ['quill', 'tempo', 'ref']) { phase = b; render(); await pause(quick ? 60 : 850); }
+    for (const b of ['pixel', 'quill', 'tempo', 'ref']) { phase = b; render(); await pause(quick ? 60 : 850); }
     phase = null;
   }
   // The team starts on its own when a new file is attached to any campaign.
@@ -289,7 +329,7 @@
       for (const it of items) {
         const p = posts.find(x => x.id === it.postId); if (!p) continue;
         if (it.date !== lastDay) { if (lastPost) list += '</div>'; lastPost = ''; lastDay = it.date; list += `<div class="day">${esc(new Date(it.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }))}</div>`; }
-        if (it.postId !== lastPost) { if (lastPost) list += '</div>'; lastPost = it.postId; const mine = items.filter(x => x.postId === it.postId); list += `<div class="camp"><header><strong>${esc(p.title)}</strong><span class="small">${mine.filter(x => x.ready).length} of ${mine.length} channel posts ready</span></header>`; }
+        if (it.postId !== lastPost) { if (lastPost) list += '</div>'; lastPost = it.postId; const mine = items.filter(x => x.postId === it.postId); const an = assetNeeds(p); list += `<div class="camp"><header><strong>${esc(p.title)}</strong><span class="small">${mine.filter(x => x.ready).length} of ${mine.length} channel posts ready</span></header><div class="assetrow"><div><strong>Files needed</strong> <span class="small">· ${an.files} attached</span><div>${an.needs.map(n => `<span class="need ${n.state}">${n.state === 'have' ? '✓ ' : ''}${esc(n.label)}${n.detail ? ' (' + esc(n.detail) + ')' : ''}</span>`).join('')}</div></div><div style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="btn ghost smallbtn" data-bot-prompt="image" data-bot-post="${esc(p.id)}">Copy image prompt</button><button type="button" class="btn ghost smallbtn" data-bot-prompt="video" data-bot-post="${esc(p.id)}">Copy video brief</button></div></div>`; }
         const key = it.postId + '|' + it.channel, open = openItem === key;
         list += `<div class="item" data-bot-item="${esc(key)}"><div><strong>${esc(NAME[it.channel])}</strong><div class="small">${it.caption.length} characters</div></div>
           <div><input type="time" value="${esc(it.time)}" aria-label="Time for ${esc(NAME[it.channel])} post of ${esc(p.title)}" data-bot-time="${esc(key)}">${settings.labels && settings.labels[it.time] ? `<div class="small" style="margin-top:3px">${esc(settings.labels[it.time])}</div>` : ''}</div>
@@ -329,6 +369,8 @@
     if (e.target.closest('[data-bot-close]')) { openItem = null; return render(); }
     const sv = e.target.closest('[data-bot-savecap]');
     if (sv) { const it = find(sv.dataset.botSavecap), ta = document.querySelector(`#rshBots [data-bot-cap="${CSS.escape(sv.dataset.botSavecap)}"]`); if (it && ta) { it.caption = ta.value; it.edited = true; } openItem = null; await save(); return render(); }
+    const pr = e.target.closest('[data-bot-prompt]');
+    if (pr) { const q = (app().data().posts || []).find(x => x.id === pr.dataset.botPost); if (!q) return; const text = pr.dataset.botPrompt === 'video' ? videoBrief(q) : imagePrompt(q), old = pr.textContent, done = ok => { pr.textContent = ok ? 'Copied' : 'Copy failed'; setTimeout(() => { pr.textContent = old; }, 1600); }; try { navigator.clipboard.writeText(text).then(() => done(true), () => done(false)); } catch (_) { done(false); } return; }
     const cp = e.target.closest('[data-bot-copy]');
     if (cp) { const it = find(cp.dataset.botCopy); if (!it) return; const text = `${NAME[it.channel]} · ${it.date} ${clock(it.time)} US Eastern\n\n${it.caption}`, done = ok => { cp.textContent = ok ? 'Copied' : 'Copy failed'; setTimeout(() => { cp.textContent = 'Copy'; }, 1600); }; try { navigator.clipboard.writeText(text).then(() => done(true), () => done(false)); } catch (_) { done(false); } }
   }
@@ -362,5 +404,5 @@
     }
     render();
   }
-  window.RSH_BOTS = { start, captionFor };
+  window.RSH_BOTS = { start, captionFor, assetNeeds, imagePrompt, videoBrief };
 })();
