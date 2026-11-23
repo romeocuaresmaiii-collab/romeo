@@ -1,0 +1,12 @@
+RSH SPORTS MARKETING OS — artifact edition, build 30
+
+24/7 Bots, organised
+- Three tabs: Office (the team, the drop box and the bot log), Plan (what was prepared), and
+  Setup (channels, named posting times, look-ahead, and what is not switched on).
+- The plan lists campaigns as collapsed rows grouped by day, each with a status: Needs files,
+  Held back or Ready. Open one to see its files, prompts and the post prepared for each channel.
+- Filter the plan by status; Expand all / Collapse all.
+- Bot faces are drawn without SVG. Claude's sharing review accepts only JPEG, PNG, GIF and WebP
+  images, and versions containing SVG could not be opened by invited people. The build now
+  refuses to produce a page containing SVG.
+- Links to other Claude pages were replaced by copy buttons.

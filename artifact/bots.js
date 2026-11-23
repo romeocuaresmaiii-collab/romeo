@@ -21,6 +21,8 @@
   const DEFAULTS = { channels: ['instagram', 'facebook', 'tiktok'], times: ['12:00', '18:00'], labels: { '12:00': 'lunch break', '18:00': 'after practice' }, days: 14 };
   let db = null, settings = { ...DEFAULTS }, plan = null, busy = false, note = '', log = [], openItem = null;
   let phase = null, wake = '', assetSig = null, queued = '', drop = { msg: '', busy: false };
+  let tab = 'office', filter = 'all';                 // which section of the screen is showing; which campaigns the plan lists
+  const openCamps = new Set();
   const slotName = t => (settings.labels && settings.labels[t]) ? `${clock(t)} · ${settings.labels[t]}` : clock(t);      // which bot is at work right now; why the team started; attachments seen so far
 
   const css = document.createElement('style');
@@ -103,6 +105,23 @@
   #rshBots .flowlab i{flex:1;height:0;border-top:2px dashed #b9c8dc}
   #rshBots .desk.flow::after{content:"→";position:absolute;right:-11px;top:74px;width:20px;height:20px;line-height:19px;border-radius:50%;background:#fff;border:1px solid #cfd9e6;color:#51607a;font-size:12px;font-weight:800;z-index:2;text-align:center}
   @media(max-width:1100px){#rshBots .desk.flow::after{display:none}}
+  #rshBots .tabs{display:inline-flex;gap:4px;padding:4px;margin-top:16px;background:#ececf0;border-radius:12px;max-width:100%;overflow-x:auto}
+  #rshBots .tabs button{border:0;background:transparent;color:#515154;font:inherit;font-size:13px;font-weight:700;padding:8px 16px;border-radius:9px;cursor:pointer;white-space:nowrap}
+  #rshBots .tabs button.on{background:#fff;color:#1d1d1f;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+  #rshBots .tabs button:focus-visible{outline:2px solid #0071e3;outline-offset:1px}
+  #rshBots .tcount{font-size:11px;font-weight:700;color:#6e6e73;margin-left:4px}
+  #rshBots .planbar{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center;margin-top:12px}
+  #rshBots .filters{display:flex;flex-wrap:wrap;gap:6px}
+  #rshBots .filters button{border:1px solid #e5e5ea;background:#fff;border-radius:999px;padding:6px 12px;font:inherit;font-size:12px;font-weight:700;color:#1d1d1f;cursor:pointer}
+  #rshBots .filters button.on{background:#1d1d1f;border-color:#1d1d1f;color:#fff}
+  #rshBots details.camp>summary{list-style:none;cursor:pointer;display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center;padding:12px 14px;background:#fbfbfd}
+  #rshBots details.camp>summary::-webkit-details-marker{display:none}
+  #rshBots details.camp[open]>summary{border-bottom:1px solid #ececf0}
+  #rshBots details.camp[open]>summary .nav-caret{transform:rotate(180deg)}
+  #rshBots details.camp>summary strong{font-size:14px}
+  #rshBots .sumr{display:inline-flex;gap:10px;align-items:center}
+  #rshBots .sumr .chk{margin:0}
+  #rshBots .offnote{margin-top:18px;padding:12px 14px;border:1px dashed #c7c7cc;border-radius:12px;font-size:13px}
   #rshBots .day{margin-top:18px;font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#515154}
   #rshBots .camp{border:1px solid #e5e5ea;border-radius:14px;margin-top:8px;background:#fff;overflow:hidden}
   #rshBots .camp>header{display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between;align-items:center;padding:11px 14px;background:#fbfbfd;border-bottom:1px solid #ececf0}
@@ -359,48 +378,76 @@
     if (items.length) check(items, posts);             // statuses always reflect the campaigns as they are now
     const ready = items.filter(i => i.ready).length, ran = !!plan;
     const step = (n, name, what, on, label) => `<div class="st ${on ? 'on' : 'off'}"><b>${n}. ${esc(name)}</b>${esc(what)}<br><span class="tag2">${esc(label)}</span></div>`;
+    // ---- Plan: one collapsible block per campaign, grouped by day ----
+    const byPost = new Map(); for (const it of items) { if (!byPost.has(it.postId)) byPost.set(it.postId, []); byPost.get(it.postId).push(it); }
+    const camps = [...byPost.keys()].map(id => { const p = posts.find(x => x.id === id); if (!p) return null; const mine = byPost.get(id), an = assetNeeds(p), ok = mine.filter(x => x.ready).length; return { p, mine, an, ok, state: an.missing ? 'files' : ok === mine.length ? 'ready' : 'held' }; }).filter(Boolean);
+    const count = k => camps.filter(c => c.state === k).length;
+    if (filter !== 'all' && !count(filter)) filter = 'all';
+    const shown = camps.filter(c => filter === 'all' || c.state === filter);
     let list = '';
     if (!ran) list = `<div class="empty"><strong>The bots have not run yet.</strong><br>Press “Run everything”. They read your planned campaigns for the next ${settings.days} days and prepare a caption and a time for each channel. Nothing in your campaigns, calendar or Metricool is changed.</div>`;
     else if (!items.length) list = `<div class="empty">No campaigns are planned in the next ${settings.days} days, so there is nothing to prepare.</div>`;
     else {
-      let lastDay = '', lastPost = '';
-      for (const it of items) {
-        const p = posts.find(x => x.id === it.postId); if (!p) continue;
-        if (it.date !== lastDay) { if (lastPost) list += '</div>'; lastPost = ''; lastDay = it.date; list += `<div class="day">${esc(new Date(it.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }))}</div>`; }
-        if (it.postId !== lastPost) { if (lastPost) list += '</div>'; lastPost = it.postId; const mine = items.filter(x => x.postId === it.postId); const an = assetNeeds(p); list += `<div class="camp"><header><strong>${esc(p.title)}</strong><span class="small">${mine.filter(x => x.ready).length} of ${mine.length} channel posts ready</span></header><div class="assetrow"><div><strong>Files needed</strong> <span class="small">· ${an.files} attached</span><div>${an.needs.map(n => `<span class="need ${n.state}">${n.state === 'have' ? '✓ ' : ''}${esc(n.label)}${n.detail ? ' (' + esc(n.detail) + ')' : ''}</span>`).join('')}</div></div><div style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="btn ghost smallbtn" data-bot-prompt="image" data-bot-post="${esc(p.id)}">Copy image prompt</button><button type="button" class="btn ghost smallbtn" data-bot-prompt="video" data-bot-post="${esc(p.id)}">Copy video brief</button><button type="button" class="btn smallbtn" data-bot-editor="${esc(p.id)}">Copy edit job for the video editor</button></div><div class="small" style="flex-basis:100%">Video editor: copy this campaign’s edit job, open your RSH SPORTS session in Claude and paste it there. When the MP4 is ready, drop it into the office above with this campaign selected.</div>${kitSport(p) ? `<div class="small" style="flex-basis:100%">Kit clip: open your RSH Kit Animator artifact, choose <strong>${esc(kitSport(p).replace(/^./, c => c.toUpperCase()))}</strong>, set the team and colours, record the 4-second clip, then drop the saved MP4 into the office above with this campaign selected.</div>` : ''}</div>`; }
-        const key = it.postId + '|' + it.channel, open = openItem === key;
-        list += `<div class="item" data-bot-item="${esc(key)}"><div><strong>${esc(NAME[it.channel])}</strong><div class="small">${it.caption.length} characters</div></div>
+      let lastDay = '';
+      for (const c of shown) {
+        const p = c.p, an = c.an;
+        if (p.date !== lastDay) { lastDay = p.date; list += `<div class="day">${esc(new Date(p.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }))}</div>`; }
+        const badge = c.state === 'files' ? '<span class="chk stop">Needs files</span>' : c.state === 'ready' ? '<span class="chk ok">✓ Ready</span>' : '<span class="chk warn">Held back</span>';
+        list += `<details class="camp" data-bot-camp="${esc(p.id)}" ${openCamps.has(p.id) ? 'open' : ''}><summary><span><strong>${esc(p.title)}</strong><span class="small"> · ${esc(p.platform || '')} · ${c.mine.length} channel post${c.mine.length === 1 ? '' : 's'}</span></span><span class="sumr">${badge}<span class="small">${c.ok} of ${c.mine.length} ready</span><span class="nav-caret">⌄</span></span></summary>` + `<div class="assetrow"><div><strong>Files needed</strong> <span class="small">· ${an.files} attached</span><div>${an.needs.map(n => `<span class="need ${n.state}">${n.state === 'have' ? '✓ ' : ''}${esc(n.label)}${n.detail ? ' (' + esc(n.detail) + ')' : ''}</span>`).join('')}</div></div><div style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="btn ghost smallbtn" data-bot-prompt="image" data-bot-post="${esc(p.id)}">Copy image prompt</button><button type="button" class="btn ghost smallbtn" data-bot-prompt="video" data-bot-post="${esc(p.id)}">Copy video brief</button><button type="button" class="btn smallbtn" data-bot-editor="${esc(p.id)}">Copy edit job for the video editor</button></div><div class="small" style="flex-basis:100%">Video editor: copy this campaign’s edit job, open your RSH SPORTS session in Claude and paste it there. When the MP4 is ready, drop it on the Office tab with this campaign selected.</div>${kitSport(p) ? `<div class="small" style="flex-basis:100%">Kit clip: open your RSH Kit Animator artifact, choose <strong>${esc(kitSport(p).replace(/^./, c => c.toUpperCase()))}</strong>, set the team and colours, record the 4-second clip, then drop the saved MP4 on the Office tab with this campaign selected.</div>` : ''}</div>`;
+        for (const it of c.mine) {
+          const key = it.postId + '|' + it.channel, open = openItem === key;
+          list += `<div class="item" data-bot-item="${esc(key)}"><div><strong>${esc(NAME[it.channel])}</strong><div class="small">${it.caption.length} characters</div></div>
           <div><input type="time" value="${esc(it.time)}" aria-label="Time for ${esc(NAME[it.channel])} post of ${esc(p.title)}" data-bot-time="${esc(key)}">${settings.labels && settings.labels[it.time] ? `<div class="small" style="margin-top:3px">${esc(settings.labels[it.time])}</div>` : ''}</div>
           <div>${open ? `<textarea rows="7" data-bot-cap="${esc(key)}" aria-label="Caption for ${esc(NAME[it.channel])}">${esc(it.caption)}</textarea>` : `<div class="cap short">${esc(it.caption)}</div>`}<div>${it.checks.map(c => `<span class="chk ${c[0]}">${c[0] === 'ok' ? '✓ ' : ''}${esc(c[1])}</span>`).join('')}</div></div>
           <div style="display:flex;flex-direction:column;gap:6px">${open ? `<button type="button" class="btn smallbtn" data-bot-savecap="${esc(key)}">Save</button><button type="button" class="btn ghost smallbtn" data-bot-close>Cancel</button>` : `<button type="button" class="btn ghost smallbtn" data-bot-edit="${esc(key)}">Edit</button><button type="button" class="btn ghost smallbtn" data-bot-copy="${esc(key)}">Copy</button>`}</div></div>`;
+        }
+        list += '</details>';
       }
-      if (lastPost) list += '</div>';
     }
+    const tabBtn = (id, label) => `<button type="button" role="tab" aria-selected="${tab === id}" class="${tab === id ? 'on' : ''}" data-bot-tab="${id}">${label}</button>`;
     host.innerHTML = `
       <div class="card">
         <div style="display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;align-items:flex-start">
-          <div><div class="eyebrow">24/7 BOTS · STEP-BY-STEP SETUP</div><h2 style="margin-top:6px">Turn planned campaigns into ready-to-post items</h2>
+          <div><div class="eyebrow">24/7 BOTS</div><h2 style="margin-top:6px">Turn planned campaigns into ready-to-post items</h2>
           <p style="margin-top:6px">The bots read your campaigns and prepare a caption and a time for every channel. They change nothing in your campaigns, calendar or Metricool.</p></div>
           <button type="button" class="btn" data-bot-run ${busy ? 'disabled' : ''}>${busy ? 'Running…' : '▶ Run everything'}</button>
         </div>
+        <div class="tabs" role="tablist">${tabBtn('office', 'Office')}${tabBtn('plan', `Plan${ran && items.length ? ` <span class="tcount">${ready} of ${items.length} ready</span>` : ''}`)}${tabBtn('setup', 'Setup')}</div>
+        ${note ? `<div class="hint" role="status" style="margin-top:12px">${esc(note)}</div>` : ''}
+      </div>
+      <div data-bot-panel="office" ${tab === 'office' ? '' : 'hidden'}>
+        <div class="card" style="margin-top:16px">
         ${office()}
+        ${log.length ? `<div class="log" role="status"><div class="log-h"><strong>Bot log</strong><span class="small">latest run${plan ? ' · ' + esc(new Date(plan.generatedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })) : ''}</span></div>${log.map(l => { const m = TEAM.find(t => t[0] === l[0]) || TEAM[0]; return `<div class="log-row"><span class="log-av">${botSvg(m[3], l[0] === 'courier' ? 'asleep' : 'happy')}</span><div><strong>${esc(m[1])}</strong> <span class="small">${esc(m[2])}</span><div>${esc(l[1])}</div></div></div>`; }).join('')}</div>` : ''}
+        </div>
+      </div>
+      <div data-bot-panel="plan" ${tab === 'plan' ? '' : 'hidden'}>
+        <div class="card" style="margin-top:16px">
+        <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:baseline"><h2 style="font-size:18px">The plan</h2><span class="small">${ran ? `${ready} of ${items.length} posts ready · prepared ${esc(new Date(plan.generatedAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }))}` : 'Not prepared yet'}</span></div>
+        ${ran && items.length ? `<p class="small" style="margin-top:6px">Open a campaign to see its files, prompts and the post prepared for each channel. A post is ready only when its campaign has both approvals and every check passes.</p>
+        <div class="planbar"><div class="filters"><button type="button" data-bot-filter="all" class="${filter === 'all' ? 'on' : ''}">All ${camps.length}</button>${count('files') ? `<button type="button" data-bot-filter="files" class="${filter === 'files' ? 'on' : ''}">Needs files ${count('files')}</button>` : ''}${count('held') ? `<button type="button" data-bot-filter="held" class="${filter === 'held' ? 'on' : ''}">Held back ${count('held')}</button>` : ''}${count('ready') ? `<button type="button" data-bot-filter="ready" class="${filter === 'ready' ? 'on' : ''}">Ready ${count('ready')}</button>` : ''}</div>
+        <button type="button" class="btn ghost smallbtn" data-bot-expand>${shown.length && shown.every(c => openCamps.has(c.p.id)) ? 'Collapse all' : 'Expand all'}</button></div>` : ''}
+        ${list}
+        </div>
+      </div>
+      <div data-bot-panel="setup" ${tab === 'setup' ? '' : 'hidden'}>
+        <div class="card" style="margin-top:16px">
+        <h2 style="font-size:18px">Setup</h2><p class="small" style="margin-top:6px">Changes apply the next time the bots run.</p>
         <div class="setup">
           <div><label class="h">Also post each campaign to</label><div class="chs">${CHANNELS.map(c => `<label><input type="checkbox" data-bot-ch="${c[0]}" ${settings.channels.includes(c[0]) ? 'checked' : ''}> ${esc(c[1])}</label>`).join('')}</div><div class="small" style="margin-top:4px">A campaign always goes to its own channel as well.</div></div>
           <div><label class="h" for="rshBotTimes">Posting times, US Eastern</label><input type="text" id="rshBotTimes" value="${esc(settings.times.map(t => t + (settings.labels && settings.labels[t] ? ' ' + settings.labels[t] : '')).join(', '))}" size="38" placeholder="12:00 lunch break, 18:00 after practice"><div class="small" style="margin-top:4px">24-hour time, then an optional name. Separate slots with commas.</div></div>
           <div><label class="h" for="rshBotDays">Look ahead</label><select id="rshBotDays">${[7, 14, 21, 30].map(n => `<option value="${n}" ${settings.days === n ? 'selected' : ''}>${n} days</option>`).join('')}</select></div>
         </div>
-        ${note ? `<div class="hint" role="status" style="margin-top:12px">${esc(note)}</div>` : ''}
-        ${log.length ? `<div class="log" role="status"><div class="log-h"><strong>Bot log</strong><span class="small">latest run${plan ? ' · ' + esc(new Date(plan.generatedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })) : ''}</span></div>${log.map(l => { const m = TEAM.find(t => t[0] === l[0]) || TEAM[0]; return `<div class="log-row"><span class="log-av">${botSvg(m[3], l[0] === 'courier' ? 'asleep' : 'happy')}</span><div><strong>${esc(m[1])}</strong> <span class="small">${esc(m[2])}</span><div>${esc(l[1])}</div></div></div>`; }).join('')}</div>` : ''}
-      </div>
-      <div class="card" style="margin-top:16px">
-        <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:baseline"><h2 style="font-size:18px">The plan</h2><span class="small">${ran ? `${ready} of ${items.length} posts ready · prepared ${esc(new Date(plan.generatedAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }))}` : 'Not prepared yet'}</span></div>
-        ${ran && items.length ? '<p class="small" style="margin-top:6px">A post is ready only when its campaign has both approvals and every check passes. Until the Posting Bot is switched on, use Copy to paste a ready post into Metricool yourself.</p>' : ''}
-        ${list}
+        <div class="offnote"><strong>Not switched on yet</strong><div class="small" style="margin-top:4px">Courier (sending ready posts to Metricool as drafts for review) and Night Owl (running the team every day by itself). Each needs your explicit go-ahead.</div></div>
+        </div>
       </div>`;
   }
 
   function find(key) { return ((plan && plan.items) || []).find(i => i.postId + '|' + i.channel === key); }
   async function onClick(e) {
+    const tb = e.target.closest('[data-bot-tab]'); if (tb) { tab = tb.dataset.botTab; return render(); }
+    const fl = e.target.closest('[data-bot-filter]'); if (fl) { filter = fl.dataset.botFilter; return render(); }
+    if (e.target.closest('[data-bot-expand]')) { const ids = [...document.querySelectorAll('#rshBots details.camp')].map(d => d.dataset.botCamp), all = ids.length && ids.every(i => openCamps.has(i)); for (const i of ids) { if (all) openCamps.delete(i); else openCamps.add(i); } return render(); }
     if (e.target.closest('[data-bot-choose]')) { const f = document.querySelector('#rshBots [data-bot-file]'); if (f) f.click(); return; }
     if (e.target.closest('[data-bot-run]')) { if (busy) return; return work('You pressed Run everything.'); }
     const ed = e.target.closest('[data-bot-edit]'); if (ed) { openItem = ed.dataset.botEdit; return render(); }
@@ -428,6 +475,7 @@
     const view = document.getElementById('view-bots'); if (!view || !app() || !app().track || document.getElementById('rshBots')) return;
     const host = document.createElement('div'); host.id = 'rshBots'; view.appendChild(host);
     host.addEventListener('click', onClick); host.addEventListener('change', onChange);
+    host.addEventListener('toggle', e => { const d = e.target; if (d && d.matches && d.matches('details.camp')) { if (d.open) openCamps.add(d.dataset.botCamp); else openCamps.delete(d.dataset.botCamp); } }, true);
     const zone = e => e.target.closest && e.target.closest('[data-bot-drop]'), files = dt => [...((dt && dt.files) || [])].filter(f => /^(image\/(png|jpeg|webp)|video\/(mp4|webm))$/.test(f.type));
     host.addEventListener('dragover', e => { const z = zone(e); if (z) { e.preventDefault(); z.classList.add('over'); } });
     host.addEventListener('dragleave', e => { const z = zone(e); if (z) z.classList.remove('over'); });
