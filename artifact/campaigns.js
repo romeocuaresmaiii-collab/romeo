@@ -11,7 +11,7 @@
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const fmt = n => Math.round(n).toLocaleString('en-US');
   const app = () => window.RSH_APP, rows = () => (window.RSH_LIVE && window.RSH_LIVE.rows()) || [];
-  let showAll = false;
+  let showAll = false, tableOpen = false;
 
   const css = document.createElement('style');
   css.textContent = `
@@ -116,7 +116,7 @@
       <h2 style="margin-top:6px">What each campaign achieved</h2>
       <p style="margin-top:6px">Link a campaign to the post that went out, and its results follow it. ${linked.length} of ${posts.length} campaign${posts.length === 1 ? '' : 's'} linked.</p>
       ${!measured.length && posts.length ? '<div class="empty" style="margin-top:12px"><strong>No results by sport, audience or season yet.</strong><br>They appear here as soon as one campaign is linked to a published post that has figures. Campaigns planned for a future date can be linked after they go out.</div>' : byTag}
-      ${body}
+      <details id="rshCampTable" ${tableOpen ? 'open' : ''} style="margin-top:12px"><summary style="cursor:pointer;font-size:13px;font-weight:700;color:#0066cc">Link campaigns to published posts</summary>${body}</details>
       <div class="small" style="margin-top:10px">Season phase follows a typical US school season for the sport and can differ by state. Results are the figures Metricool reports for the linked post and update when the numbers are refreshed.</div>`;
   }
 
@@ -130,6 +130,7 @@
       const u = e.target.closest('[data-unlink]'); if (u) return unlink(u.dataset.unlink);
       if (e.target.closest('[data-toggle-all]')) { showAll = !showAll; render(); }
     });
+    card.addEventListener('toggle', e => { if (e.target.id === 'rshCampTable') tableOpen = e.target.open; }, true);
     if (window.RSH_LIVE && window.RSH_LIVE.onData) window.RSH_LIVE.onData(() => { syncResults(); render(); });
     document.querySelectorAll('.nav button[data-view="overview"]').forEach(b => b.addEventListener('click', () => setTimeout(render, 0)));
     render();

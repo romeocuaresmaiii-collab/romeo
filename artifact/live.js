@@ -55,6 +55,8 @@
   .rsh-live .brief-item:first-of-type{border-top:0}
   .rsh-live .brief-tag{flex:none;width:92px;font-size:10.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;padding:3px 0;border-radius:6px;text-align:center;margin-top:1px}
   .rsh-live .brief-tag.good{background:#eaf7ee;color:#1a7f37}.rsh-live .brief-tag.act{background:#fff3e0;color:#b45309}.rsh-live .brief-tag.info{background:#f0f0f3;color:#515154}
+  .rsh-live .live-detail{margin-top:16px}
+  .rsh-live .live-detail>summary{cursor:pointer;font-size:13px;font-weight:700;color:#0066cc;padding:6px 0}
   .rsh-live .live-foot{margin-top:12px;font-size:11.5px;color:#6e6e73;line-height:1.5}`;
   document.head.appendChild(css);
 
@@ -205,7 +207,9 @@
 
   const listeners = [];
   function render() { document.querySelectorAll('.rsh-live').forEach(renderInto); for (const fn of listeners) { try { fn(); } catch (_) {} } }
+  const detailOpen = {};
   function renderInto(host) {
+    if (!(host.id in detailOpen)) detailOpen[host.id] = host.id !== 'rshLive';
     const when = state.fetchedAt ? new Date(state.fetchedAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
     let body;
     if (!state.rows) {
@@ -226,6 +230,7 @@
         <div class="live-tile"><div class="small">Interactions per 100 impressions</div><div class="n">${er === null ? '—' : er.toFixed(1)}</div>${erPrev === null ? '<span class="delta flat">no earlier data to compare</span>' : `<span class="small">previous ${DAYS} days: ${erPrev.toFixed(1)}</span>`}</div>
       </div>
       ${bestText ? `<div class="insight">${bestText}</div>` : ''}
+      <details class="live-detail" ${detailOpen[host.id] ? 'open' : ''}><summary>Channels, top posts, followers, schedule, comments and links</summary>
       <div class="live-grid">
         <div class="live-box"><h3>By channel · last ${DAYS} days</h3><div class="scroll"><table>
           <thead><tr><th>Channel</th><th>Posts</th><th>Impressions</th><th>vs prev.</th><th>Interactions</th></tr></thead>
@@ -236,6 +241,7 @@
       ${(state.followers && state.followers.length) || state.scheduled ? `<div class="live-grid">${followersBox()}${scheduledBox()}</div>` : ''}
       ${(() => { const boxes = replyBox() + linkBox(s); return boxes ? `<div class="live-grid">${boxes}</div>` : ''; })()}
       ${rivalBox() ? `<div class="live-grid" style="grid-template-columns:minmax(0,1fr)">${rivalBox()}</div>` : ''}
+      </details>
       <div class="live-foot">Period: ${esc(shortDate(dayKey(s.w.curFrom)))} – ${esc(shortDate(dayKey(s.w.curTo)))}, compared with ${esc(shortDate(dayKey(s.w.prevFrom)))} – ${esc(shortDate(dayKey(s.w.prevTo)))}. Impressions and interactions are per-post figures exactly as Metricool reports them${unmeasured ? `; ${unmeasured} post${unmeasured === 1 ? '' : 's'} (mostly Stories and very recent posts) have no figures yet and are counted as published only` : ''}. Website sales are not included here.</div>`;
     }
     host.innerHTML = `
@@ -245,6 +251,7 @@
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="tag ${state.rows ? 'good' : 'warn'}" data-live-stamp>${state.busy ? 'Refreshing…' : when ? 'Updated ' + esc(when) : 'Not loaded'}</span>${canRefresh ? `<button class="btn smallbtn" data-live-refresh type="button" ${state.busy ? 'disabled' : ''}>↻ Refresh from Metricool</button>` : ''}</div>
       </div>
       ${state.note ? `<div class="hint" role="status" style="margin-top:12px">${esc(state.note)}</div>` : ''}${body}`;
+    const det = host.querySelector('.live-detail'); if (det) det.addEventListener('toggle', () => { detailOpen[host.id] = det.open; });
     const btn = host.querySelector('[data-live-refresh]'); if (btn) btn.addEventListener('click', () => refresh(true));
     const copy = host.querySelector('[data-live-copy]');
     if (copy) copy.addEventListener('click', () => {

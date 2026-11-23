@@ -1,0 +1,11 @@
+RSH SPORTS MARKETING OS — artifact edition, build 17
+
+A shorter Home
+- Quick actions at the top: Create a post, Reviews (with the number waiting), Calendar, Insights,
+  Executive Brief.
+- The live panel shows the brief, four headline figures and the strongest format; channel detail
+  opens on demand (it stays open on the Executive Brief).
+- The campaign pipeline lists the first five campaigns with a "Show all" control.
+- Campaign results show the summary; the linking table opens on demand.
+- Getting started, today at a glance, priorities and the extended dashboard are under "More on Home".
+Nothing was removed. Home is roughly 40% of its previous length.

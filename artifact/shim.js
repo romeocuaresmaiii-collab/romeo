@@ -471,7 +471,7 @@
     [db, assets, downloads] = await Promise.all([use('db'), use('assets'), use('downloads')]);
     const source = await hydrate();
     loading.remove();
-    try { window.__rshBoot(); if (window.RSH_LIVE) window.RSH_LIVE.start(); if (window.RSH_SCORE) window.RSH_SCORE.start(); if (window.RSH_CAMPAIGNS) window.RSH_CAMPAIGNS.start(); if (window.RSH_EXPERIMENTS) window.RSH_EXPERIMENTS.start(); if (window.RSH_SIGNOFF) window.RSH_SIGNOFF.start(); if (window.RSH_CALENDAR) window.RSH_CALENDAR.start(); } catch (e) { if (window.RSH_DIAGNOSTICS) window.RSH_DIAGNOSTICS.report('startup', e); throw e; }
+    try { window.__rshBoot(); if (window.RSH_LIVE) window.RSH_LIVE.start(); if (window.RSH_SCORE) window.RSH_SCORE.start(); if (window.RSH_CAMPAIGNS) window.RSH_CAMPAIGNS.start(); if (window.RSH_EXPERIMENTS) window.RSH_EXPERIMENTS.start(); if (window.RSH_SIGNOFF) window.RSH_SIGNOFF.start(); if (window.RSH_CALENDAR) window.RSH_CALENDAR.start(); if (window.RSH_HOME) window.RSH_HOME.start(); } catch (e) { if (window.RSH_DIAGNOSTICS) window.RSH_DIAGNOSTICS.report('startup', e); throw e; }
     watchTeam();
     if (source === 'cloud') pill('saved', 'Saved · team copy up to date');
     else if (source === 'browser') pill('error', 'Saved in this browser only');
