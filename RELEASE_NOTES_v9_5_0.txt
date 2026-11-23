@@ -1,0 +1,14 @@
+RSH SPORTS MARKETING OS — v9.5.0
+
+Artifact edition: signed final approval
+- The workspace owner registers one person as the final approver (Reviews, "Signed final approval").
+- When that person presses Approve from their own Claude account, a sign-off is stored under their
+  identity. The artifact's access rules let nobody else, the owner included, write or alter it.
+- The sign-off carries a fingerprint of the campaign's text and attachments. If either changes
+  afterwards, the signature stops counting and a new one is needed.
+- The same conditions as before apply: manager review first, current media with five visual checks.
+- The older typed-in approval still works and is labelled as not verified.
+- Experiments can be filled from two published posts; campaigns can be linked to published posts.
+
+Limits: a signature proves which Claude account approved, not who was at the keyboard. Anyone able
+to republish the page could change the rules. Nothing is scheduled or published by an approval.

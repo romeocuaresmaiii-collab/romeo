@@ -6,12 +6,13 @@ const http = require('http'); const fs = require('fs'); const path = require('pa
 const DIST = path.join(__dirname, 'dist'); const SHOTS = process.argv[2] || '';
 const page0 = fs.readFileSync(path.join(DIST, 'RSH Sports Marketing OS.html'), 'utf8');
 const seed = fs.existsSync(path.join(DIST, 'seed.json')) ? fs.readFileSync(path.join(DIST, 'seed.json'), 'utf8') : 'null';
-const mock = `<script>(function(){const store={'live/comments':{fetchedAt:new Date().toISOString(),posts:JSON.stringify([['INSTAGRAM',Number(new Date().toISOString().slice(0,10).replace(/-/g,'')),'https://www.instagram.com/p/x/','Coach question post',3],['TIKTOK',20200101,'https://www.tiktok.com/x','Older clip',2]])}};const seed=${seed};if(seed&&!location.search.includes('empty'))store['workspace/main']=seed;window.__store=store;window.__saves=[];window.__uploads=[];
+const mock = `<script>(function(){const store={'live/comments':{fetchedAt:new Date().toISOString(),posts:JSON.stringify([['INSTAGRAM',Number(new Date().toISOString().slice(0,10).replace(/-/g,'')),'https://www.instagram.com/p/x/','Coach question post',3],['TIKTOK',20200101,'https://www.tiktok.com/x','Older clip',2]])}};const seed=${seed};if(seed&&!location.search.includes('empty'))store['workspace/main']=seed;Object.assign(store,window.__preStore||{});window.__store=store;window.__saves=[];window.__uploads=[];
 const snap=(p)=>({id:p.split('/').pop(),exists:p in store,data:()=>store[p],metadata:{fromCache:false,hasPendingWrites:false}});
 const doc=p=>({id:p.split('/').pop(),path:p,get:async()=>snap(p),set:async d=>{store[p]=JSON.parse(JSON.stringify(d))},update:async d=>{Object.assign(store[p],d)},delete:async()=>{delete store[p]}});window.__RSH_TEST_PART_BYTES=40000;
 const coll=(c,o)=>({orderBy:(f,dir)=>coll(c,{...o,f,dir}),limit:n=>coll(c,{...o,n}),where:()=>coll(c,o),doc:id=>doc(c+'/'+id),get:async()=>{let ds=Object.keys(store).filter(k=>k.startsWith(c+'/')).map(snap);if(o&&o.f)ds.sort((a,b)=>(a.data()[o.f]-b.data()[o.f])*(o.dir==='desc'?-1:1));if(o&&o.n)ds=ds.slice(0,o.n);return{docs:ds,size:ds.length,empty:!ds.length}}});
 const caps={db:{doc,collection:c=>coll(c,{})},assets:{upload:async(b,o)=>{if(location.search.includes('hang'))return new Promise(()=>{});if(location.search.includes('refuse'))throw {code:'not_granted',message:'test'};const id=[...crypto.getRandomValues(new Uint8Array(16))].map(x=>x.toString(16).padStart(2,'0')).join('');window.__uploads.push({id,size:b.size,type:o&&o.type});await fetch('/__put/'+id,{method:'POST',body:b});return{id,url:'/_blob/'+id,sizeBytes:b.size,contentType:o.type}},list:async()=>({assets:window.__uploads.map(u=>({id:u.id})),usage:{}})},downloads:{save:async r=>{window.__saves.push({filename:r.filename,size:(r.data.size||r.data.length)});return{status:'saved'}}}};
 const day=n=>{const d=new Date();d.setDate(d.getDate()-n);return String(d.getFullYear()*10000+(d.getMonth()+1)*100+d.getDate())+'230000'};
+const who=(location.search.match(/as=([a-z_]+)/)||[])[1]||'u_owner';caps.user={id:async()=>who,isOwner:async()=>who==='u_owner',canEdit:async()=>who==='u_owner',profiles:async ids=>Object.fromEntries(ids.map(i=>[i,{id:i,name:i==='u_owner'?'Test Owner':i==='u_anthony'?'Anthony Test':''}]))};
 caps.mcp={callTool:async(server,tool,input)=>{window.__mcpCalls=(window.__mcpCalls||[]).concat([{server,tool,input}]);if(location.search.includes('nometricool'))throw {code:'server_not_connected'};
 if(tool==='getScheduledPosts'){const t=new Date();t.setDate(t.getDate()+1);const dt=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0')+'T18:00:00';return {payload:{data:[{publicationDate:{dateTime:dt},text:'Every champion has someone',providers:[{network:'instagram'},{network:'tiktok'}],instagramData:{type:'REEL'},facebookData:{title:'The Round Nobody Claps For'},draft:false}]}}}
 if(input.metrics[0]==='IGEV01'){return {payload:{rows:[['55.0','60.0','30.0','36.0','11.0','9.0','26.0',day(27).slice(0,8)],['55.0','69.0','38.0','36.0',null,null,'28.0',day(0).slice(0,8)],['55.0','70.0','37.0','36.0','13.0','9.0','28.0',day(1).slice(0,8)]]}}}
@@ -148,6 +149,32 @@ const out = []; const ok = (n, c, d) => { out.push(c); console.log((c ? 'PASS  '
   ok('A video over the single-file limit is stored in parts', !!big && Array.isArray(big.parts) && big.parts.length >= 3, big ? big.parts.length + ' parts' : (await p.textContent('#visualUploadMsg')).slice(0, 140));
   const same = big && await p.evaluate(async () => { const v = [...document.querySelectorAll('video')].find(x => (x.getAttribute('src') || '').startsWith('blob:')); if (!v) return 'no player with joined video'; const b = new Uint8Array(await (await fetch(v.src)).arrayBuffer()); return b.length === 130000 && b.reduce((a, c) => (a + c) % 1000000007, 0) === window.__bigSum ? true : 'bytes differ: ' + b.length; });
   ok('The parts are joined back into the identical file for the player', same === true, String(same));
+  // signed final approval
+  await p.evaluate(() => document.querySelector('[data-view="approvals"]').click());
+  await p.click(`[data-review-select="${withMedia}"]`); await p.waitForSelector('#rshSign');
+  await p.waitForFunction(() => /No final approver is registered yet/.test(document.getElementById('rshSign').textContent));
+  await p.evaluate(() => { window.__store['signoffs/u_anthony'] = { requestedAt: new Date().toISOString() }; });
+  await p.click('#rshSign [data-sign-register="u_owner"]');
+  await p.waitForFunction(() => /Final approver: Test Owner \(you\)/.test((document.getElementById('rshSign') || {}).textContent || ''));
+  const s1 = await p.evaluate(() => ({ text: document.getElementById('rshSign').textContent, cfg: window.__store['config/approver'], disabled: !!document.querySelector('#rshSign button[disabled]') }));
+  ok('The owner can register a final approver, and signing stays blocked until manager review', s1.cfg && s1.cfg.userId === 'u_owner' && /Manager review must be completed first/.test(s1.text) && s1.disabled);
+  for (const c of ['reviewCheckAssets', 'reviewCheckFacts', 'reviewCheckRights', 'reviewCheckPlatform']) await p.check('#' + c);
+  await p.click('#reviewApprove'); await p.waitForSelector('#rshSign [data-sign-approve]');
+  await p.click('#rshSign [data-sign-approve]');
+  await p.waitForFunction(() => /Signed by Test Owner/.test((document.getElementById('rshSign') || {}).textContent || ''), null, { timeout: 8000 });
+  const s2 = await p.evaluate(id => { const ws = JSON.parse(localStorage.getItem('rsh_growth_command_v1')), q = ws.posts.find(x => x.id === id); return { sig: window.__store['signoffs/u_owner/posts/' + id], status: q.status, by: q.approvalMeta.signedBy, log: ws.approvalLog[0].action }; }, withMedia);
+  ok('The approver’s own click writes a signature under their identity and approves the campaign', !!s2.sig && /^[0-9a-f]{64}$/.test(s2.sig.hash) && s2.status === 'Approved' && s2.by === 'Test Owner' && /signed from the approver/.test(s2.log), JSON.stringify(s2).slice(0, 200));
+  const other = await b.newPage({ viewport: { width: 1300, height: 900 } });
+  other.on('pageerror', e => errs.push(e.message));
+  await other.addInitScript(s => { window.__preStore = s; }, await p.evaluate(() => window.__store));
+  await other.goto('http://127.0.0.1:8792/?as=u_maxine');
+  await other.waitForFunction(() => /Connected|mismatch|verified/.test(document.getElementById('rshBuildLabel').textContent) && !document.getElementById('rshHostLoading'));
+  await other.evaluate(() => document.querySelector('[data-view="approvals"]').click());
+  await other.click(`[data-review-select="${withMedia}"]`).catch(() => {});
+  await other.waitForTimeout(600);
+  ok('Other people see who the approver is but get no approve button', await other.evaluate(() => { const b = document.getElementById('rshSign'); return !!b && /Signed by Test Owner/.test(b.textContent) && !b.querySelector('[data-sign-approve]') && !b.querySelector('[data-sign-register]'); }), await other.evaluate(() => (document.getElementById('rshSign') || {}).textContent || 'no box').then(t => t.slice(0, 140)));
+  await other.close();
+
   // file store unavailable -> files are saved through the database instead
   for (const mode of ['refuse', 'noassets']) {
     const f = await open(1300, 900, '?' + mode);
