@@ -1,0 +1,32 @@
+RSH SPORTS MARKETING OS — v9.0.8
+
+Stabilisation release. No features removed, no data format changes, nothing published or sent.
+
+Fixes
+- Sidebar footer showed "V9.0.2" while the header showed the real build; all visible version labels now agree.
+- Server start-up banner and port messages now show the real version and port.
+- Restore then save: after restoring a complete ZIP on a computer that already had Data Vault
+  revisions, "Save current workspace to Vault" was refused. The restored workspace now continues
+  from the latest Vault revision, so saving ADDS a new revision and earlier revisions are kept.
+  Restore still never writes to the Vault by itself; the status message now says so and names the next step.
+- Vault location text no longer says "Mac" when the server runs on another system.
+- Removed a duplicate origin check in the server (the same check already runs for every POST).
+- The server no longer waits for keyboard input when started without a terminal.
+
+For development and testing only (defaults unchanged)
+- RSH_DATA_DIR: use a separate data folder instead of the normal app-support folder.
+- RSH_PORT: use a port other than 8765.
+- RSH_NO_BROWSER=1: do not open a browser window on start.
+
+Automated acceptance checks (new)
+- tests/acceptance.js starts its own server on a spare port with a throw-away data folder and
+  checks: version labels, logo, every view opening, origin/host guards, media type validation,
+  complete ZIP restore, media display in Reviews, approval guards, Vault save/conflict, backup
+  export round-trip and video range requests.
+- Run: node tests/acceptance.js path/to/RSH_Sports_Complete_Backup.zip
+
+Not covered yet by automated checks
+- Creating a new draft in Create, attaching a video, the five visual-quality checks, and the full
+  manager-pass -> Anthony-confirmation path with real media.
+
+Limits unchanged: local approvals are not authenticated; no live Metricool sync; no publishing.

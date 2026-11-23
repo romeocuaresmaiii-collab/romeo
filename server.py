@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """RSH Sports local-only workspace server. Serves index.html and a separate cloud-auth pilot."""
 import base64
+import os
 import hashlib
 import io
 import tempfile
@@ -15,7 +16,6 @@ from datetime import datetime, timezone
 from urllib.parse import urlsplit, parse_qs, unquote
 import json
 import re
-import os
 from pathlib import Path
 import sys
 import threading
@@ -26,14 +26,15 @@ from urllib.request import Request, urlopen
 
 BASE = Path(__file__).resolve().parent
 HOST = '127.0.0.1'
-PORT = 8765
-APP_VERSION = '9.0.7'
+PORT = int(os.environ.get('RSH_PORT', '8765'))
+APP_VERSION = '9.0.8'
 MODEL = os.environ.get('OPENAI_MODEL', 'gpt-6-luna')
 API_KEY = ''
 MAX_PROMPT = 24000
 MAX_BODY = 36000
 MAX_VAULT_BODY = 3_000_000
-VAULT_HOME = (Path.home() / 'Library' / 'Application Support' / 'RSH Sports Growth Command Center') if sys.platform == 'darwin' else (Path.home() / '.local' / 'share' / 'rsh-sports-growth')
+# v9.0.8: RSH_DATA_DIR lets tests/dev copies use an isolated folder; default location is unchanged.
+VAULT_HOME = Path(os.environ['RSH_DATA_DIR']).expanduser().resolve() if os.environ.get('RSH_DATA_DIR') else (Path.home() / 'Library' / 'Application Support' / 'RSH Sports Growth Command Center') if sys.platform == 'darwin' else (Path.home() / '.local' / 'share' / 'rsh-sports-growth')
 VAULT_DB = VAULT_HOME / 'workspace.sqlite3'
 ASSET_DIR = VAULT_HOME / 'creative_assets'
 MAX_ASSET_BODY = 11_000_000
@@ -116,7 +117,7 @@ def vault_connect():
 def vault_status():
     with VAULT_LOCK, closing(vault_connect()) as con:
         rows=con.execute('SELECT revision,created,length(content) FROM snapshots ORDER BY revision DESC LIMIT 12').fetchall()
-    return {'available':True,'latestRevision':rows[0][0] if rows else 0,'updatedAt':rows[0][1] if rows else None,'revisions':[{'revision':v,'at':dt,'bytes':n} for v,dt,n in rows], 'location':'Mac local app-support folder; not cloud storage'}
+    return {'available':True,'latestRevision':rows[0][0] if rows else 0,'updatedAt':rows[0][1] if rows else None,'revisions':[{'revision':v,'at':dt,'bytes':n} for v,dt,n in rows], 'location':('Mac local app-support folder' if sys.platform=='darwin' else 'Local app data folder on this computer')+'; not cloud storage'}
 
 def vault_read(version=None):
     with VAULT_LOCK, closing(vault_connect()) as con:
@@ -512,8 +513,6 @@ class Handler(BaseHTTPRequestHandler):
         origin=self.headers.get('Origin','')
         if origin not in (f'http://{HOST}:{PORT}', f'http://localhost:{PORT}'):
             return self._json(403, {'error':'This endpoint only accepts local app requests.'})
-        if self.command == 'POST' and self.path == '/api/vault/save' and not self.headers.get('Origin','') in (f'http://{HOST}:{PORT}', f'http://localhost:{PORT}'):
-            return self._json(403, {'error':'Local browser origin required.'})
         if self.path in ('/api/backup/check','/api/backup/export'):
             try:
                 if not self.headers.get('Content-Type','').lower().startswith('application/json'):
@@ -645,24 +644,24 @@ class Handler(BaseHTTPRequestHandler):
 
 def main():
     global API_KEY
-    print('\nRSH SPORTS MARKETING OS v9.0 — SMART GROWTH LOOP\n')
-    print('The app runs only on this computer: http://127.0.0.1:8765')
+    print(f'\nRSH SPORTS MARKETING OS v{APP_VERSION}\n')
+    print(f'The app runs only on this computer: http://{HOST}:{PORT}')
     print('Your API key is never saved to a file, sent to the browser, or shared with other users.')
     print('You can press Enter to use the free app without live AI.\n')
     API_KEY=os.environ.get('OPENAI_API_KEY','').strip()
-    if not API_KEY:
+    if not API_KEY and sys.stdin and sys.stdin.isatty():
         try:API_KEY=getpass.getpass('OpenAI API key (optional, hidden; press Enter to skip): ').strip()
         except (EOFError,KeyboardInterrupt):API_KEY=''
     try:
         server=ThreadingHTTPServer((HOST,PORT),Handler)
     except OSError:
-        print('\nPort 8765 is already used. Close your earlier RSH launcher window and try again.')
-        input('Press Enter to exit...')
+        print(f'\nPort {PORT} is already used. Close your earlier RSH launcher window and try again.')
+        if sys.stdin and sys.stdin.isatty():input('Press Enter to exit...')
         return
     print('\nApp ready. AI status:', 'CONFIGURED (API usage may be billed)' if API_KEY else 'NOT CONFIGURED — free/manual mode')
     print('Local Data Vault:', VAULT_DB)
     print('Close this window or press Ctrl+C to stop.\n')
-    threading.Timer(0.8,lambda:webbrowser.open(f'http://{HOST}:{PORT}/')).start()
+    if not os.environ.get('RSH_NO_BROWSER'):threading.Timer(0.8,lambda:webbrowser.open(f'http://{HOST}:{PORT}/')).start()
     try:server.serve_forever()
     except KeyboardInterrupt:pass
     finally:server.server_close()
