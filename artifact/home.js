@@ -53,13 +53,12 @@
     const hero = home.querySelector(':scope > .card.hero'), cta = home.querySelector(':scope > .smart-home-cta');
     // 2. order: quick actions, live summary, campaigns needing a next step, campaign results, then everything else
     const live = document.getElementById('rshLive'), pipe = document.getElementById('productionPipeline'), camp = document.getElementById('rshCampaigns');
-    if (live && pipe) home.insertBefore(pipe, live.nextSibling);
-    if (camp && pipe) home.insertBefore(camp, pipe.nextSibling);
+    if (live && camp) home.insertBefore(camp, live.nextSibling);
     if (pipe) pipe.style.marginBottom = '16px';
     // 3. the rest goes behind one control
     const more = document.createElement('details'); more.id = 'rshHomeMore';
-    more.innerHTML = '<summary><span><strong>More on Home</strong><span class="small"> · getting started, today at a glance, priorities and the extended dashboard</span></span><span class="nav-caret">⌄</span></summary><div class="body"></div>';
-    const keep = new Set([bar, live, pipe, camp, more].filter(Boolean)), body = more.querySelector('.body');
+    more.innerHTML = '<summary><span><strong>More on Home</strong><span class="small"> · production pipeline board, getting started, today at a glance, priorities and the extended dashboard</span></span><span class="nav-caret">⌄</span></summary><div class="body"></div>';
+    const keep = new Set([bar, live, camp, more].filter(Boolean)), body = more.querySelector('.body');
     const rest = [...home.children].filter(el => !keep.has(el));
     home.appendChild(more); for (const el of rest) body.appendChild(el);
     if (hero) hero.style.marginBottom = '16px'; if (cta) cta.style.marginBottom = '16px';

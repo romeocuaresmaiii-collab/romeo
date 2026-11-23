@@ -1,0 +1,10 @@
+RSH SPORTS MARKETING OS — v9.8.0
+
+Artifact edition: campaign checklist on Home
+- One list of every campaign in a date range, grouped by day, with five steps per campaign
+  (Brief, Media, Visual checks, Manager review, Anthony approval) and one plain next step.
+- A button on each row opens the screen where that step is done.
+- Defaults to the next two weeks of campaigns; choose your own dates or a quick range.
+- Filter by status, and copy the list as text to share with the team.
+- Status is worked out from each campaign's real state with the app's existing rules.
+The older pipeline board is still available under "More on Home".

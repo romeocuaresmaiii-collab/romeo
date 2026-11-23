@@ -49,6 +49,7 @@ exper = (ROOT / 'artifact' / 'experiments.js').read_text(encoding='utf-8')
 signoff = (ROOT / 'artifact' / 'signoff.js').read_text(encoding='utf-8')
 cal = (ROOT / 'artifact' / 'calendar.js').read_text(encoding='utf-8')
 homejs = (ROOT / 'artifact' / 'home.js').read_text(encoding='utf-8')
+tracker = (ROOT / 'artifact' / 'tracker.js').read_text(encoding='utf-8')
 shim = once(shim, '__APP_VERSION__', version)
 shim = once(shim, '__BUNDLED_MEDIA__', json.dumps(bundled))
 shim = once(shim, '__WEEKLY_PACKS__', json.dumps(packs, ensure_ascii=False).replace('</', '<\\/'))
@@ -88,7 +89,7 @@ s = once(s, "const f=files[i];el('visualUploadMsg').textContent=`Uploading ${i+1
 s = once(s, "notice('Some uploads could not finish. Saved files were retained.');", "notice('Upload stopped: '+failed.message);")
 # 4. Wording that would be untrue here.
 s = once(s, f'<strong>LOCAL APP · V{version}</strong><div class="small">Activate the local Data Vault in Setup & Backup to preserve browser work. Export a backup before upgrading. Metricool is connected in ChatGPT only, not this local app.</div>',
-         f'<strong>ARTIFACT EDITION · V{version} · BUILD 18</strong><div class="small">Your workspace and uploaded media are saved automatically to this artifact’s private storage. Approvals are local records, not authenticated. No Metricool sync or publishing.</div>')
+         f'<strong>ARTIFACT EDITION · V{version} · BUILD 19</strong><div class="small">Your workspace and uploaded media are saved automatically to this artifact’s private storage. Approvals are local records, not authenticated. No Metricool sync or publishing.</div>')
 s = once(s, "'Use python3 server.py in the extracted v%s folder, then open http://127.0.0.1:8765. Buttons and media uploads require the local server.'" % version, "'Open this page from your Claude artifacts.'")
 
 for old, new in (('Local editorial plans are separate from the read-only Metricool monthly archive.', 'Team plans, with what is scheduled and published in Metricool.'), ('Metricool connected to ChatGPT only', 'Live results from Metricool'), ('Local workspace · demo/pilot', 'RSH Sports workspace')):
@@ -97,7 +98,7 @@ for old, new in (('Local editorial plans are separate from the read-only Metrico
 
 # Live results panel (artifact edition only) loads before the host layer starts the app.
 assert s.count('<script>\n' + shim) == 1
-s = s.replace('<script>\n' + shim, '<script>\n' + live + '\n</script>\n<script>\n' + score + '\n</script>\n<script>\n' + camp + '\n</script>\n<script>\n' + exper + '\n</script>\n<script>\n' + signoff + '\n</script>\n<script>\n' + cal + '\n</script>\n<script>\n' + homejs + '\n</script>\n<script>\n' + shim)
+s = s.replace('<script>\n' + shim, '<script>\n' + live + '\n</script>\n<script>\n' + score + '\n</script>\n<script>\n' + camp + '\n</script>\n<script>\n' + exper + '\n</script>\n<script>\n' + signoff + '\n</script>\n<script>\n' + cal + '\n</script>\n<script>\n' + homejs + '\n</script>\n<script>\n' + tracker + '\n</script>\n<script>\n' + shim)
 
 (OUT / 'RSH Sports Marketing OS.html').write_text(s, encoding='utf-8')
 print('built', len(s), 'bytes; bundled media:', len(bundled), '; weekly packs:', len(packs))
