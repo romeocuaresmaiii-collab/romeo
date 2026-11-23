@@ -394,7 +394,7 @@
     [db, assets, downloads] = await Promise.all([use('db'), use('assets'), use('downloads')]);
     const source = await hydrate();
     loading.remove();
-    try { window.__rshBoot(); } catch (e) { if (window.RSH_DIAGNOSTICS) window.RSH_DIAGNOSTICS.report('startup', e); throw e; }
+    try { window.__rshBoot(); if (window.RSH_LIVE) window.RSH_LIVE.start(); } catch (e) { if (window.RSH_DIAGNOSTICS) window.RSH_DIAGNOSTICS.report('startup', e); throw e; }
     if (source === 'cloud') pill('saved', 'Saved to this artifact');
     else if (source === 'browser') pill('error', 'Saved in this browser only');
     else if (source === 'unreachable') pill('error', 'Storage not reached: showing this browser’s copy');

@@ -1,0 +1,18 @@
+RSH SPORTS MARKETING OS — v9.1.0
+
+Easier to find things
+- "More tools" is grouped by purpose: Plan, Results, Competition, For Anthony, System.
+- Section labels no longer show build-history wording such as "STEP 12" or "V2.7".
+No screens or features were removed.
+
+Artifact edition (the copy opened from Claude)
+- Home opens with live results for RSH Sports from Metricool: posts published, impressions,
+  interactions and interactions per 100 impressions for the last 14 days against the 14 days
+  before, a per-channel table, the top five posts with links, and the strongest format.
+- Figures are per-post numbers exactly as Metricool reports them. Posts without figures yet are
+  counted as published only. Nothing is estimated. Read-only: nothing is scheduled or published.
+- The latest pull is saved in the artifact so it shows immediately on the next visit; it
+  refreshes on open when older than three hours, or on demand.
+- Attachments fall back to the artifact database when its file store is unavailable.
+
+Local Python app: no live Metricool connection (unchanged). Approvals remain local records.

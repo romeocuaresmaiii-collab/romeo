@@ -11,6 +11,10 @@ const snap=(p)=>({id:p.split('/').pop(),exists:p in store,data:()=>store[p],meta
 const doc=p=>({id:p.split('/').pop(),path:p,get:async()=>snap(p),set:async d=>{store[p]=JSON.parse(JSON.stringify(d))},update:async d=>{Object.assign(store[p],d)},delete:async()=>{delete store[p]}});window.__RSH_TEST_PART_BYTES=40000;
 const coll=(c,o)=>({orderBy:(f,dir)=>coll(c,{...o,f,dir}),limit:n=>coll(c,{...o,n}),where:()=>coll(c,o),doc:id=>doc(c+'/'+id),get:async()=>{let ds=Object.keys(store).filter(k=>k.startsWith(c+'/')).map(snap);if(o&&o.f)ds.sort((a,b)=>(a.data()[o.f]-b.data()[o.f])*(o.dir==='desc'?-1:1));if(o&&o.n)ds=ds.slice(0,o.n);return{docs:ds,size:ds.length,empty:!ds.length}}});
 const caps={db:{doc,collection:c=>coll(c,{})},assets:{upload:async(b,o)=>{if(location.search.includes('hang'))return new Promise(()=>{});if(location.search.includes('refuse'))throw {code:'not_granted',message:'test'};const id=[...crypto.getRandomValues(new Uint8Array(16))].map(x=>x.toString(16).padStart(2,'0')).join('');window.__uploads.push({id,size:b.size,type:o&&o.type});await fetch('/__put/'+id,{method:'POST',body:b});return{id,url:'/_blob/'+id,sizeBytes:b.size,contentType:o.type}},list:async()=>({assets:window.__uploads.map(u=>({id:u.id})),usage:{}})},downloads:{save:async r=>{window.__saves.push({filename:r.filename,size:(r.data.size||r.data.length)});return{status:'saved'}}}};
+const day=n=>{const d=new Date();d.setDate(d.getDate()-n);return String(d.getFullYear()*10000+(d.getMonth()+1)*100+d.getDate())+'230000'};
+caps.mcp={callTool:async(server,tool,input)=>{window.__mcpCalls=(window.__mcpCalls||[]).concat([{server,tool,input}]);if(location.search.includes('nometricool'))throw {code:'server_not_connected'};
+const rows=[];for(let i=0;i<28;i++){rows.push(['TIKTOK',day(i),'https://www.tiktok.com/x/'+i,'Clip '+i,String(i<14?200:100)+'.0',String(i<14?20:5)+'.0','VIDEO']);rows.push(['INSTAGRAM',day(i),'https://www.instagram.com/p/'+i,null,'50.0','2.0','IMAGE']);rows.push(['FACEBOOK',day(i),'https://facebook.com/s/'+i,null,null,null,'STORY'])}
+return {payload:{rows}}}};
 window.claude={use:async n=>(n==='assets'&&location.search.includes('noassets'))?null:(caps[n]||null)};})();</script>`;
 const wrap = `<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light}body{margin:0;font:14px system-ui}img{max-width:100%}[hidden]{display:none!important}</style></head><body>${mock}${page0}</body></html>`;
 const blobs = {};
@@ -33,6 +37,10 @@ const out = []; const ok = (n, c, d) => { out.push(c); console.log((c ? 'PASS  '
   ok('App starts and reports the right build', /Connected/.test(await p.textContent('#rshBuildLabel')), (await p.textContent('#rshBuildLabel')).trim());
   ok('Workspace loads from artifact storage', (await WS(p)).posts.length === 11, (await WS(p)).posts.length + ' campaigns');
   ok('Save status is shown', /Saved to this artifact/.test(await p.textContent('#rshSyncPill')), await p.textContent('#rshSyncPill'));
+  await p.waitForFunction(() => /Updated/.test((document.getElementById('rshLiveStamp') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});
+  const live = await p.evaluate(() => { const h = document.getElementById('rshLive'); return { text: h ? h.innerText : '', calls: window.__mcpCalls || [], saved: !!window.__store['live/metricool'] }; });
+  ok('Live results load from the Metricool connector and are saved', live.calls.length === 1 && live.calls[0].tool === 'getAnalyticsDataByMetrics' && live.calls[0].input.brandId === '5695688' && live.saved);
+  ok('Live totals are computed correctly (posts 42, impressions 3,500, interactions 308)', /\b42\b/.test(live.text) && /3,500/.test(live.text) && /\b308\b/.test(live.text) && /TikTok videos/.test(live.text), live.text.replace(/\s+/g, ' ').slice(140, 420));
   ok('Logo renders', await p.evaluate(() => [...document.images].some(i => /rsh_logo/.test(i.src) && i.naturalWidth > 0)));
   const views = await p.$$eval('[data-view]', e => [...new Set(e.map(x => x.dataset.view))].filter(v => /^[a-z]+$/.test(v)));
   const before = errs.length;
@@ -124,6 +132,10 @@ const out = []; const ok = (n, c, d) => { out.push(c); console.log((c ? 'PASS  '
     ok(`[${mode}] The stored video is byte-identical`, vidOk === true);
     await f.close();
   }
+  const nm = await open(1200, 800, '?empty&nometricool');
+  await nm.waitForTimeout(800);
+  ok('Without the connector the panel explains itself instead of showing numbers', await nm.evaluate(() => /not connected/.test(document.getElementById('rshLive').innerText) && /No live results loaded yet/.test(document.getElementById('rshLive').innerText)));
+  await nm.close();
   // phone width
   const m = await open(400, 800);
   const over = await m.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
