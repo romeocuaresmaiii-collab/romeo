@@ -16,7 +16,7 @@
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const fmt = n => Math.round(n).toLocaleString('en-US');
   const use = name => (window.claude && typeof window.claude.use === 'function') ? window.claude.use(name).catch(() => null) : Promise.resolve(null);
-  let db = null, canRefresh = false, state = { rows: null, fetchedAt: null, followers: null, scheduled: null, busy: false, note: '' };
+  let db = null, canRefresh = false, state = { rows: null, fetchedAt: null, followers: null, scheduled: null, comments: null, rivals: null, busy: false, note: '' };
 
   const css = document.createElement('style');
   css.textContent = `
@@ -155,6 +155,9 @@
         out.push([drafts.length || gapDays > 0 ? 'act' : 'good', 'Schedule', `${next.length} post${next.length === 1 ? '' : 's'} scheduled for the next 7 days.` + (drafts.length ? ` ${drafts.length} ${drafts.length === 1 ? 'is' : 'are'} still in draft and will not publish until finished (next: ${new Date(drafts[0][0] + ':00').toLocaleString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit' })} Eastern).` : '') + (gapDays > 0 ? ` The schedule ends on ${lastLabel}; nothing is planned after that yet.` : '')]);
       }
     }
+    if (state.comments && state.comments.length) { const n = state.comments.reduce((a, r) => a + (r[4] || 0), 0); out.push(['act', 'Replies', `${fmt(n)} comment${n === 1 ? '' : 's'} came in on ${state.comments.length} post${state.comments.length === 1 ? '' : 's'} in the last ${DAYS} days. Answering each one is the cheapest way to grow at this size.`]); }
+    const la = linkAudit(s);
+    if (la.store.length && la.untagged.length) out.push(['act', 'Tracking', `${la.untagged.length} of ${la.store.length} posts linking to rshsports.com carry no campaign tracking${la.home.length ? `, and ${la.home.length} point to the homepage` : ''}. Until links are tagged, store sales cannot be credited to social posts.`]);
     try {
       const ws = JSON.parse((window.RSH_HOST && window.RSH_HOST.read('rsh_growth_command_v1')) || '{}'), posts = Array.isArray(ws.posts) ? ws.posts : [];
       const mgr = posts.filter(p => p.status === 'Review' && !(p.approvalMeta && p.approvalMeta.pmReviewedAt)).length, ant = posts.filter(p => p.status === 'Review' && p.approvalMeta && p.approvalMeta.pmReviewedAt && !p.approvalMeta.anthonyConfirmedAt).length;
@@ -169,6 +172,35 @@
   }
   function briefText(s) {
     return `RSH Sports — social summary (${shortDate(dayKey(s.w.curFrom))} – ${shortDate(dayKey(s.w.curTo))})\n` + findings(s).map(i => `• ${i[1]}: ${i[2]}`).join('\n') + '\nSource: Metricool, updated ' + new Date(state.fetchedAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + '.';
+  }
+
+  // Outbound links: which published posts send people to the store without campaign tracking.
+  function linkAudit(s) {
+    const cf = dayKey(s.w.curFrom), ct = dayKey(s.w.curTo);
+    const store = state.rows.filter(r => r[1] >= cf && r[1] <= ct && /^https?:\/\/(www\.)?rshsports\.com/i.test(r[2]));
+    const untagged = store.filter(r => !/[?&]utm_/i.test(r[2])), home = store.filter(r => /^https?:\/\/(www\.)?rshsports\.com\/?(\?.*)?$/i.test(r[2]));
+    return { store, untagged, home };
+  }
+  function linkBox(s) {
+    const a = linkAudit(s); if (!a.store.length) return '';
+    const ok = !a.untagged.length;
+    const month = new Date().toISOString().slice(0, 7);
+    return `<div class="live-box"><h3>Link tracking · last ${DAYS} days</h3>
+      <div class="small" style="margin-bottom:8px">${a.store.length} published post${a.store.length === 1 ? '' : 's'} linked to rshsports.com.</div>
+      <div class="sched"><span class="when">${a.untagged.length} of ${a.store.length}</span><span><strong>${ok ? 'All links carry campaign tracking' : 'have no campaign tracking'}</strong><br><span class="small">${ok ? 'Visits from these posts can be told apart in store analytics.' : 'Visits from these posts cannot be told apart from any other visit, so sales cannot be credited to them.'}</span></span></div>
+      <div class="sched"><span class="when">${a.home.length} of ${a.store.length}</span><span><strong>point to the homepage</strong><br><span class="small">A product or collection page gives the visitor less to do before buying.</span></span></div>
+      ${ok ? '' : `<div class="small" style="margin-top:8px">Tagged link to use on Pinterest this month:</div><div class="sample" style="margin-top:4px;font-size:11.5px;word-break:break-all;user-select:all">https://www.rshsports.com/collections/wrestling?utm_source=pinterest&amp;utm_medium=organic_social&amp;utm_campaign=${esc(month)}</div><div class="small" style="margin-top:6px">Swap the collection and campaign name per post. Build others in Revenue &amp; ROI.</div>`}</div>`;
+  }
+  function replyBox() {
+    const c = state.comments; if (!c) return '';
+    const total = c.reduce((a, r) => a + (r[4] || 0), 0);
+    const list = c.slice().sort((a, b) => b[1] - a[1] || b[4] - a[4]).slice(0, 7).map(r => `<div class="top"><div class="what"><a href="${esc(/^https:\/\//.test(r[2]) ? r[2] : '#')}" target="_blank" rel="noopener noreferrer">${esc(r[3] || ((NETS[r[0]] || r[0]) + ' post'))}</a><span class="small">${esc(NETS[r[0]] || r[0])} · ${esc(shortDate(r[1]))}</span></div><div class="num">${fmt(r[4])} <span class="small">comment${r[4] === 1 ? '' : 's'}</span></div></div>`).join('');
+    return `<div class="live-box"><h3>Comments to answer · last ${DAYS} days</h3>${c.length ? `<div class="small" style="margin-bottom:4px">${fmt(total)} comment${total === 1 ? '' : 's'} on ${c.length} post${c.length === 1 ? '' : 's'}. Open each post to reply; this list cannot show whether a reply was already sent.</div>${list}${c.length > 7 ? `<div class="small" style="margin-top:6px">…and ${c.length - 7} more posts.</div>` : ''}` : '<div class="small">No comments were recorded on posts from this period.</div>'}</div>`;
+  }
+  function rivalBox() {
+    const r = state.rivals; if (!r || !r.length) return '';
+    const rows = r.slice().sort((a, b) => (b[2] || 0) - (a[2] || 0)).map(x => `<tr><td><strong>${esc(x[1])}</strong><div class="small">${esc(NETS[x[0]] || x[0])}</div></td><td>${x[2] == null ? '—' : fmt(x[2])}</td><td>${x[3] == null ? '—' : fmt(x[3])}</td><td>${x[4] == null ? '—' : fmt(x[4])}</td></tr>`).join('');
+    return `<div class="live-box"><h3>Competitors tracked in Metricool · last ${DAYS} days</h3><div class="scroll"><table><thead><tr><th>Account</th><th>Followers</th><th>Posts</th><th>Interactions</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
   }
 
   function render() { document.querySelectorAll('.rsh-live').forEach(renderInto); }
@@ -201,6 +233,8 @@
         <div class="live-box"><h3>Top posts · last ${DAYS} days</h3>${s.tops.length ? s.tops.map((r, i) => `<div class="top"><span class="rank">${i + 1}</span><div class="what"><a href="${esc(/^https:\/\//.test(r[2]) ? r[2] : '#')}" target="_blank" rel="noopener noreferrer">${esc(r[3] || ((NETS[r[0]] || r[0]) + ' ' + formatName(r[6])))}</a><span class="small">${esc(NETS[r[0]] || r[0])} · ${esc(formatName(r[6]))} · ${esc(shortDate(r[1]))}</span></div><div class="num">${fmt(r[5] || 0)} <span class="small">interactions</span><br><span class="small">${fmt(r[4])} impressions</span></div></div>`).join('') : '<div class="small">No measured posts in this period.</div>'}</div>
       </div>
       ${(state.followers && state.followers.length) || state.scheduled ? `<div class="live-grid">${followersBox()}${scheduledBox()}</div>` : ''}
+      ${(() => { const boxes = replyBox() + linkBox(s); return boxes ? `<div class="live-grid">${boxes}</div>` : ''; })()}
+      ${rivalBox() ? `<div class="live-grid" style="grid-template-columns:minmax(0,1fr)">${rivalBox()}</div>` : ''}
       <div class="live-foot">Period: ${esc(shortDate(dayKey(s.w.curFrom)))} – ${esc(shortDate(dayKey(s.w.curTo)))}, compared with ${esc(shortDate(dayKey(s.w.prevFrom)))} – ${esc(shortDate(dayKey(s.w.prevTo)))}. Impressions and interactions are per-post figures exactly as Metricool reports them${unmeasured ? `; ${unmeasured} post${unmeasured === 1 ? '' : 's'} (mostly Stories and very recent posts) have no figures yet and are counted as published only` : ''}. Website sales are not included here.</div>`;
     }
     host.innerHTML = `
@@ -284,7 +318,9 @@
     const [d, mcp] = await Promise.all([use('db'), use('mcp')]); db = d; canRefresh = !!mcp;
     if (db) {
       const read = async (path) => { try { const snap = await Promise.race([db.doc(path).get(), new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 10000))]); return snap.exists ? snap.data() : null; } catch (_) { return null; } };
-      const [posts, fol, sch] = await Promise.all([read(DOC), read('live/followers'), read('live/scheduled')]);
+      const [posts, fol, sch, com, riv] = await Promise.all([read(DOC), read('live/followers'), read('live/scheduled'), read('live/comments'), read('live/rivals')]);
+      try { if (com) state.comments = JSON.parse(com.posts); } catch (_) {}
+      try { if (riv) state.rivals = JSON.parse(riv.rivals); } catch (_) {}
       try { if (posts) { state.rows = JSON.parse(posts.rows); state.fetchedAt = posts.fetchedAt; } } catch (_) {}
       try { if (fol) state.followers = JSON.parse(fol.followers); } catch (_) {}
       try { if (sch) state.scheduled = JSON.parse(sch.posts); } catch (_) {}
