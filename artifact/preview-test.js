@@ -428,6 +428,11 @@ const out = []; const ok = (n, c, d) => { out.push(c); console.log((c ? 'PASS  '
   ok('Night Owl runs the whole team once a day on the first visit and leaves a report', owl.first === true && owl.second === false && owl.morning && !!owl.ran, JSON.stringify({ first: owl.first, second: owl.second, ran: owl.ran }));
   const shr = await p.evaluate(async () => { const B = window.RSH_BOTS, it = B.readyItems()[0]; return B.attachForPost(it.postId + '|' + it.channel, new File([new Uint8Array(17 * 1048576)], 'big.mp4', { type: 'video/mp4' })); });
   ok('A video over 16 MB is shrunk automatically, and a browser that cannot make H.264 says so plainly', !shr.ok && /could not be shrunk here: (This browser cannot re-save videos as H\.264|The video could not be read)/.test(shr.reason), shr.reason);
+  const rvn = await p.evaluate(async () => { const B = window.RSH_BOTS, st = window.__store; const id = Object.keys(st).filter(k => /^editJobs\//.test(k) && /attached|done/.test(st[k].status)).map(k => k.split('/')[1])[0]; if (!id) return { none: true };
+    await B.reviseFromNotes(); const post = window.RSH_APP.data().posts.find(x => x.id === id); post.revisionHistory = (post.revisionHistory || []).concat([{ at: new Date().toISOString(), type: 'Changes requested', reviewNotes: 'Make the ending clearer and use cheerful music.' }]);
+    const before = (window.__sent || []).length; await B.reviseFromNotes(); await new Promise(r => setTimeout(r, 500)); const j = st['editJobs/' + id], m = ((window.__sent || [])[before] || {}).input || {};
+    return { src: j.source, notes: j.notes, rev: j.revision, base: !!j.baseAssetId, msg: /REVISION/.test(m.message || '') && /cheerful music/.test(m.message || '') }; });
+  ok('New review notes on a video Reel delivered start a revision job with those notes, sent to the editor', rvn.src === 'revision' && /cheerful music/.test(rvn.notes) && rvn.rev >= 2 && rvn.base && rvn.msg, JSON.stringify(rvn));
   await b.close(); srv.close();
   process.exit(out.every(Boolean) ? 0 : 1);
 })().catch(e => { console.error(e); process.exit(1); });

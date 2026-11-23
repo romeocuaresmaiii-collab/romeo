@@ -229,6 +229,11 @@
   const needsVideo = p => { const n = assetNeeds(p).needs[0]; return /reel|video/i.test(p.postType || '') && n && n.state === 'miss'; };
   const RETURN_STEPS = id => `WHEN THE VIDEO IS FINISHED, return it to the app so nobody has to move it by hand:\n1. If the MP4 is 19 MB or smaller, upload it to the artifact ${APP_URL} as one asset (Artifact tool: action publish, url set to that artifact, asset true, file_path the MP4) and note the 32-character asset id. If it is larger, split it into 16 MB pieces (split -b 16m), upload each piece the same way with content type video/mp4, and note each piece's asset id with its start and end byte offsets.\n2. Record it with the ArtifactData tool on the same artifact: read collection "editJobs", document "${id}" (action get) to learn its version, then action update with if_version and data {"status":"done","assetId":"<the asset id, or the first piece's id>","parts":[{"id":"<piece id>","start":0,"end":16777216}, ...] (only when split),"mime":"video/mp4","bytes":<file size>,"name":"<file name>.mp4","finishedAt":"<current time, ISO 8601>"}.\nIf you cannot finish, update that document with {"status":"failed","reason":"<one sentence>"} instead.\nDo not change anything else in that artifact, and do not publish or schedule anything.`;
   function handoff(p, j) {
+    if (j && j.source === 'revision') {
+      let files = []; try { files = JSON.parse(j.manifest || '[]'); } catch (_) {}
+      const list = files.map((f, n) => `${n + 1}. ${f.name} (${f.mime}, ${Math.round(f.bytes / 1024)} KB${f.encoding === 'base64' ? ', stored base64-encoded: decode after joining' : ''}) asset${f.parts.length > 1 ? 's in order' : ''}: ${f.parts.map(x => x.id).join(' + ')}`).join('\n');
+      return `[RSH Sports Marketing OS: automatic REVISION job. Sent by the app on behalf of the team after the manager's review.]\n\nREVISION ${j.revision || 2} — ${p.title}\nCampaign for ${p.platform || 'social media'}, planned ${p.date || 'no date yet'}.\n\nThe current video is asset ${j.baseAssetId} (fetch it with the Artifact tool: action read, url ${APP_URL}, path ${j.baseAssetId}). Apply ONLY these review notes and keep everything else as it is:\n\n"${j.notes}"\n\nKeep 1080×1920, MP4 (H.264 + AAC), under 15 MB. No third-party logos, no stock, price or delivery claims. If a note asks for something you cannot do (for example new footage), do the rest and say so in one line.${list ? '\n\nORIGINAL FILES, if you need them (same Artifact read, path = asset id):\n' + list : ''}${j.script ? '\n\nSCRIPT:\n' + String(j.script).slice(0, 6000) : ''}\n\n${RETURN_STEPS(p.id)}`;
+    }
     if (j && (j.source === 'zip' || j.source === 'campaign')) {
       let files = []; try { files = JSON.parse(j.manifest || '[]'); } catch (_) {}
       const list = files.map((f, n) => `${n + 1}. ${f.name} (${f.mime}, ${Math.round(f.bytes / 1024)} KB${f.encoding === 'base64' ? ', stored base64-encoded: decode after joining' : ''}) asset${f.parts.length > 1 ? 's in order' : ''}: ${f.parts.map(x => x.id).join(' + ')}`).join('\n');
@@ -658,7 +663,25 @@ Answer with JSON only, exactly these keys:
   // A campaign that just got its final approval is scheduled straight away (when Tempo's auto-scheduling is on).
   let apprSig = null;
   const approvals = () => (app().data().posts || []).filter(p => p.date && app().track(p).stage === 'ready').map(p => p.id).sort().join(',');
+  let notesSig = null;
+  const latestNotes = p => { const h = (p.revisionHistory || []).filter(x => /changes requested/i.test(x.type || '') && (x.reviewNotes || x.detail)); return h.length ? h.sort((a, b) => String(b.at).localeCompare(String(a.at)))[0] : null; };
+  async function reviseFromNotes() {
+    if (!db || !settings.autoEdit) return;
+    const posts = app().data().posts || [], sig = posts.map(p => { const n = latestNotes(p); return n ? p.id + '@' + n.at : ''; }).filter(Boolean).sort().join('|');
+    if (notesSig === null) { notesSig = sig; return; }
+    if (sig === notesSig) return;
+    const before = new Set(notesSig.split('|')); notesSig = sig;
+    for (const key of sig.split('|').filter(k => k && !before.has(k))) {
+      const id = key.split('@')[0], p = posts.find(x => x.id === id), n = latestNotes(p), prev = jobs[id];
+      if (!p || !n || !prev || !/attached|done/.test(prev.status)) continue;          // only videos Reel delivered
+      const vid = fileFor({ postId: id, channel: 'tiktok' }); if (!vid) continue;
+      const job = { postId: id, title: String(p.title || '').slice(0, 120), status: 'queued', queuedAt: new Date().toISOString(), source: 'revision', notes: String(n.reviewNotes || n.detail).slice(0, 3000), baseAssetId: vid.id, revision: (Number(prev.revision) || 1) + 1, manifest: prev.manifest || '', script: prev.script || '', attachedAssetId: prev.attachedAssetId || vid.id };
+      jobs[id] = job; try { await db.doc('editJobs/' + id).set(job); } catch (_) {}
+      wake = `Review notes on “${cut(p.title, 40)}”. Reel sent the revision to the editor.`; render(); dispatch();
+    }
+  }
   async function onCampaignsChanged() {
+    reviseFromNotes();
     const ap = approvals(); if (apprSig === null) apprSig = ap;
     if (ap !== apprSig) { const before = new Set(apprSig.split(',')), fresh = ap.split(',').filter(x => x && !before.has(x)); apprSig = ap;
       if (fresh.length && settings.autoSend && plan) { const t = ((app().data().posts || []).find(x => x.id === fresh[0]) || {}).title; const why = `“${cut(t || 'A campaign', 40)}” was approved. Tempo is scheduling it.`; if (busy) queued = why; else await work(why); return; } }
@@ -1202,10 +1225,11 @@ Answer with JSON only, exactly these keys:
       try { const p = await db.doc('bots/plan').get(); if (p.exists) plan = JSON.parse(p.data().json); } catch (_) {}
       try { const m = await db.doc('bots/morning').get(); if (m.exists) morning = JSON.parse(m.data().json); } catch (_) {}
       await reconcileJobs();
+      reviseFromNotes();   // remember the notes already there, so only new ones start a revision
       await collect();
       setTimeout(() => { nightOwl(); }, 1500);
     }
     render();
   }
-  window.RSH_BOTS = { shrinkVideo, nightOwl, weeklyReport, learnedTags, resultsForPrompt, openRaw, addRaw, sendRaw, rawCount, loadRaw, dayFor, isDyk, targets, sendText, autoSend, seoFor, seoRun, learnedTimes, schedule, attachForPost, driveUpload, fileFor, autoLink, needsFile, readyItems, placedOn, place, unplace, setMediaUrl, sendToMetricool, metricoolPost, NAME, freshVideos, watch, onChange: f => listeners.push(f), handoff, collect, start, captionFor, assetNeeds, imagePrompt, videoBrief, editJob };
+  window.RSH_BOTS = { reviseFromNotes, shrinkVideo, nightOwl, weeklyReport, learnedTags, resultsForPrompt, openRaw, addRaw, sendRaw, rawCount, loadRaw, dayFor, isDyk, targets, sendText, autoSend, seoFor, seoRun, learnedTimes, schedule, attachForPost, driveUpload, fileFor, autoLink, needsFile, readyItems, placedOn, place, unplace, setMediaUrl, sendToMetricool, metricoolPost, NAME, freshVideos, watch, onChange: f => listeners.push(f), handoff, collect, start, captionFor, assetNeeds, imagePrompt, videoBrief, editJob };
 })();
