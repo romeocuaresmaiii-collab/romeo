@@ -29,7 +29,9 @@
     const posts = app().data().posts || [];
     const mine = posts.filter(p => p.status === 'Review' && !(p.approvalMeta && p.approvalMeta.pmReviewedAt)).length;
     const drafts = posts.filter(p => p.status === 'Draft').length;
+    const open = window.RSH_TRACKER ? window.RSH_TRACKER.openCount() : 0;
     bar.innerHTML = `<button type="button" class="primary" data-quick="studio">＋ Create a post</button>
+      <button type="button" data-quick="tracker">Checklist${open ? `<span class="count">${open} need work</span>` : ''}</button>
       <button type="button" data-quick="approvals">Reviews${mine ? `<span class="count">${mine} waiting</span>` : ''}</button>
       <button type="button" data-quick="calendar">Calendar${drafts ? `<span class="count">${drafts} draft${drafts === 1 ? '' : 's'}</span>` : ''}</button>
       <button type="button" data-quick="weekly">Insights</button>

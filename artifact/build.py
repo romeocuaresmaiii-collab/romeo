@@ -87,9 +87,14 @@ s = once(s, "uploadedAt:new Date().toISOString(),storage:'media'});", "uploadedA
 s = once(s, "const f=files[i];el('visualUploadMsg').textContent=`Uploading ${i+1}/${files.length}: ${f.name} (${(f.size/1_000_000).toFixed(1)} MB)...`;", "const f=files[i];const upLabel=`Uploading ${i+1}/${files.length}: ${f.name} (${(f.size/1_000_000).toFixed(1)} MB)`;el('visualUploadMsg').textContent=upLabel+'...';RSH_HOST.onUploadProgress=(done,total)=>{el('visualUploadMsg').textContent=upLabel+' · '+Math.round(done/total*100)+'%'};")
 
 s = once(s, "notice('Some uploads could not finish. Saved files were retained.');", "notice('Upload stopped: '+failed.message);")
+# Campaign Checklist: its own screen and sidebar entry (the click handler binds to markup present at start-up).
+s = once(s, '<button data-view="studio" type="button"><span class="icon">✦</span> Create</button>', '<button data-view="tracker" type="button"><span class="icon">☑</span> Checklist</button>\n<button data-view="studio" type="button"><span class="icon">✦</span> Create</button>')
+s = once(s, '<section class="section" id="view-calendar">', '<section class="section" id="view-tracker"></section>\n<section class="section" id="view-calendar">')
+s = once(s, "approvals:['Approval Desk',", "tracker:['Campaign Checklist','Every campaign, where it stands, and the one thing to do next.'],approvals:['Approval Desk',")
+
 # 4. Wording that would be untrue here.
 s = once(s, f'<strong>LOCAL APP · V{version}</strong><div class="small">Activate the local Data Vault in Setup & Backup to preserve browser work. Export a backup before upgrading. Metricool is connected in ChatGPT only, not this local app.</div>',
-         f'<strong>ARTIFACT EDITION · V{version} · BUILD 19</strong><div class="small">Your workspace and uploaded media are saved automatically to this artifact’s private storage. Approvals are local records, not authenticated. No Metricool sync or publishing.</div>')
+         f'<strong>ARTIFACT EDITION · V{version} · BUILD 20</strong><div class="small">Your workspace and uploaded media are saved automatically to this artifact’s private storage. Approvals are local records, not authenticated. No Metricool sync or publishing.</div>')
 s = once(s, "'Use python3 server.py in the extracted v%s folder, then open http://127.0.0.1:8765. Buttons and media uploads require the local server.'" % version, "'Open this page from your Claude artifacts.'")
 
 for old, new in (('Local editorial plans are separate from the read-only Metricool monthly archive.', 'Team plans, with what is scheduled and published in Metricool.'), ('Metricool connected to ChatGPT only', 'Live results from Metricool'), ('Local workspace · demo/pilot', 'RSH Sports workspace')):

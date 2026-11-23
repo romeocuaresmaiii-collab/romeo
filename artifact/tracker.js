@@ -112,9 +112,9 @@
   }
 
   function start() {
-    const home = document.getElementById('view-overview'); if (!home || !app() || !app().track || document.getElementById('rshTracker')) return;
-    const card = document.createElement('div'); card.className = 'card'; card.id = 'rshTracker'; card.style.marginBottom = '16px';
-    const quick = document.getElementById('rshQuick'); home.insertBefore(card, quick ? quick.nextSibling : home.firstChild);
+    const view = document.getElementById('view-tracker'); if (!view || !app() || !app().track || document.getElementById('rshTracker')) return;
+    const card = document.createElement('div'); card.className = 'card'; card.id = 'rshTracker';
+    view.appendChild(card);
     card.addEventListener('click', e => {
       const o = e.target.closest('[data-track-open]'); if (o) return app().openNext(o.dataset.trackOpen);
       const f = e.target.closest('[data-track-only]'); if (f) { only = f.dataset.trackOnly; return render(); }
@@ -124,9 +124,11 @@
       if (e.target.id === 'rshTrackFrom' || e.target.id === 'rshTrackTo') setRange(card.querySelector('#rshTrackFrom').value, card.querySelector('#rshTrackTo').value);
       if (e.target.id === 'rshTrackPreset' && e.target.value) preset(e.target.value);
     });
-    document.querySelectorAll('.nav button[data-view="overview"]').forEach(b => b.addEventListener('click', () => setTimeout(render, 0)));
+    document.querySelectorAll('[data-view="tracker"]').forEach(b => b.addEventListener('click', () => setTimeout(render, 0)));
     const list = document.getElementById('pipelineItems'); if (list) new MutationObserver(() => render()).observe(list, { childList: true });   // the app redraws this whenever campaigns change
     render();
   }
-  window.RSH_TRACKER = { start, render };
+  // How many campaigns in the current range still need work (for the Home shortcut).
+  function openCount() { if (!app() || !app().track) return 0; const all = (app().data().posts || []).filter(p => p.date); const r = range || defaultRange(all); return all.filter(p => p.date >= r.from && p.date <= r.to && app().track(p).stage !== 'ready').length; }
+  window.RSH_TRACKER = { start, render, openCount };
 })();
