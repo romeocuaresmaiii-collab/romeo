@@ -1,0 +1,12 @@
+RSH SPORTS MARKETING OS — artifact edition, build 24
+
+24/7 Bots
+- Bot log: after every run each bot reports in its own voice (Quill shows the first caption it
+  wrote, Tempo the days and slots it used, Ref how many posts it held back and the main reason,
+  Courier that nothing was sent because posting is not switched on).
+- The office shows the flow: campaigns and files, captions, times, checks, Metricool.
+- Start here: drop, paste or choose a photo or video on the Bots screen and pick the campaign.
+  The file is attached through the app's normal attach step, so the same rules apply, and the
+  team then starts by itself. MP4 and WebM videos; PNG, JPEG and WebP photos.
+- Posting times can carry a name, such as "18:00 after practice"; the name shows in the plan.
+Nothing outside the Bots screen changed. The bots still send nothing to Metricool.
