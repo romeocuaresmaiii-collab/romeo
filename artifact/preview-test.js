@@ -61,6 +61,16 @@ const out = []; const ok = (n, c, d) => { out.push(c); console.log((c ? 'PASS  '
   const trk = await p.evaluate(() => { const c = document.getElementById('rshTracker'); const rows = [...c.querySelectorAll('.row')]; const withMedia = rows.find(r => /Community Question/.test(r.textContent)), bare = rows.find(r => /Pre-Match Ritual/.test(r.textContent)); return { n: rows.length, intro: c.querySelector('.head p').textContent, days: c.querySelectorAll('.day').length, first: c.querySelector('.day').textContent, bare: bare.textContent.replace(/\s+/g, ' '), media: withMedia.textContent.replace(/\s+/g, ' '), chips: [...c.querySelectorAll('.sum button')].map(b => b.textContent).join(' | ') }; });
   ok('The checklist lists every campaign in the default two-week range, grouped by day', trk.n === 11 && trk.days === 11 && /11 campaigns planned for Dec 1 – Dec 14/.test(trk.intro) && /Tuesday, December 1/.test(trk.first), trk.intro + ' · ' + trk.chips);
   ok('Each campaign shows its real status and one plain next step', /✓ Brief ?Media ?Visual checks/.test(trk.bare) && /Next ?Attach the finished/.test(trk.bare) && /✓ Brief ?✓ Media ?✓ Visual checks ?Manager review/.test(trk.media) && /Manager: check the media, claims and rights/.test(trk.media), trk.bare.slice(0, 170));
+  await p.click('#rshTracker .row [data-track-details]');
+  const dv = await p.evaluate(() => { const d = document.getElementById('rshDetail'); return { text: d.innerText, labels: [...d.querySelectorAll('.lab')].map(x => x.textContent.replace('Copy', '').trim()).join(' | ') }; });
+  ok('Details shows the whole idea for a campaign: hook, caption, on-image text, visual concept and image prompt', /Pre-Match Ritual/.test(dv.text) && /Hook \| Caption and call to action \| Text on the image \| Visual concept \| Image prompt/.test(dv.labels) && /Next: Attach the finished/.test(dv.text) && /Nothing attached yet/.test(dv.text), dv.labels);
+  await p.click('#rshDetail [data-detail-edit]');
+  await p.fill('#rshD_hook', 'NEW TEST HOOK'); await p.fill('#rshD_title', 'Pre-Match Ritual: Edited');
+  await p.click('#rshDetail [data-detail-save]'); await p.waitForTimeout(300);
+  const de = await p.evaluate(() => { const ws = JSON.parse(localStorage.getItem('rsh_growth_command_v1')), q = ws.posts.find(x => x.title === 'Pre-Match Ritual: Edited'); return { hook: q && q.hook, version: q && q.contentVersion, panel: document.getElementById('rshDetail').innerText, row: [...document.querySelectorAll('#rshTracker .row .title')].some(x => x.textContent === 'Pre-Match Ritual: Edited') }; });
+  ok('Editing in the details panel saves through the app and updates the list', de.hook === 'NEW TEST HOOK' && de.version >= 2 && /Saved\./.test(de.panel) && /NEW TEST HOOK/.test(de.panel) && de.row, JSON.stringify({ hook: de.hook, version: de.version }));
+  await p.click('#rshDetail [data-detail-close]');
+  ok('The details panel closes', await p.evaluate(() => !document.getElementById('rshDetail') && !document.getElementById('rshDetailBack')));
   await p.click('#rshTracker [data-track-only="manager"]');
   const trk2 = await p.evaluate(() => document.querySelectorAll('#rshTracker .row').length);
   await p.click('#rshTracker .row [data-track-open]'); await p.waitForTimeout(300);

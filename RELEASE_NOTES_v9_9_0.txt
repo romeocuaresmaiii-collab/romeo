@@ -1,0 +1,10 @@
+RSH SPORTS MARKETING OS — v9.9.0
+
+Artifact edition: Checklist screen and campaign details
+- Checklist has its own sidebar entry and screen; Home has a shortcut with the number needing work.
+- Every campaign row has a Details button. The panel shows the whole idea in one place: hook,
+  caption and call to action, text on the image, visual concept, image prompt, attached files,
+  reviewer notes, status and the next step. Each part has a Copy button, plus "Copy the whole brief".
+- "Edit this campaign" lets you change the title, date, owner and all of the idea text. Saving
+  follows the same rules as the Calendar editor: the change is logged, the visual checks and any
+  approvals are cleared, and the locked no-third-party-logo wording stays on the image prompt.
