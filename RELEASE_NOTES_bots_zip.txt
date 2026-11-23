@@ -1,0 +1,12 @@
+RSH SPORTS MARKETING OS — artifact edition, build 32
+
+24/7 Bots: full videos from a zip
+- On the Office tab, pick the campaign and drop (or choose) one .zip holding the script and every
+  clip, photo and piece of music for the video.
+- The app opens the zip in the browser, stores every file in the artifact's file store, reads the
+  script (.txt or .md; a file with "script" in its name is preferred), and Reel sends the whole job
+  to the RSH SPORTS editor session: the script, the list of files and how to download them.
+- The editor makes the video and sends it back. Videos over 19 MB come back in pieces, which the
+  app joins for playback. Reel attaches the result to the campaign; the visual checks follow.
+- Files that the file store does not take as-is (MOV, MP3, WAV, DOCX, …) are stored encoded and
+  decoded by the editor. Limits: 400 MB per zip, 80 files.

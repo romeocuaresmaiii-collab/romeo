@@ -35,7 +35,8 @@ const out = []; const ok = (n, c, d) => { out.push(c); console.log((c ? 'PASS  '
   await new Promise(r => srv.listen(8792, '127.0.0.1', r));
   const b = await chromium.launch();
   const errs = [];
-  const open = async (w, h, q) => { const p = await b.newPage({ viewport: { width: w, height: h } }); p.on('pageerror', e => errs.push(e.message)); await p.goto('http://127.0.0.1:8792/' + (q || '')); await p.waitForFunction(() => /Connected|mismatch|verified/.test(document.getElementById('rshBuildLabel').textContent) && !document.getElementById('rshHostLoading')); return p; };
+  const JSZIP = process.env.JSZIP_PATH || '';
+  const open = async (w, h, q) => { const p = await b.newPage({ viewport: { width: w, height: h } }); p.on('pageerror', e => errs.push(e.message)); if (JSZIP) await p.route('https://cdnjs.cloudflare.com/ajax/libs/jszip/**', r => r.fulfill({ path: JSZIP, contentType: 'application/javascript' })); await p.goto('http://127.0.0.1:8792/' + (q || '')); await p.waitForFunction(() => /Connected|mismatch|verified/.test(document.getElementById('rshBuildLabel').textContent) && !document.getElementById('rshHostLoading')); return p; };
   const WS = p => p.evaluate(() => JSON.parse(localStorage.getItem('rsh_growth_command_v1') || '{"posts":[]}'));
   const p = await open(1440, 900);
   ok('App starts and reports the right build', /Connected/.test(await p.textContent('#rshBuildLabel')), (await p.textContent('#rshBuildLabel')).trim());
@@ -272,6 +273,26 @@ const out = []; const ok = (n, c, d) => { out.push(c); console.log((c ? 'PASS  '
   await p.waitForTimeout(600);
   const back = await p.evaluate(id => ({ files: (JSON.parse(localStorage.getItem('rsh_growth_command_v1')).posts.find(x => x.id === id).creativeAssets || []).map(a => a.id + ':' + a.mime), status: window.__store['editJobs/' + id].status, calls: (window.__sent || []).length }), vid);
   ok('When the editor reports back, the video is attached to its campaign and not sent twice', back.files.join() === 'ab'.repeat(16) + ':video/mp4' && back.status === 'attached' && back.calls === 1, JSON.stringify(back));
+  // a zip with a script and every file goes to Reel as one job; a split video comes back and is attached
+  if (JSZIP) {
+    const JSZipNode = require(JSZIP.replace(/dist\/jszip\.min\.js$/, ''));
+    const z = new JSZipNode();
+    z.file('Script.txt', 'SCENE 1: athlete laces shoes. VO: "Every match starts before the whistle."\nSCENE 2: team huddle.');
+    const mp4 = Buffer.alloc(20000); Buffer.from([0, 0, 0, 24, 102, 116, 121, 112]).copy(mp4); z.file('clips/clip1.mp4', mp4);
+    z.file('music.mp3', Buffer.from(Array.from({ length: 5000 }, (_, i) => (i * 7) % 251)));
+    z.file('__MACOSX/._clip1.mp4', 'junk');
+    const zipBytes = [...await z.generateAsync({ type: 'nodebuffer' })];
+    const zc = await p.evaluate(() => { const ws = JSON.parse(localStorage.getItem('rsh_growth_command_v1')).posts; const busy = Object.keys(window.__store).filter(k => k.startsWith('editJobs/')).map(k => k.slice(9)); return ws.find(x => !(x.creativeAssets || []).length && !x.creativeAsset && !busy.includes(x.id)).id; });
+    await p.click('#rshBots [data-bot-tab="office"]');
+    await p.selectOption('#rshBots [data-bot-dropcamp]', zc);
+    await p.evaluate(bytes => { const dt = new DataTransfer(); dt.items.add(new File([new Uint8Array(bytes)], 'Pre-match video.zip', { type: 'application/zip' })); document.querySelector('#rshBots [data-bot-drop]').dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: dt })); }, zipBytes);
+    await p.waitForFunction(id => (window.__store['editJobs/' + id] || {}).status === 'sent', zc, { timeout: 12000 }).catch(() => {});
+    const zj = await p.evaluate(id => { const j = window.__store['editJobs/' + id] || {}; const m = JSON.parse(j.manifest || '[]'); const msg = ((window.__sent || []).slice(-1)[0] || { input: {} }).input.message || ''; return { status: j.status, files: m.map(f => f.name + ':' + f.encoding).join(','), msg: /SCRIPT \(Script\.txt\):\nSCENE 1: athlete laces shoes/.test(msg) && /path set to the asset id/.test(msg) && /base64/.test(msg) && m.every(f => msg.includes(f.parts[0].id)), dropmsg: document.querySelector('#rshBots [data-bot-dropmsg]').textContent }; }, zc);
+    ok('A zip with a script and files is stored and sent to the editor as one job, without copying', zj.status === 'sent' && zj.files === 'Script.txt:raw,clips/clip1.mp4:raw,music.mp3:base64' && zj.msg && /Stored 3 files/.test(zj.dropmsg), JSON.stringify(zj).slice(0, 260));
+    await p.evaluate(async id => { const ids = ['cd'.repeat(16), 'ef'.repeat(16)]; const a = new Uint8Array(4000); a.set([0, 0, 0, 24, 102, 116, 121, 112], 0); const bb = new Uint8Array(2500).fill(9); await fetch('/__put/' + ids[0], { method: 'POST', body: a }); await fetch('/__put/' + ids[1], { method: 'POST', body: bb }); window.__store['editJobs/' + id] = { ...window.__store['editJobs/' + id], status: 'done', assetId: ids[0], parts: [{ id: ids[0], start: 0, end: 4000 }, { id: ids[1], start: 4000, end: 6500 }], mime: 'video/mp4', bytes: 6500, name: 'final.mp4' }; await window.RSH_BOTS.collect(); }, zc);
+    const zb = await p.evaluate(id => { const a = (JSON.parse(localStorage.getItem('rsh_growth_command_v1')).posts.find(x => x.id === id).creativeAssets || [])[0] || {}; return { parts: (a.parts || []).length, mime: a.mime, status: window.__store['editJobs/' + id].status }; }, zc);
+    ok('The finished video comes back in pieces and is attached to its campaign as one video', zb.parts === 2 && zb.mime === 'video/mp4' && zb.status === 'attached', JSON.stringify(zb));
+  } else console.log('SKIP  zip job tests (set JSZIP_PATH)');
   // dropping a file on the Bots screen attaches it to the chosen campaign and wakes the team
   await p.click('#rshBots [data-bot-tab="office"]');
   await p.waitForFunction(() => !document.querySelector('#rshBots .desk.working') && !/Running/.test(document.querySelector('#rshBots [data-bot-run]').textContent), null, { timeout: 9000 });
