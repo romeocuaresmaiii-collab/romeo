@@ -157,6 +157,7 @@
   function mediaUrl(a) {
     const id = a && a.id ? String(a.id) : '';
     if (BUNDLED_MEDIA[id]) return BUNDLED_MEDIA[id];
+    if (a && a.store === 'db') { partSets.set(id, { db: true }); return '#rsh-parts-' + id; }
     if (a && Array.isArray(a.parts) && a.parts.length > 1) { partSets.set(id, { parts: a.parts, mime: a.mime || 'video/mp4' }); return '#rsh-parts-' + id; }
     return '/_blob/' + encodeURIComponent(id);
   }
@@ -165,6 +166,7 @@
     if (joined.has(id)) return joined.get(id);
     const set = partSets.get(id);
     const job = (async () => {
+      if (set.db) return loadFromDatabase(id);
       const pieces = []; let have = 0;
       for (const part of set.parts) {
         const resp = await realFetch('/_blob/' + encodeURIComponent(part.id));
@@ -186,7 +188,7 @@
       el.removeAttribute(attr);
       if (!partSets.has(id)) continue;
       if (el.tagName === 'VIDEO') el.title = 'Loading video…';
-      joinParts(id).then(url => { el.setAttribute(attr, url); if (el.tagName === 'VIDEO') { el.title = ''; el.load(); } }, () => { if (el.tagName === 'VIDEO') el.title = 'This video could not be loaded'; toast('A video could not be loaded from storage. Reload the page and try again.'); });
+      joinParts(id).then(url => { el.setAttribute(attr, url); if (el.tagName === 'VIDEO') { el.title = ''; el.load(); } }, () => { if (el.tagName === 'VIDEO') el.title = 'This video could not be loaded'; toast('A file could not be loaded from storage. Reload the page and try again.'); });
     }
   }
   new MutationObserver(list => {
@@ -197,8 +199,86 @@
   }).observe(document.documentElement, { subtree: true, childList: true, attributes: true, attributeFilter: ['src', 'href'] });
   function referenced(workspace) {
     const seen = new Set();
-    for (const p of (workspace.posts || [])) for (const a of [p && p.creativeAsset].concat(Array.isArray(p && p.creativeAssets) ? p.creativeAssets : [])) if (a && typeof a.id === 'string') { seen.add(a.id); for (const part of (Array.isArray(a.parts) ? a.parts : [])) if (part && typeof part.id === 'string') seen.add(part.id); }
+    for (const p of (workspace.posts || [])) for (const a of [p && p.creativeAsset].concat(Array.isArray(p && p.creativeAssets) ? p.creativeAssets : [])) if (a && typeof a.id === 'string' && a.store !== 'db') { seen.add(a.id); for (const part of (Array.isArray(a.parts) ? a.parts : [])) if (part && typeof part.id === 'string') seen.add(part.id); }
     return [...seen];
+  }
+
+  /* ---------- storing a file ---------- */
+  const SKIP_KEY = 'rsh:fileStoreFailedAt';      // after a failure, go straight to the database for a day
+  const DB_VIDEO_MAX = 30e6, DB_CHUNK = 120000;
+  const limit = (promise, ms) => Promise.race([promise, new Promise((_, rej) => setTimeout(() => rej({ code: 'timed_out', message: 'no answer after ' + Math.round(ms / 1000) + ' s' }), ms))]);
+
+  async function storeInFileStore(file, mime) {
+    if (!assets && window.claude && typeof window.claude.use === 'function') { try { assets = await limit(window.claude.use('assets'), 8000); } catch (_) {} }
+    if (!assets) throw { code: 'assets_null', message: 'no file store in this view' };
+    const putOne = async blob => {
+      for (let attempt = 0; ; attempt++) {
+        try { const r = await limit(assets.upload(blob, { type: mime }), 20000 + blob.size / 100); if (!r || typeof r.id !== 'string') throw { code: 'no_id' }; return r; }
+        catch (e) { if (attempt === 0 && e && e.code === 'store_unavailable') { await new Promise(res => setTimeout(res, 1500)); continue; } throw e; }
+      }
+    };
+    if (file.size <= PART_BYTES) { const r = await putOne(new Blob([await file.arrayBuffer()], { type: mime })); return { id: r.id }; }
+    const stored = [];
+    try {
+      let start = 0;
+      while (start < file.size) {
+        // A part must not begin with markup-looking bytes, or the store refuses it as a video.
+        for (;;) { const head = new Uint8Array(await file.slice(start, Math.min(file.size, start + 64)).arrayBuffer()); let i = 0; while (i < head.length && (head[i] === 32 || (head[i] >= 9 && head[i] <= 13))) i++; if (stored.length && head[i] === 60 && start > 1) { start--; continue; } break; }
+        const end = Math.min(file.size, start + PART_BYTES);
+        if (window.RSH_HOST.onUploadProgress) window.RSH_HOST.onUploadProgress(start, file.size);
+        const r = await putOne(new Blob([await file.slice(start, end).arrayBuffer()], { type: mime }));
+        stored.push({ id: r.id, start, end }); start = end;
+      }
+      return { id: stored[0].id, parts: stored };
+    } catch (e) { for (const x of stored) { try { await assets.delete(x.id); } catch (_) {} } throw e; }
+  }
+
+  async function reviewCopy(file) {            // large photos are saved as a high-quality review copy
+    if (file.size <= 700000) return file;
+    try {
+      const bmp = await createImageBitmap(file); const scale = Math.min(1, 2000 / Math.max(bmp.width, bmp.height));
+      const c = document.createElement('canvas'); c.width = Math.round(bmp.width * scale); c.height = Math.round(bmp.height * scale);
+      const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(bmp, 0, 0, c.width, c.height); if (bmp.close) bmp.close();
+      const out = await new Promise(res => c.toBlob(res, 'image/jpeg', 0.86));
+      return out && out.size < file.size ? out : file;
+    } catch (_) { return file; }
+  }
+  function b64(bytes) { let bin = ''; for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000)); return btoa(bin); }
+  function unb64(text) { const bin = atob(text), out = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i); return out; }
+  const chunkId = n => 'c' + String(n).padStart(5, '0');
+
+  async function storeInDatabase(file, mime) {
+    if (!db) throw { code: 'no_db' };
+    let blob = file;
+    if (mime.startsWith('image/')) blob = await reviewCopy(file);
+    else if (file.size > DB_VIDEO_MAX) throw { code: 'video_too_large' };
+    const type = blob.type || mime;
+    const id = [...crypto.getRandomValues(new Uint8Array(16))].map(x => x.toString(16).padStart(2, '0')).join('');
+    const total = Math.ceil(blob.size / DB_CHUNK); let next = 0, finished = 0;
+    const worker = async () => {
+      while (next < total) {
+        const n = next++;
+        const bytes = new Uint8Array(await blob.slice(n * DB_CHUNK, (n + 1) * DB_CHUNK).arrayBuffer());
+        await db.doc('media/' + id + '/chunks/' + chunkId(n)).set({ n, data: b64(bytes) });
+        finished++; if (total > 4 && window.RSH_HOST.onUploadProgress) window.RSH_HOST.onUploadProgress(finished, total);
+      }
+    };
+    try {
+      await Promise.all([worker(), worker(), worker()]);
+      await db.doc('media/' + id).set({ mime: type, bytes: blob.size, chunks: total, name: String(file.name || 'upload').slice(0, 130), originalBytes: file.size, at: new Date().toISOString() });
+    } catch (e) {
+      for (let n = 0; n < total; n++) { try { await db.doc('media/' + id + '/chunks/' + chunkId(n)).delete(); } catch (_) {} }
+      throw e;
+    }
+    return { id, store: 'db' };
+  }
+  async function loadFromDatabase(id) {
+    const meta = await db.doc('media/' + id).get();
+    if (!meta.exists) throw new Error('not found');
+    const info = meta.data(), pieces = new Array(info.chunks); let next = 0;
+    const worker = async () => { while (next < info.chunks) { const n = next++; const s = await db.doc('media/' + id + '/chunks/' + chunkId(n)).get(); if (!s.exists) throw new Error('part missing'); pieces[n] = unb64(s.data().data); } };
+    await Promise.all([worker(), worker(), worker(), worker()]);
+    return URL.createObjectURL(new Blob(pieces, { type: info.mime }));
   }
 
   /* ---------- request router (replaces server.py) ---------- */
@@ -246,51 +326,21 @@
       if (mime === 'video/quicktime') return json(415, { error: 'MOV videos cannot be stored in this artifact. Export the video as MP4 and attach that' });
       if (!(file instanceof Blob) || !(mime in MEDIA_TYPES)) return json(415, { error: 'Attach PNG, JPEG, WebP, MP4 or WebM files' });
       if (file.size < 256 || file.size > MEDIA_TYPES[mime]) return json(413, { error: 'File is over the limit: 12 MB per image, 120 MB per video' });
-      // The file store may not have been ready when the page started: ask again now.
-      if (!assets && window.claude && typeof window.claude.use === 'function') { try { assets = await window.claude.use('assets'); } catch (_) {} }
-      if (!assets) diag({ stage: 'no file store', code: 'assets_null', mime, bytes: file.size });
-      if (!assets) return json(400, { error: 'This view cannot store files (no file store). Open the artifact in a browser at claude.ai, signed in as its owner' });
-      const WHY = {
-        not_granted: 'file storage was not allowed for this page. Reload, and allow it if Claude asks',
-        capability_disabled: 'file storage is switched off in this view. Try the artifact in a desktop browser at claude.ai',
-        capability_removed: 'file storage is switched off in this view. Try the artifact in a desktop browser at claude.ai',
-        too_large: 'the file is over the size limit', unsupported_type: 'this file type is not accepted. Use PNG, JPEG, WebP, MP4 or WebM',
-        quota_or_state: 'the artifact storage is full or not accepting files right now', rate_limited: 'too many uploads at once. Wait a moment and try again',
-        upstream_auth: 'your sign-in could not be confirmed. Reload the page and try again', invalid_request: 'the file could not be read',
-      };
-      const putOne = async blob => {
-        for (let attempt = 0; ; attempt++) {
-          try { const r = await assets.upload(blob, { type: mime }); if (!r || typeof r.id !== 'string') throw { code: 'no_id' }; return r; }
-          catch (e) { if (attempt === 0 && e && e.code === 'store_unavailable') { await new Promise(res => setTimeout(res, 1500)); continue; } throw e; }
-        }
-      };
-      let lastErr = null; const stored = [];
-      try {
-        if (file.size <= PART_BYTES) {
-          const r = await putOne(new Blob([await file.arrayBuffer()], { type: mime }));
-          return json(201, { id: r.id, mime, bytes: r.sizeBytes || file.size, name: file.name || 'upload', storage: 'media' });
-        }
-        let start = 0;
-        while (start < file.size) {
-          let end = Math.min(file.size, start + PART_BYTES);
-          // A part must not begin with markup-looking bytes, or the store refuses it as a video.
-          for (;;) { const head = new Uint8Array(await file.slice(start, Math.min(file.size, start + 64)).arrayBuffer()); let i = 0; while (i < head.length && (head[i] === 32 || (head[i] >= 9 && head[i] <= 13))) i++; if (stored.length && head[i] === 60 && start > 1) { start--; continue; } break; }
-          end = Math.min(file.size, start + PART_BYTES);
-          if (window.RSH_HOST.onUploadProgress) window.RSH_HOST.onUploadProgress(start, file.size);
-          const r = await putOne(new Blob([await file.slice(start, end).arrayBuffer()], { type: mime }));
-          stored.push({ id: r.id, start, end });
-          start = end;
-        }
-        // Parts may overlap by a byte or two after the markup adjustment; record exact ranges.
-        return json(201, { id: stored[0].id, mime, bytes: file.size, name: file.name || 'upload', storage: 'media', parts: stored.map(x => ({ id: x.id, start: x.start, end: x.end })) });
-      } catch (e) {
-        lastErr = e;
-        for (const x of stored) { try { await assets.delete(x.id); } catch (_) {} }
+      const done = r => json(201, { id: r.id, mime, bytes: file.size, name: file.name || 'upload', storage: 'media', ...(r.parts ? { parts: r.parts } : {}), ...(r.store ? { store: r.store } : {}) });
+      let fileStoreError = null;
+      if (!ls.get(SKIP_KEY) || Date.now() - Number(ls.get(SKIP_KEY)) > 86400000) {
+        try { return done(await storeInFileStore(file, mime)); }
+        catch (e) { fileStoreError = e; ls.set(SKIP_KEY, String(Date.now())); diag({ stage: 'file store', code: (e && e.code) || 'unknown', message: e && String(e.message || '').slice(0, 300), mime, bytes: file.size }); }
       }
-      const code = (lastErr && lastErr.code) || 'unknown';
-      diag({ stage: stored.length ? 'part ' + (stored.length + 1) : 'first file or part', code, message: lastErr && String(lastErr.message || '').slice(0, 300), mime, bytes: file.size, partsStoredBeforeFailure: stored.length });
-      console.warn('[RSH host] upload failed', code, lastErr && lastErr.message);
-      return json(400, { error: 'Upload failed: ' + (WHY[code] || 'the file store did not accept it') + ' [' + code + (lastErr && lastErr.message ? ': ' + String(lastErr.message).slice(0, 90) : '') + ']' });
+      try { return done(await storeInDatabase(file, mime)); }
+      catch (e) {
+        const code = (e && e.code) || 'unknown';
+        diag({ stage: 'database fallback', code, message: e && String(e.message || '').slice(0, 300), mime, bytes: file.size, fileStoreCode: fileStoreError && fileStoreError.code });
+        const why = code === 'video_too_large' ? 'this artifact can store videos up to ' + Math.round(DB_VIDEO_MAX / 1e6) + ' MB right now. Attach a shorter or compressed MP4, or use the local app for the full file'
+          : code === 'quota_exceeded' ? 'the artifact storage is full' : code === 'no_db' ? 'storage is not available in this view. Open the artifact signed in as its owner'
+          : (code === 'permission_denied' || code === 'not_granted') ? 'this view is read-only' : 'storage did not accept the file';
+        return json(400, { error: 'Upload failed: ' + why + ' [' + code + ']' });
+      }
     }
     if (path === '/api/backup/check' && method === 'POST') {
       const ids = referenced(JSON.parse(init.body)); const missing = [];
