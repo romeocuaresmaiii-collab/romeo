@@ -78,7 +78,7 @@
     return null;
   }
   // Compact rows: [network, yyyymmdd, link, text, impressions|null, interactions|null, format]
-  const compact = rows => rows.filter(r => Array.isArray(r) && r[0] && r[1]).map(r => [String(r[0]).toUpperCase(), Number(String(r[1]).slice(0, 8)), String(r[2] || '').slice(0, 300), String(r[3] || '').replace(/\s+/g, ' ').trim().slice(0, 90), num(r[4]), num(r[5]), String(r[6] || '').toUpperCase(), /^\d{12}/.test(String(r[1])) ? String(r[1]).slice(8, 12) : '']);
+  const compact = rows => rows.filter(r => Array.isArray(r) && r[0] && r[1]).map(r => [String(r[0]).toUpperCase(), Number(String(r[1]).slice(0, 8)), String(r[2] || '').slice(0, 300), String(r[3] || '').replace(/\s+/g, ' ').trim().slice(0, 90), num(r[4]), num(r[5]), String(r[6] || '').toUpperCase(), /^\d{12}/.test(String(r[1])) ? String(r[1]).slice(8, 12) : '', (String(r[3] || '').match(/#[\p{L}\p{N}_]+/gu) || []).slice(0, 15).join(' ')]);
 
   function summarise(rows, endMs) {
     const w = windows(endMs), cf = dayKey(w.curFrom), ct = dayKey(w.curTo), pf = dayKey(w.prevFrom), pt = dayKey(w.prevTo);
@@ -339,5 +339,5 @@
     // With the connector available, refresh on open when results are missing or older than three hours.
     if (canRefresh && (!state.fetchedAt || Date.now() - new Date(state.fetchedAt).getTime() > STALE_MS)) refresh(false);
   }
-  window.RSH_LIVE = { rows: () => state.rows, scheduled: () => state.scheduled, onData: fn => listeners.push(fn), start, summarise, compact, findRows };
+  window.RSH_LIVE = { refresh: byClick => refresh(byClick), fetchedAt: () => state.fetchedAt, brief: () => (state.rows && state.rows.length ? briefText(summarise(state.rows, state.fetchedAt)) : ''), rows: () => state.rows, scheduled: () => state.scheduled, onData: fn => listeners.push(fn), start, summarise, compact, findRows };
 })();

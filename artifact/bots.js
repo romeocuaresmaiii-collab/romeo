@@ -18,7 +18,7 @@
   const app = () => window.RSH_APP;
   const CHANNELS = [['instagram', 'Instagram', 2200], ['facebook', 'Facebook', 5000], ['tiktok', 'TikTok', 2200], ['youtube', 'YouTube', 5000], ['pinterest', 'Pinterest', 500], ['threads', 'Threads', 500], ['bluesky', 'Bluesky', 300]];
   const NAME = Object.fromEntries(CHANNELS.map(c => [c[0], c[1]])), LIMIT = Object.fromEntries(CHANNELS.map(c => [c[0], c[2]]));
-  const DEFAULTS = { pinBoard: '1114218832750459340', autoEdit: true, autoSend: true, dykDay: 2, channels: ['instagram', 'facebook', 'tiktok'], times: ['12:00', '18:00'], labels: { '12:00': 'lunch break', '18:00': 'after practice' }, days: 14 };
+  const DEFAULTS = { dailyAuto: true, pinBoard: '1114218832750459340', autoEdit: true, autoSend: true, dykDay: 2, channels: ['instagram', 'facebook', 'tiktok'], times: ['12:00', '18:00'], labels: { '12:00': 'lunch break', '18:00': 'after practice' }, days: 14 };
   // RSH Sports' own accounts (from the brand's connected profiles, 23 Nov 2026). Today posts reach them through
   // Metricool or by hand; each has a slot for a direct connection from this app later.
   const ACCOUNTS = [
@@ -364,6 +364,10 @@
   // Pinterest: keywords in title/description, no hashtags; Threads: one topic tag; Bluesky: 1–3 hashtags feed custom feeds.
   const MAXTAGS = { instagram: 5, tiktok: 5, facebook: 3, youtube: 3, threads: 1, bluesky: 3, pinterest: 0 };
   function seasonOf(d) { const m = new Date((d || iso(new Date())) + 'T12:00:00').getMonth() + 1; return [m >= 11 || m <= 2 ? 'wrestling season (Nov–Feb)' : '', m >= 11 || m <= 3 ? 'basketball season (Nov–Mar)' : '', m >= 10 || m <= 3 ? 'hockey season (Oct–Mar)' : '', m >= 2 && m <= 5 ? 'softball season (Feb–May)' : '', [3, 4, 5, 8, 9, 10, 11].includes(m) ? 'soccer season' : ''].filter(Boolean).join(', ') || 'off-season / preseason planning'; }
+  function resultsForPrompt() {
+    const L = learnedTags(), lines = Object.entries(L).map(([ch, x]) => `${NAME[ch]}: strongest ${x.best.map(b => `${b.tag} (avg ${b.avg} views, ${b.n} posts)`).join(', ')}${x.weak.length ? `; weakest ${x.weak.map(b => b.tag).join(', ')}` : ''}`);
+    return lines.length ? `RSH SPORTS' OWN RESULTS, last 28 days (real Metricool numbers; prefer what worked, drop what did not, but stay relevant to this post):\n${lines.join('\n')}` : '';
+  }
   function seoPrompt(p) {
     return `You are a senior social media SEO strategist (10+ years, search and recommendation systems on Instagram, Facebook, TikTok, YouTube, Pinterest, Threads, Bluesky). You work for RSH Sports (rshsports.com), a US maker of custom team uniforms and apparel: wrestling singlets, basketball, softball, soccer and hockey uniforms, and online team stores. Buyers: high school and club coaches, athletic directors, team parents, athletes.
 
@@ -385,6 +389,7 @@ Caption: ${p.captionBody || p.caption || ''}
 Call to action: ${p.cta || ''}
 Existing hashtags: ${p.hashtags || ''}
 On-image text: ${p.onImageText || ''}
+${resultsForPrompt()}
 
 Answer with JSON only, exactly these keys:
 {"primaryKeyword":"...","keywords":[3 to 6 secondary long-tail phrases, lowercase],
@@ -421,7 +426,7 @@ Answer with JSON only, exactly these keys:
   }
   async function seoRun(posts, step) {
     seoNote = ''; let wrote = 0;
-    const todo = posts.filter(p => !seo[p.id] || seo[p.id].sig !== seoSig(p) || seo[p.id].v !== 2).slice(0, 12);
+    const week = Date.now() - 7 * 864e5, todo = posts.filter(p => !seo[p.id] || seo[p.id].sig !== seoSig(p) || seo[p.id].v !== 2 || new Date(seo[p.id].at).getTime() < week).slice(0, 12);   // refreshed weekly so new results feed in
     for (const p of todo) { step && step(`Quill is writing SEO for “${cut(p.title, 40)}”…`); if (await writeSeo(p)) wrote++; else if (seoNote) break; }
     if (wrote && db) { try { await db.doc('bots/seo').set({ json: JSON.stringify(seo).slice(0, 240000), updatedAt: new Date().toISOString() }); } catch (_) {} }
     return { wrote, have: posts.filter(p => seo[p.id]).length, total: posts.length };
@@ -453,6 +458,24 @@ Answer with JSON only, exactly these keys:
       if (hours.length) out[ch] = { time: String(hours[0].h).padStart(2, '0') + ':00', n: hours[0].n, avg: Math.round(hours[0].avg), tried: hours.length, metric: by[ch] && rows.some(r => String(r[0]).toLowerCase() === ch && r[4] != null) ? 'views' : 'interactions' };
     }
     return out;
+  }
+  // Results loop: which hashtags went with RSH Sports' best and weakest posts, per channel (own posts, last 28 days).
+  function learnedTags() {
+    const rows = (window.RSH_LIVE && window.RSH_LIVE.rows && window.RSH_LIVE.rows()) || [], by = {};
+    for (const r of rows) {
+      const ch = String(r[0]).toLowerCase(), score = r[4] != null ? r[4] : r[5]; if (score == null || !NAME[ch] || !r[8]) continue;
+      for (const t of String(r[8]).split(' ').filter(Boolean)) { const k = t.toLowerCase(); ((by[ch] = by[ch] || {})[k] = by[ch][k] || { tag: t, v: [] }).v.push(score); }
+    }
+    const out = {};
+    for (const ch of Object.keys(by)) {
+      const l = Object.values(by[ch]).filter(x => x.v.length >= 2).map(x => ({ tag: x.tag, n: x.v.length, avg: Math.round(x.v.reduce((a, b) => a + b, 0) / x.v.length) })).sort((a, b) => b.avg - a.avg);
+      if (l.length >= 2) out[ch] = { best: l.slice(0, 6), weak: l.length > 6 ? l.slice(-3) : [] };
+    }
+    return out;
+  }
+  function topPosts(days) {
+    const rows = (window.RSH_LIVE && window.RSH_LIVE.rows && window.RSH_LIVE.rows()) || [], d = new Date(); d.setDate(d.getDate() - (days || 7)); const from = Number(iso(d).replace(/-/g, ''));
+    return rows.filter(r => r[1] >= from && r[4] != null).sort((a, b) => (b[4] || 0) - (a[4] || 0));
   }
   function schedule(items) {
     const busyM = metricoolBusy(), used = new Set(), slots = settings.times.slice().sort(), learned = learnedTimes();
@@ -589,7 +612,7 @@ Answer with JSON only, exactly these keys:
     out.pixel = !all.length ? ['plain', 'Idle', 'neutral', 'No campaigns to prepare assets for.']
       : missing ? ['bad', 'Busy', 'worried', `${missing} of ${all.length} campaign${all.length === 1 ? '' : 's'} still need${missing === 1 ? 's' : ''} files. I wrote a brief and a ready-to-paste prompt for each.`]
       : ['good', 'Happy', 'happy', `Every campaign has the files it needs.`];
-    out.owl = ['off', 'Asleep', 'asleep', 'Not switched on. I would run the whole team every morning.'];
+    out.owl = !settings.dailyAuto ? ['off', 'Off', 'asleep', 'Daily run is off in Setup.'] : morning && morning.at && new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date(morning.at)) === new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date()) ? ['good', 'Done for today', 'happy', `I ran the whole team at ${new Date(morning.at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}${morning.by === 'cloud' ? ' from the cloud' : ''}. See my report below.`] : ['plain', 'Waiting', 'neutral', 'I run the whole team once a day: every morning from the cloud, and on the first visit of the day.'];
     const task = { pixel: 'Writing asset briefs…', reel: 'Sending edit jobs…', quill: 'Writing captions…', tempo: 'Picking times…', ref: 'Checking every post…' };
     if (phase && out[phase]) out[phase] = ['busy', 'Working', 'working', task[phase]];
     return out;
@@ -632,7 +655,13 @@ Answer with JSON only, exactly these keys:
   }
   // The team starts on its own when a new file is attached to any campaign.
   const signature = () => (app().data().posts || []).map(p => [p.creativeAsset].concat(Array.isArray(p.creativeAssets) ? p.creativeAssets : []).filter(Boolean).map(a => a.id).sort().join(',')).join('|');
+  // A campaign that just got its final approval is scheduled straight away (when Tempo's auto-scheduling is on).
+  let apprSig = null;
+  const approvals = () => (app().data().posts || []).filter(p => p.date && app().track(p).stage === 'ready').map(p => p.id).sort().join(',');
   async function onCampaignsChanged() {
+    const ap = approvals(); if (apprSig === null) apprSig = ap;
+    if (ap !== apprSig) { const before = new Set(apprSig.split(',')), fresh = ap.split(',').filter(x => x && !before.has(x)); apprSig = ap;
+      if (fresh.length && settings.autoSend && plan) { const t = ((app().data().posts || []).find(x => x.id === fresh[0]) || {}).title; const why = `“${cut(t || 'A campaign', 40)}” was approved. Tempo is scheduling it.`; if (busy) queued = why; else await work(why); return; } }
     const now = signature(); if (assetSig === null) { assetSig = now; return; }
     if (now === assetSig) { if (plan && !busy && !phase) render(); return; }
     const before = new Set(assetSig.split(/[|,]/)), added = now.split(/[|,]/).filter(x => x && !before.has(x)); assetSig = now;
@@ -669,6 +698,52 @@ Answer with JSON only, exactly these keys:
       if (r.ok) { if (r.queued) queued++; else ok++; } else fails.push(`${NAME[it.channel]} ${it.date}: ${r.reason}`);
     }
     return `Sent to Metricool: ${ok} scheduled${queued ? `, ${queued} waiting for a Claude session` : ''}${fails.length ? `. Not sent (${fails.length}): ${fails.slice(0, 3).join(' · ')}${fails.length > 3 ? ' …' : ''}` : '.'}`;
+  }
+
+  // Posts a Claude session sent for us (from the scheduleJobs queue) are marked as scheduled here.
+  async function reconcileJobs() {
+    if (!db || !plan) return; let changed = false;
+    try { const q = await db.collection('scheduleJobs').get();
+      for (const d of q.docs) { const j = d.data() || {}, it = find(j.key || (j.postId + '|' + j.channel)); if (!it) continue;
+        if (j.status === 'sent' && !(it.sent && /scheduled|draft/.test(it.sent.status))) { it.sent = { status: j.mode === 'draft' ? 'draft' : 'scheduled', at: j.sentAt || new Date().toISOString(), plannerUrl: j.plannerUrl || '', by: 'Claude session' }; changed = true; }
+        if (j.status === 'failed' && it.sent && it.sent.status === 'queued') { it.sent = { status: 'error', at: j.sentAt || new Date().toISOString(), reason: String(j.error || 'Metricool did not accept it.').slice(0, 240) }; changed = true; } } } catch (_) {}
+    if (changed) { await save(); render(); notify(); }
+  }
+
+  /* ---------- Reports ---------- */
+  let morning = null;
+  function weeklyReport() {
+    const brief = (window.RSH_LIVE && window.RSH_LIVE.brief && window.RSH_LIVE.brief()) || '', top = topPosts(7).slice(0, 5), L = learnedTimes(), T = learnedTags();
+    const items = (plan && plan.items) || [], nextWeek = (() => { const a = iso(new Date()), d = new Date(); d.setDate(d.getDate() + 7); const b = iso(d); return items.filter(i => i.date >= a && i.date <= b); })();
+    const sent = nextWeek.filter(i => i.sent && /scheduled|draft/.test(i.sent.status)).length, ready = nextWeek.filter(i => i.ready).length;
+    const held = [...new Set(nextWeek.filter(i => !i.ready).map(i => i.postId))].map(id => ((app().data().posts || []).find(x => x.id === id) || {}).title).filter(Boolean);
+    const lines = [`RSH Sports — weekly social report (${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })})`, ''];
+    lines.push('RESULTS (Metricool, last 14 days vs the 14 before)'); lines.push(brief ? brief.split('\n').slice(1).filter(l => !/^Source:/.test(l)).join('\n') : 'Live numbers not loaded yet: refresh on Home.');
+    if (top.length) { lines.push('', 'TOP POSTS THIS WEEK (views)'); for (const r of top) lines.push(`• ${NAME[String(r[0]).toLowerCase()] || r[0]}: ${Math.round(r[4]).toLocaleString('en-US')} views${r[5] != null ? `, ${Math.round(r[5])} interactions` : ''} · “${r[3] || 'no text'}”`); }
+    if (Object.keys(L).length) { lines.push('', 'BEST POSTING HOURS (own results)'); for (const [c, x] of Object.entries(L)) lines.push(`• ${NAME[c]}: ${clockTxt(x.time)} US Eastern (${x.n} posts, avg ${x.avg.toLocaleString('en-US')} ${x.metric}${x.tried === 1 ? '; other hours not tested yet' : ''})`); }
+    if (Object.keys(T).length) { lines.push('', 'HASHTAGS THAT WORKED'); for (const [c, x] of Object.entries(T)) lines.push(`• ${NAME[c]}: ${x.best.slice(0, 3).map(b => b.tag + ' (avg ' + b.avg + ')').join(', ')}${x.weak.length ? ' · dropping: ' + x.weak.map(b => b.tag).join(', ') : ''}`); }
+    lines.push('', 'NEXT 7 DAYS', `• ${nextWeek.length} channel posts planned, ${ready} approved and ready, ${sent} already scheduled in Metricool.`);
+    if (held.length) lines.push(`• Waiting on files or approvals: ${held.slice(0, 6).join('; ')}${held.length > 6 ? ' …' : ''}.`);
+    lines.push('', 'Prepared by the RSH Sports Marketing OS from Metricool data. Nothing here is estimated.');
+    return lines.join('\n');
+  }
+  function reportsHtml() {
+    const m = morning && morning.lines && morning.lines.length ? `<div class="log" style="margin-top:14px"><div class="log-h"><strong>Night Owl’s report</strong><span class="small">${esc(new Date(morning.at).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }))} · ${esc(morning.by === 'cloud' ? 'daily run in the cloud' : 'first visit of the day')}</span></div>${morning.lines.map(l => { const mm = TEAM.find(t => t[0] === l[0]) || TEAM[0]; return `<div class="log-row"><span class="log-av">${botSvg(mm[3], 'happy')}</span><div><strong>${esc(mm[1])}</strong><div>${esc(l[1])}</div></div></div>`; }).join('')}</div>` : '';
+    return `${log.length ? '' : m}<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:14px"><button type="button" class="btn ghost smallbtn" data-bot-weekly>Weekly report for Anthony</button><span class="small">What worked, best hours and hashtags, and the next 7 days, from real Metricool numbers.</span></div><pre data-bot-weeklytext hidden style="white-space:pre-wrap;font:13px/1.5 system-ui;background:var(--soft,#f5f5f7);border-radius:12px;padding:14px;margin-top:10px"></pre>`;
+  }
+  async function saveMorning(by) {
+    morning = { at: new Date().toISOString(), by, lines: log.slice(0, 10) };
+    if (db) { try { await db.doc('bots/morning').set({ json: JSON.stringify(morning) }); } catch (_) {} }
+  }
+  // Night Owl: the first visit of each day (US Eastern) by someone who can edit runs the whole team once.
+  const etToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date());
+  async function nightOwl() {
+    if (!settings.dailyAuto || !db || busy) return false;
+    try { const u = await use('user'); if (u && u.canEdit && !(await u.canEdit())) return false; } catch (_) {}
+    const today = etToday();
+    try { const d = await db.doc('bots/dailyRun').get(); if (d.exists && d.data().date === today) return false; await db.doc('bots/dailyRun').set({ date: today, at: new Date().toISOString(), by: 'app' }); } catch (_) { return false; }
+    try { if (window.RSH_LIVE && window.RSH_LIVE.refresh) await window.RSH_LIVE.refresh(false); } catch (_) {}
+    await work('Night Owl started the daily run: first visit today.'); await saveMorning('app'); render(); return true;
   }
 
   /* ---------- Campaign asset box ----------
@@ -807,6 +882,7 @@ Answer with JSON only, exactly these keys:
       <div data-bot-panel="office" ${tab === 'office' ? '' : 'hidden'}>
         <div class="card" style="margin-top:16px">
         ${office()}
+        ${reportsHtml()}
         ${log.length ? `<div class="log" role="status"><div class="log-h"><strong>Bot log</strong><span class="small">latest run${plan ? ' · ' + esc(new Date(plan.generatedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })) : ''}</span></div>${log.map(l => { const m = TEAM.find(t => t[0] === l[0]) || TEAM[0]; return `<div class="log-row"><span class="log-av">${botSvg(m[3], l[0] === 'courier' ? 'asleep' : 'happy')}</span><div><strong>${esc(m[1])}</strong> <span class="small">${esc(m[2])}</span><div>${esc(l[1])}</div></div></div>`; }).join('')}</div>` : ''}
         </div>
       </div>
@@ -840,6 +916,7 @@ Answer with JSON only, exactly these keys:
           <div><label class="h" for="rshBotDyk">“Did You Know” video day</label><select id="rshBotDyk"><option value="" ${settings.dykDay == null || settings.dykDay === '' ? 'selected' : ''}>No weekly DYK day</option>${['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((d, i) => `<option value="${i}" ${String(settings.dykDay) === String(i) ? 'selected' : ''}>${d}</option>`).join('')}</select><div class="small" style="margin-top:4px">DYK campaigns go to every channel except Pinterest on this day; other posts move off it (Pinterest stays as planned).</div></div>
           <div><label class="h" for="rshBotDays">Look ahead</label><select id="rshBotDays">${[7, 14, 21, 30].map(n => `<option value="${n}" ${settings.days === n ? 'selected' : ''}>${n} days</option>`).join('')}</select></div>
         </div>
+        <div style="margin-top:16px"><label style="display:inline-flex;gap:8px;align-items:flex-start;font-size:13px;cursor:pointer"><input type="checkbox" id="rshBotDaily" ${settings.dailyAuto ? 'checked' : ''} style="margin-top:2px"><span><strong>Night Owl runs the whole team once a day</strong><br><span class="small">Every morning from the cloud, and on the first visit of the day by someone who can edit: refresh Metricool numbers, write SEO, time and check every post, and schedule the approved ones.</span></span></label></div>
         <div style="margin-top:16px"><label style="display:inline-flex;gap:8px;align-items:flex-start;font-size:13px;cursor:pointer"><input type="checkbox" id="rshBotAutoSend" ${settings.autoSend ? 'checked' : ''} style="margin-top:2px"><span><strong>Tempo schedules ready posts in Metricool by itself</strong><br><span class="small">When you press Run everything, every post with both approvals and all checks passed is scheduled on its day, with its photo or video and Quill’s hashtags. Posts that are not approved are never sent.</span></span></label></div>
         <div style="margin-top:16px"><label style="display:inline-flex;gap:8px;align-items:flex-start;font-size:13px;cursor:pointer"><input type="checkbox" id="rshBotAutoEdit" ${settings.autoEdit ? 'checked' : ''} style="margin-top:2px"><span><strong>Send video jobs to the RSH SPORTS editor automatically</strong><br><span class="small">When a Reel or video campaign has no video, Reel sends the edit job to your RSH SPORTS session and attaches the finished MP4. At most three new jobs per run. This uses your Claude usage in that session.</span></span></label></div>
         <div class="offnote"><strong>Not switched on yet</strong><div class="small" style="margin-top:4px">Courier (sending ready posts to Metricool as drafts for review) and Night Owl (running the team every day by itself). Each needs your explicit go-ahead.</div></div>
@@ -913,6 +990,36 @@ Answer with JSON only, exactly these keys:
     const pool = (it.channel === 'facebook' || it.channel === 'youtube') ? vid : (vid.length ? vid : pic);
     return pool.length ? pool[pool.length - 1] : null;   // the latest one attached (a revision replaces the older cut)
   }
+  // Shrink a video that is over 16 MB in the browser (plays it once, silently, and re-records it as MP4 at a bitrate
+  // that lands near 14.5 MB). Needs a browser that records MP4 (Chrome or Edge) and runs from a click.
+  const MP4_TYPES = ['video/mp4;codecs=avc1.640028,mp4a.40.2', 'video/mp4;codecs=avc1.4D401F,mp4a.40.2', 'video/mp4;codecs=avc1.42E01E,mp4a.40.2', 'video/mp4;codecs=avc1,mp4a.40.2', 'video/mp4;codecs=avc1'];   // H.264 only: what Instagram, Facebook and TikTok accept
+  async function shrinkVideo(blob, step, aim) {
+    aim = aim || 10;   // MB; recorders overshoot, so aim well under the 16 MB limit
+    const type = typeof MediaRecorder !== 'undefined' && MP4_TYPES.find(t => { try { return MediaRecorder.isTypeSupported(t); } catch (_) { return false; } });
+    if (!type) return { ok: false, reason: 'This browser cannot re-save videos as H.264 MP4 (what Instagram and Facebook need). Open the app in a current Chrome or Edge, or export the video under 16 MB.' };
+    const url = URL.createObjectURL(blob), v = document.createElement('video'); v.src = url; v.playsInline = true; v.preload = 'auto'; v.style.cssText = 'position:fixed;left:-9999px;width:2px;height:2px'; document.body.appendChild(v);
+    const cleanup = () => { try { v.pause(); v.remove(); URL.revokeObjectURL(url); } catch (_) {} };
+    try {
+      await new Promise((res, rej) => { v.onloadedmetadata = res; v.onerror = () => rej(new Error('The video could not be read.')); setTimeout(() => rej(new Error('The video took too long to open.')), 20000); });
+      const dur = v.duration; if (!isFinite(dur) || dur <= 0 || dur > 600) throw new Error('Only videos up to 10 minutes can be shrunk here.');
+      const vbits = Math.max(400000, Math.floor(aim * 1048576 * 8 / dur - 128000));
+      const vs = v.captureStream ? v.captureStream() : v.mozCaptureStream(); let tracks = vs.getVideoTracks(), ac = null;
+      try { ac = new (window.AudioContext || window.webkitAudioContext)(); const src = ac.createMediaElementSource(v), dest = ac.createMediaStreamDestination(); src.connect(dest); await ac.resume(); if (ac.state === 'running') tracks = tracks.concat(dest.stream.getAudioTracks()); } catch (_) {}
+      const rec = new MediaRecorder(new MediaStream(tracks), { mimeType: type, videoBitsPerSecond: vbits, audioBitsPerSecond: 128000 }), chunks = [];
+      rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+      const done = new Promise(res => { rec.onstop = res; });
+      const tick = setInterval(() => { step && step(`Shrinking the video… ${Math.min(99, Math.round(v.currentTime / dur * 100))}%`); }, 1000);
+      rec.start(1000);
+      try { await v.play(); } catch (e) { clearInterval(tick); rec.stop(); throw new Error('The browser would not play the video to shrink it. Press Send to Metricool yourself so it runs from your click.'); }
+      await new Promise(res => { v.onended = res; });
+      rec.stop(); await done; clearInterval(tick); if (ac) try { ac.close(); } catch (_) {}
+      const out = new Blob(chunks, { type: 'video/mp4' });
+      if (!out.size) throw new Error('Shrinking produced an empty file.');
+      if (out.size > DRIVE_MAX) { if (aim > 7) { cleanup(); return shrinkVideo(blob, step, aim * 0.6); } throw new Error(`After shrinking the video is still ${(out.size / 1048576).toFixed(1)} MB. Export it shorter or at a lower quality.`); }
+      return { ok: true, blob: out };
+    } catch (e) { return { ok: false, reason: (e && e.message) || String(e) }; }
+    finally { cleanup(); }
+  }
   async function driveUpload(blob, fname, mime, step) {
     const mcp = await use('mcp'); if (!mcp) return { ok: false, reason: 'This view cannot reach Google Drive. Paste a public link to the file in the box above, then send again.' };
     let fileArgs = false; try { const lt = await mcp.listTools(); fileArgs = !!lt.fileArgs && (lt.servers || []).some(x => x.server === GD); } catch (_) {}
@@ -939,8 +1046,12 @@ Answer with JSON only, exactly these keys:
   async function attachForPost(key, file, step) {
     const it = find(key); if (!it || !file) return { ok: false, reason: 'Pick a file first.' };
     if (!/^(video|image)\//.test(file.type || '')) return { ok: false, reason: 'Pick a photo or a video.' };
-    if (file.size > DRIVE_MAX) return { ok: false, reason: `That file is ${(file.size / 1048576).toFixed(1)} MB; the app can send files up to 16 MB to Google Drive. Pick a smaller copy.` };
-    const up = await driveUpload(file, file.name, file.type, step); if (!up.ok) return up;
+    let data = file;
+    if (file.size > DRIVE_MAX) {
+      if (!/^video\//.test(file.type)) return { ok: false, reason: `That file is ${(file.size / 1048576).toFixed(1)} MB; the app can send files up to 16 MB to Google Drive. Pick a smaller copy.` };
+      step && step('Shrinking the video…'); const sh = await shrinkVideo(file, step); if (!sh.ok) return { ok: false, reason: `That file is ${(file.size / 1048576).toFixed(1)} MB (the limit is 16 MB) and could not be shrunk here: ${sh.reason}` }; data = sh.blob;
+    }
+    const up = await driveUpload(data, file.name, data.type || file.type, step); if (!up.ok) return up;
     for (const x of (plan.items || [])) if (x.postId === it.postId && !(x.sent && /scheduled|draft/.test(x.sent.status)) && (x === it || !x.mediaUrl)) x.mediaUrl = up.link;
     await save(); render(); notify(); return { ok: true };
   }
@@ -950,7 +1061,10 @@ Answer with JSON only, exactly these keys:
     if (plan.links[a.id]) { it.mediaUrl = plan.links[a.id]; return { ok: true }; }
     step && step('Getting the file ready…');
     let blob; try { blob = await window.RSH_HOST.fileBlob(a); } catch (_) { return { ok: false, reason: 'The attached file could not be read. Attach it again in the campaign, then send again.' }; }
-    if (blob.size > DRIVE_MAX) return { ok: false, reason: `The file is ${(blob.size / 1048576).toFixed(1)} MB; the app can upload files up to 16 MB to Google Drive. Use “Attach file” below to pick a smaller copy (under 16 MB), or paste a public link in the box above.` };
+    if (blob.size > DRIVE_MAX) {
+      if (!/^video\//.test(a.mime || blob.type || '')) return { ok: false, reason: `The file is ${(blob.size / 1048576).toFixed(1)} MB; the app can upload files up to 16 MB to Google Drive. Attach a smaller copy, or paste a public link in the box above.` };
+      step && step('Shrinking the video…'); const sh = await shrinkVideo(blob, step); if (!sh.ok) return { ok: false, reason: `The video is ${(blob.size / 1048576).toFixed(1)} MB (the limit is 16 MB) and could not be shrunk here: ${sh.reason}` }; blob = sh.blob;
+    }
     const up = await driveUpload(blob, a.name, a.mime, step); if (!up.ok) return up; const link = up.link;
     plan.links[a.id] = link; it.mediaUrl = link; await save();
     return { ok: true };
@@ -1013,6 +1127,7 @@ Answer with JSON only, exactly these keys:
   async function onClick(e) {
     const at = e.target.closest('[data-bot-addtags]');
     if (at) { const it = find(at.dataset.botAddtags), so = it && seoFor(it.postId, it.channel); if (it && so) { const add = (so.ch.hashtags || []).filter(t => !it.caption.toLowerCase().includes(t.toLowerCase())); if (add.length) { it.caption = it.caption.replace(/\s+$/, '') + (/(#[\p{L}\p{N}_]+)\s*$/u.test(it.caption) ? ' ' : '\n\n') + add.join(' '); it.edited = true; await save(); render(); } } return; }
+    if (e.target.closest('[data-bot-weekly]')) { const pre = document.querySelector('#rshBots [data-bot-weeklytext]'), text = weeklyReport(); if (pre) { pre.hidden = false; pre.textContent = text; } const b = e.target.closest('[data-bot-weekly]'); try { navigator.clipboard.writeText(text).then(() => { b.textContent = 'Copied: paste it to Anthony'; setTimeout(() => { b.textContent = 'Weekly report for Anthony'; }, 2500); }, () => {}); } catch (_) {} return; }
     const rb = e.target.closest('[data-bot-raw]'); if (rb) { e.preventDefault(); return openRaw(rb.dataset.botRaw); }
     const fln = e.target.closest('[data-bot-firstline]');
     if (fln) { const it = find(fln.dataset.botFirstline), so = it && seoFor(it.postId, it.channel); if (it && so && so.firstLine) { it.caption = so.firstLine + '\n\n' + it.caption; it.edited = true; await save(); render(); } return; }
@@ -1051,6 +1166,7 @@ Answer with JSON only, exactly these keys:
     const t = e.target;
     if (t.matches('[data-bot-file]')) { const files = [...t.files], camp = document.querySelector('#rshBots [data-bot-dropcamp]'); t.value = ''; return attach(files, camp && camp.value); }
     if (t.matches('[data-bot-dropcamp]')) return;
+    if (t.id === 'rshBotDaily') { settings.dailyAuto = t.checked; if (db) { try { await db.doc('bots/settings').set({ json: JSON.stringify(settings) }); } catch (_) {} } return render(); }
     if (t.id === 'rshBotAutoSend') { settings.autoSend = t.checked; if (db) { try { await db.doc('bots/settings').set({ json: JSON.stringify(settings) }); } catch (_) {} } return render(); }
     if (t.id === 'rshBotAutoEdit') { settings.autoEdit = t.checked; if (db) { try { await db.doc('bots/settings').set({ json: JSON.stringify(settings) }); } catch (_) {} } return render(); }
     if (t.dataset.botCh) { settings.channels = [...document.querySelectorAll('#rshBots [data-bot-ch]:checked')].map(x => x.dataset.botCh); note = 'Setup changed. Press “Run everything” to apply it.'; if (db) { try { await db.doc('bots/settings').set({ json: JSON.stringify(settings) }); } catch (_) {} } return render(); }
@@ -1083,9 +1199,12 @@ Answer with JSON only, exactly these keys:
       try { const s = await db.doc('bots/settings').get(); if (s.exists) settings = { ...DEFAULTS, ...JSON.parse(s.data().json) }; } catch (_) {}
       try { const s = await db.doc('bots/seo').get(); if (s.exists) seo = JSON.parse(s.data().json) || {}; } catch (_) {}
       try { const p = await db.doc('bots/plan').get(); if (p.exists) plan = JSON.parse(p.data().json); } catch (_) {}
+      try { const m = await db.doc('bots/morning').get(); if (m.exists) morning = JSON.parse(m.data().json); } catch (_) {}
+      await reconcileJobs();
       await collect();
+      setTimeout(() => { nightOwl(); }, 1500);
     }
     render();
   }
-  window.RSH_BOTS = { openRaw, addRaw, sendRaw, rawCount, loadRaw, dayFor, isDyk, targets, sendText, autoSend, seoFor, seoRun, learnedTimes, schedule, attachForPost, driveUpload, fileFor, autoLink, needsFile, readyItems, placedOn, place, unplace, setMediaUrl, sendToMetricool, metricoolPost, NAME, freshVideos, watch, onChange: f => listeners.push(f), handoff, collect, start, captionFor, assetNeeds, imagePrompt, videoBrief, editJob };
+  window.RSH_BOTS = { shrinkVideo, nightOwl, weeklyReport, learnedTags, resultsForPrompt, openRaw, addRaw, sendRaw, rawCount, loadRaw, dayFor, isDyk, targets, sendText, autoSend, seoFor, seoRun, learnedTimes, schedule, attachForPost, driveUpload, fileFor, autoLink, needsFile, readyItems, placedOn, place, unplace, setMediaUrl, sendToMetricool, metricoolPost, NAME, freshVideos, watch, onChange: f => listeners.push(f), handoff, collect, start, captionFor, assetNeeds, imagePrompt, videoBrief, editJob };
 })();
