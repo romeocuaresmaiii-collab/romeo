@@ -1,0 +1,11 @@
+RSH SPORTS MARKETING OS — v9.4.0
+
+Artifact edition
+- Campaign results on Home: link a campaign to the post that was published and its Metricool
+  figures follow it. The app suggests a match when channel, date and wording agree; a person
+  always confirms. Linked results are grouped by sport, audience, season phase and goal.
+- Season phase is derived from the sport and planned date using a typical US school season.
+- Comments to answer and a link-tracking check were added to the live panel.
+
+Both editions
+- A small add-on surface (RSH_APP) lets panels read campaigns and save through the normal path.

@@ -203,7 +203,8 @@
     return `<div class="live-box"><h3>Competitors tracked in Metricool · last ${DAYS} days</h3><div class="scroll"><table><thead><tr><th>Account</th><th>Followers</th><th>Posts</th><th>Interactions</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
   }
 
-  function render() { document.querySelectorAll('.rsh-live').forEach(renderInto); }
+  const listeners = [];
+  function render() { document.querySelectorAll('.rsh-live').forEach(renderInto); for (const fn of listeners) { try { fn(); } catch (_) {} } }
   function renderInto(host) {
     const when = state.fetchedAt ? new Date(state.fetchedAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
     let body;
@@ -329,5 +330,5 @@
     // With the connector available, refresh on open when results are missing or older than three hours.
     if (canRefresh && (!state.fetchedAt || Date.now() - new Date(state.fetchedAt).getTime() > STALE_MS)) refresh(false);
   }
-  window.RSH_LIVE = { start, summarise, compact, findRows };
+  window.RSH_LIVE = { rows: () => state.rows, onData: fn => listeners.push(fn), start, summarise, compact, findRows };
 })();

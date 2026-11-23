@@ -50,6 +50,14 @@ const out = []; const ok = (n, c, d) => { out.push(c); console.log((c ? 'PASS  '
   ok('Untracked store links are counted and explained (3 of 4 untagged, 3 to the homepage)', /3 of 4 posts linking to rshsports.com carry no campaign tracking, and 3 point to the homepage/.test(live.text) && /Link tracking/.test(live.text) && /utm_source=pinterest&utm_medium=organic_social/.test(live.text));
   ok('Comments to answer are listed with links', /5 comments came in on 2 posts/.test(live.text) && /Coach question post/.test(live.text) && /Comments to answer/.test(live.text));
   ok('Logo renders', await p.evaluate(() => [...document.images].some(i => /rsh_logo/.test(i.src) && i.naturalWidth > 0)));
+  const tk = (await WS(p)).posts.find(x => x.platform === 'TikTok').id;
+  const campBefore = await p.evaluate(() => document.getElementById('rshCampaigns').innerText);
+  await p.selectOption(`#rshCampaigns select[data-pick="${tk}"]`, { index: 1 });
+  await p.click(`#rshCampaigns [data-link-pick="${tk}"]`); await p.waitForTimeout(2200);
+  const camp = await p.evaluate(id => { const ws = JSON.parse(localStorage.getItem('rsh_growth_command_v1')), cloud = JSON.parse(window.__store['workspace/main'].json); return { local: ws.posts.find(x => x.id === id).published, cloud: cloud.posts.find(x => x.id === id).published, text: document.getElementById('rshCampaigns').innerText }; }, tk);
+  ok('Campaign results start empty and explain how to fill them', /0 of 11 campaigns linked/.test(campBefore) && /No results by sport, audience or season yet/.test(campBefore));
+  ok('Linking a campaign to its published post saves the link and its real figures', !!camp.local && camp.local.impressions === 200 && camp.local.interactions === 20 && !!camp.cloud && camp.cloud.link === camp.local.link, JSON.stringify(camp.local).slice(0, 160));
+  ok('Results are grouped by sport, audience, season phase and goal', /1 of 11 campaigns linked/.test(camp.text) && /By sport/.test(camp.text) && /By season phase/.test(camp.text) && /In season/.test(camp.text) && /Wrestling|Basketball/.test(camp.text));
   const views = await p.$$eval('[data-view]', e => [...new Set(e.map(x => x.dataset.view))].filter(v => /^[a-z]+$/.test(v)));
   const before = errs.length;
   for (const v of views) { await p.evaluate(v => document.querySelector(`[data-view="${v}"]`).click(), v); await p.waitForTimeout(200); }
