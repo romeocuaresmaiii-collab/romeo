@@ -69,6 +69,16 @@ const out = []; const ok = (n, c, d) => { out.push(c); console.log((c ? 'PASS  '
   ok('Every experiment offers results from published posts, or says why it cannot', gx.boxes === gx.cards && gx.cards === 5 && /does not report per post/.test(gx.folText));
   ok('An engagement test is filled with the two posts’ real figures (A 20/200, B 5/100)', gxAfter.t.join(',') === '20,200,5,100' && /Metricool figures read/.test(gxAfter.source) && /A leads/.test(gxAfter.result) && gxAfter.redecorated, gxAfter.t.join(',') + ' · ' + gxAfter.result.slice(0, 80));
   await p.evaluate(() => document.querySelector('[data-view="overview"]').click());
+  await p.evaluate(() => document.querySelector('[data-view="calendar"]').click());
+  const tomorrow = await p.evaluate(() => { const d = new Date(); d.setDate(d.getDate() + 1); return { iso: d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'), otherMonth: d.getMonth() !== new Date().getMonth() }; });
+  const calBanner = await p.textContent('#rshCalCover');
+  if (tomorrow.otherMonth) await p.click('#calNext');
+  const calDay = await p.evaluate(k => { const d = document.querySelector(`.calday[data-date="${k}"]`); return d ? { mc: d.querySelectorAll('.calevent.mc').length, empty: d.classList.contains('mc-empty'), text: d.textContent } : null; }, tomorrow.iso);
+  if (tomorrow.otherMonth) await p.click('#calPrev');
+  const todayCell = await p.evaluate(() => { const d = document.querySelector('.calday.today'); return d ? { pub: /published/.test(d.textContent), empty: d.classList.contains('mc-empty') } : null; });
+  ok('Calendar warns how many of the next 14 days are covered in Metricool', /1 of the next 14 days have a post scheduled in Metricool/.test(calBanner) && /Nothing is scheduled on/.test(calBanner), calBanner.slice(0, 150));
+  ok('Metricool scheduled posts and published counts appear on the calendar days', !!calDay && calDay.mc === 1 && !calDay.empty && /Round Nobody/.test(calDay.text) && !!todayCell && todayCell.pub && todayCell.empty, JSON.stringify(calDay) + JSON.stringify(todayCell));
+  await p.evaluate(() => document.querySelector('[data-view="overview"]').click());
   const views = await p.$$eval('[data-view]', e => [...new Set(e.map(x => x.dataset.view))].filter(v => /^[a-z]+$/.test(v)));
   const before = errs.length;
   for (const v of views) { await p.evaluate(v => document.querySelector(`[data-view="${v}"]`).click(), v); await p.waitForTimeout(200); }

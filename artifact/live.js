@@ -330,5 +330,5 @@
     // With the connector available, refresh on open when results are missing or older than three hours.
     if (canRefresh && (!state.fetchedAt || Date.now() - new Date(state.fetchedAt).getTime() > STALE_MS)) refresh(false);
   }
-  window.RSH_LIVE = { rows: () => state.rows, onData: fn => listeners.push(fn), start, summarise, compact, findRows };
+  window.RSH_LIVE = { rows: () => state.rows, scheduled: () => state.scheduled, onData: fn => listeners.push(fn), start, summarise, compact, findRows };
 })();

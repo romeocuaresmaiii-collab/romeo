@@ -1,0 +1,9 @@
+RSH SPORTS MARKETING OS — artifact edition, build 16
+
+Calendar
+- Posts scheduled in Metricool appear on their days next to the team's own plans; drafts are
+  shown with a dashed outline. Days with published posts show the count.
+- A banner states how many of the next 14 days have a post scheduled and which days have none.
+  Those days are tinted and labelled.
+- The older dated snapshot counts are hidden once the current Metricool schedule is loaded.
+Read-only: the app shows Metricool's schedule and never changes it.
