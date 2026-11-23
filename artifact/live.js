@@ -222,7 +222,7 @@
     const card = document.createElement('div'); card.className = 'card rsh-live'; card.id = 'rshLive'; card.style.marginBottom = '16px';
     home.insertBefore(card, home.firstChild);
     const exec = document.getElementById('view-executive');
-    if (exec) { const c2 = document.createElement('div'); c2.className = 'card rsh-live'; c2.id = 'rshLiveExecutive'; c2.style.marginBottom = '16px'; exec.insertBefore(c2, exec.firstChild); }
+    if (exec) { const c2 = document.createElement('div'); c2.className = 'card rsh-live'; c2.id = 'rshLiveExecutive'; c2.style.marginBottom = '16px'; const tabs = exec.querySelector(':scope > .view-tabs'); exec.insertBefore(c2, tabs ? tabs.nextSibling : exec.firstChild); }
     render();
     const [d, mcp] = await Promise.all([use('db'), use('mcp')]); db = d; canRefresh = !!mcp;
     if (db) {

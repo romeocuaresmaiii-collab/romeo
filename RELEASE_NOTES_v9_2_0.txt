@@ -1,0 +1,15 @@
+RSH SPORTS MARKETING OS — v9.2.0
+
+Fewer places to look
+- Four pairs of overlapping screens now share one sidebar entry each, with tabs at the top:
+    Strategy         = Strategy Lab | Decision Engine
+    Performance      = Metricool history | Manual tracker
+    Competitors      = Watchlist | Intelligence
+    Executive Brief  = Executive Brief | Anthony Review Center
+  "More tools" shows 12 entries instead of 16. Nothing was removed; search still finds the old names.
+
+Artifact edition
+- Live panel on Home and the Executive Brief also shows followers per channel with the change
+  over the period, and the posts scheduled in Metricool for the next 7 days (drafts flagged).
+- Results can be loaded into the artifact by Claude, so they show for every viewer, including
+  viewers without their own Metricool connection. A daily scheduled refresh keeps them current.

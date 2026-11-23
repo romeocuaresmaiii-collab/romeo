@@ -51,6 +51,16 @@ const out = []; const ok = (n, c, d) => { out.push(c); console.log((c ? 'PASS  '
   const before = errs.length;
   for (const v of views) { await p.evaluate(v => document.querySelector(`[data-view="${v}"]`).click(), v); await p.waitForTimeout(200); }
   ok(`All ${views.length} views open without errors`, errs.length === before, errs.slice(before).join(' | '));
+  const merged = await p.evaluate(() => {
+    document.getElementById('navMoreDetails').open = true;
+    const visible = [...document.querySelectorAll('#navMoreDetails button[data-view]')].filter(b => b.offsetParent !== null).map(b => b.dataset.view);
+    document.querySelector('[data-view="competitors"]').click();
+    const tabs = [...document.querySelectorAll('#view-competitors > .view-tabs button')].map(b => b.textContent);
+    document.querySelector('#view-competitors > .view-tabs [data-tabview="compintel"]').click();
+    return { visible, tabs, onIntel: document.getElementById('view-compintel').classList.contains('active'), navActive: document.querySelector('.nav button[data-view="competitors"]').classList.contains('active'), tabActive: document.querySelector('#view-compintel > .view-tabs .active').textContent };
+  });
+  ok('Overlapping screens share one sidebar entry (12 tools instead of 16)', merged.visible.length === 12 && !merged.visible.includes('compintel') && !merged.visible.includes('pitch'), merged.visible.join(','));
+  ok('Tabs switch between the merged screens and keep the sidebar entry highlighted', merged.tabs.join('|') === 'Watchlist|Intelligence' && merged.onIntel && merged.navActive && merged.tabActive === 'Intelligence');
   await p.evaluate(() => document.querySelector('[data-view="approvals"]').click());
   const withMedia = (await WS(p)).posts.find(x => (x.creativeAssets || []).length).id;
   await p.click(`[data-review-select="${withMedia}"]`);
