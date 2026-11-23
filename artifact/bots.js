@@ -18,10 +18,11 @@
   const app = () => window.RSH_APP;
   const CHANNELS = [['instagram', 'Instagram', 2200], ['facebook', 'Facebook', 5000], ['tiktok', 'TikTok', 2200], ['youtube', 'YouTube', 5000], ['pinterest', 'Pinterest', 500], ['threads', 'Threads', 500], ['bluesky', 'Bluesky', 300]];
   const NAME = Object.fromEntries(CHANNELS.map(c => [c[0], c[1]])), LIMIT = Object.fromEntries(CHANNELS.map(c => [c[0], c[2]]));
-  const DEFAULTS = { channels: ['instagram', 'facebook', 'tiktok'], times: ['12:00', '18:00'], labels: { '12:00': 'lunch break', '18:00': 'after practice' }, days: 14 };
+  const DEFAULTS = { autoEdit: true, channels: ['instagram', 'facebook', 'tiktok'], times: ['12:00', '18:00'], labels: { '12:00': 'lunch break', '18:00': 'after practice' }, days: 14 };
   let db = null, settings = { ...DEFAULTS }, plan = null, busy = false, note = '', log = [], openItem = null;
   let phase = null, wake = '', assetSig = null, queued = '', drop = { msg: '', busy: false };
-  let tab = 'office', filter = 'all';                 // which section of the screen is showing; which campaigns the plan lists
+  let tab = 'office', filter = 'all';
+  let jobs = {}, editorState = 'unknown', dispatching = false;      // edit jobs by campaign id; whether the editor can be reached from this view                 // which section of the screen is showing; which campaigns the plan lists
   const openCamps = new Set();
   const slotName = t => (settings.labels && settings.labels[t]) ? `${clock(t)} · ${settings.labels[t]}` : clock(t);      // which bot is at work right now; why the team started; attachments seen so far
 
@@ -35,7 +36,8 @@
   #rshBots .office{margin-top:16px;border-radius:18px;padding:18px 16px 14px;background:linear-gradient(180deg,#eef4fb 0%,#f7f9fc 58%,#e9edf3 58%,#e3e8ef 100%);border:1px solid #dfe6ee;position:relative;overflow:hidden}
   #rshBots .office-top{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
   #rshBots .office-top .sign{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#51607a}
-  #rshBots .desks{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}
+  #rshBots .desks{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px}
+  @media(max-width:1250px){#rshBots .desks{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}}
   #rshBots .assetrow{padding:11px 14px;border-bottom:1px solid #ececf0;background:#fff;font-size:12.5px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
   #rshBots .assetrow .need{display:inline-block;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:999px;margin:3px 4px 0 0}
   #rshBots .need.have{background:#eaf7ee;color:#1a7f37}#rshBots .need.miss{background:#fdecea;color:#b42318}#rshBots .need.opt{background:#f0f0f3;color:#515154}
@@ -193,6 +195,49 @@
       'No text or captions in the footage; text is added in editing. No music with lyrics.', RULES].filter(Boolean).join('\n\n');
   }
 
+  /* ---------- Reel: automatic hand-off to the video editor ----------
+   * When a campaign needs a video and has none, Reel writes an edit job, sends it to the team's
+   * "RSH SPORTS" Claude Code session, and attaches the finished video when that session reports
+   * back. Nobody copies or pastes. The job travels through the viewer's own Claude connection
+   * (asked for once); the finished file returns through the artifact's file store and a small
+   * record in collection `editJobs`. One job per campaign, at most three new jobs per run.
+   */
+  const EDITOR_SESSION = 'session_01EomsW2MJWVwshJ5YMhGGBP', APP_URL = 'https://claude.ai/artifact/YR8cQvQaSPNMVNxngvihpz', REMOTE = 'Claude Code Remote';
+  const needsVideo = p => { const n = assetNeeds(p).needs[0]; return /reel|video/i.test(p.postType || '') && n && n.state === 'miss'; };
+  function handoff(p) {
+    return `[RSH Sports Marketing OS: automatic edit job. Sent by the app on behalf of the team.]\n\n${editJob(p).replace('under 30 MB', 'under 15 MB')}\n\nWHEN THE VIDEO IS FINISHED, return it to the app so nobody has to move it by hand:\n1. Upload the MP4 to the artifact ${APP_URL} as an asset (Artifact tool: action publish, url set to that artifact, asset true, file_path the MP4). Note the 32-character asset id in the result.\n2. Record it with the ArtifactData tool on the same artifact: read collection "editJobs", document "${p.id}" (action get) to learn its version, then action update with if_version and data {"status":"done","assetId":"<the asset id>","mime":"video/mp4","bytes":<file size>,"name":"${slug(p.title) || 'campaign'}.mp4","finishedAt":"<current time, ISO 8601>"}.\nIf you cannot finish, update that document with {"status":"failed","reason":"<one sentence>"} instead.\nDo not change anything else in that artifact, and do not publish or schedule anything.`;
+  }
+  function queueEdits(campaigns) {
+    if (!settings.autoEdit || !db) return; let added = 0;
+    for (const p of campaigns) { if (added >= 3) break; if (jobs[p.id] || !needsVideo(p)) continue; jobs[p.id] = { postId: p.id, title: String(p.title || '').slice(0, 120), status: 'queued', queuedAt: new Date().toISOString() }; added++; db.doc('editJobs/' + p.id).set(jobs[p.id]).catch(() => {}); }
+    if (added) dispatch();
+  }
+  async function dispatch() {
+    if (dispatching || !db) return; dispatching = true;
+    try {
+      const queued = Object.values(jobs).filter(j => j.status === 'queued'); if (!queued.length) return;
+      const mcp = await use('mcp'); if (!mcp) { editorState = 'unavailable'; return; }
+      for (const j of queued) {
+        const p = (app().data().posts || []).find(x => x.id === j.postId); if (!p) continue;
+        try { await mcp.callTool(REMOTE, 'send_message', { session_id: EDITOR_SESSION, message: handoff(p) }); editorState = 'ok'; j.status = 'sent'; j.sentAt = new Date().toISOString(); await db.doc('editJobs/' + j.postId).set(j); }
+        catch (e) { editorState = 'unavailable'; j.lastError = String((e && e.code) || 'send_failed'); try { await db.doc('editJobs/' + j.postId).set(j); } catch (_) {} break; }
+      }
+    } finally { dispatching = false; render(); }
+  }
+  // Pick up what the editor sent back and attach it to its campaign.
+  async function collect() {
+    if (!db) return; let changed = false;
+    try { const q = await db.collection('editJobs').get(); const next = {}; for (const s of q.docs) { const d = s.data(); if (d && d.postId) next[d.postId] = { ...d }; } jobs = next; } catch (_) { return; }
+    for (const j of Object.values(jobs)) {
+      if (j.status !== 'done' || !j.assetId) continue;
+      const ok = app().attachAsset(j.postId, { id: j.assetId, mime: j.mime || 'video/mp4', bytes: j.bytes, name: j.name });
+      j.status = ok ? 'attached' : 'failed'; if (!ok) j.reason = 'The returned file could not be attached (wrong type, or the campaign already has 10 files).'; j.attachedAt = new Date().toISOString(); changed = true;
+      try { await db.doc('editJobs/' + j.postId).set(j); } catch (_) {}
+    }
+    if (Object.values(jobs).some(j => j.status === 'queued')) dispatch();
+    if (changed || true) render();
+  }
+
   /* ---------- 1. Caption Bot ---------- */
   function bodyOf(p) {
     let b = String(p.captionBody || p.caption || '').trim();
@@ -268,7 +313,9 @@
     const stops = {}; for (const i of items) for (const c of i.checks) if (c[0] === 'stop') stops[c[1]] = (stops[c[1]] || 0) + 1;
     const top = Object.keys(stops).sort((a, b) => stops[b] - stops[a])[0];
     const needing = inRange.filter(q => assetNeeds(q).missing);
-    log = [['pixel', !inRange.length ? 'No campaigns in the window.' : needing.length ? `${needing.length} of ${inRange.length} campaigns need files. Next up: “${cut(needing[0].title, 40)}” needs ${assetNeeds(needing[0]).needs.filter(n => n.state === 'miss').map(n => n.label).join(' and ')}. Briefs and prompts are in the plan.` : `All ${inRange.length} campaigns have their files.`], ['quill', items.length ? `${items.length} captions for ${inRange.length} campaign${inRange.length === 1 ? '' : 's'}. First one: ${sample}` : 'No campaigns in the window, so nothing to write.'],
+    queueEdits(inRange);
+    const jl = Object.values(jobs), jq = jl.filter(j => j.status === 'queued' || j.status === 'sent').length;
+    log = [['reel', !settings.autoEdit ? 'Automatic editing is off.' : jq ? `${jq} edit job${jq === 1 ? '' : 's'} with the RSH SPORTS editor${jl.filter(j => j.status === 'attached').length ? `, ${jl.filter(j => j.status === 'attached').length} finished and attached` : ''}.` : 'No video is waiting to be edited.'], ['pixel', !inRange.length ? 'No campaigns in the window.' : needing.length ? `${needing.length} of ${inRange.length} campaigns need files. Next up: “${cut(needing[0].title, 40)}” needs ${assetNeeds(needing[0]).needs.filter(n => n.state === 'miss').map(n => n.label).join(' and ')}. Briefs and prompts are in the plan.` : `All ${inRange.length} campaigns have their files.`], ['quill', items.length ? `${items.length} captions for ${inRange.length} campaign${inRange.length === 1 ? '' : 's'}. First one: ${sample}` : 'No campaigns in the window, so nothing to write.'],
       ['tempo', items.length ? `${items.length} posts timed across ${days.length} day${days.length === 1 ? '' : 's'} (${[...new Set(days)].join(', ')}), using ${settings.times.map(slotName).join(' and ')} US Eastern. No clashes.` : 'Nothing to schedule.'],
       ['ref', !items.length ? 'Nothing to check.' : ready === items.length ? `All ${items.length} checks passed. Ready for Courier.` : `${ready} ready, ${items.length - ready} held back.${top ? ` Most common reason: ${top.charAt(0).toLowerCase() + top.slice(1)} (${stops[top]}).` : ''}`],
       ['courier', ready ? `Not switched on, so nothing was sent. ${ready} post${ready === 1 ? ' is' : 's are'} ready: use Copy to paste into Metricool.` : 'Not switched on, and nothing is ready yet, so nothing was sent to Metricool.']];
@@ -285,7 +332,7 @@
    * Five bots with their own desk. What each one "feels" and says is worked out from real numbers
    * (posts written, days uncovered, posts held back), so a glance at the office is a status report.
    */
-  const TEAM = [['pixel', 'Pixel', 'Asset Bot', '#db2777'], ['quill', 'Quill', 'Caption Bot', '#0071e3'], ['tempo', 'Tempo', 'Scheduler Bot', '#7c3aed'], ['ref', 'Ref', 'Manager Bot', '#d9480f'], ['courier', 'Courier', 'Posting Bot', '#0f9d7a'], ['owl', 'Night Owl', 'Daily run', '#64748b']];
+  const TEAM = [['pixel', 'Pixel', 'Asset Bot', '#db2777'], ['reel', 'Reel', 'Video Editor', '#b45309'], ['quill', 'Quill', 'Caption Bot', '#0071e3'], ['tempo', 'Tempo', 'Scheduler Bot', '#7c3aed'], ['ref', 'Ref', 'Manager Bot', '#d9480f'], ['courier', 'Courier', 'Posting Bot', '#0f9d7a'], ['owl', 'Night Owl', 'Daily run', '#64748b']];
   // Bot faces are drawn with plain page elements and CSS (no SVG): Claude's sharing review only
   // accepts JPEG, PNG, GIF or WebP images, and a version containing SVG cannot be opened by invited people.
   function botSvg(color, face) {
@@ -310,11 +357,18 @@
       : ['bad', ready ? 'Strict' : 'Frustrated', 'strict', `I’m holding back ${held} of ${items.length} posts.` + (noMedia ? ` ${noMedia} campaign${noMedia === 1 ? ' has' : 's have'} no media.` : '') + (waiting ? ` ${waiting} still need${waiting === 1 ? 's' : ''} a review or approval.` : '')];
     out.courier = ['off', 'Asleep', 'asleep', `Not switched on. ${ready ? `${ready} post${ready === 1 ? ' is' : 's are'} ready when you want me to take them to Metricool for review.` : 'Wake me when posts are ready to go to Metricool for review.'}`];
     const all = (app().data().posts || []).filter(q => q.date && (!plan || (q.date >= plan.from && q.date <= plan.to))), missing = all.filter(q => assetNeeds(q).missing).length;
+    const js = Object.values(jobs), active = js.filter(j => j.status === 'sent').length, jWait = js.filter(j => j.status === 'queued').length, done = js.filter(j => j.status === 'attached').length, failed = js.filter(j => j.status === 'failed').length;
+    out.reel = !settings.autoEdit ? ['off', 'Paused', 'asleep', 'Automatic editing is turned off in Setup.']
+      : editorState === 'unavailable' ? ['bad', 'Cut off', 'worried', `I can’t reach the RSH SPORTS editor from this view${jWait ? `, so ${jWait} job${jWait === 1 ? ' is' : 's are'} waiting` : ''}. Open the app from the owner account and allow the connection.`]
+      : failed ? ['bad', 'Stuck', 'worried', `${failed} edit${failed === 1 ? '' : 's'} came back with a problem. ${active ? active + ' still in the editor.' : ''}`]
+      : active || jWait ? ['busy', 'Editing', 'working', `${active + jWait} video${active + jWait === 1 ? '' : 's'} with the RSH SPORTS editor. I attach each one when it comes back.`]
+      : done ? ['good', 'Proud', 'happy', `${done} edited video${done === 1 ? '' : 's'} came back and ${done === 1 ? 'is' : 'are'} attached.`]
+      : ['plain', 'Ready', 'neutral', 'When a campaign needs a video, I send the job to the RSH SPORTS editor and attach what comes back.'];
     out.pixel = !all.length ? ['plain', 'Idle', 'neutral', 'No campaigns to prepare assets for.']
       : missing ? ['bad', 'Busy', 'worried', `${missing} of ${all.length} campaign${all.length === 1 ? '' : 's'} still need${missing === 1 ? 's' : ''} files. I wrote a brief and a ready-to-paste prompt for each.`]
       : ['good', 'Happy', 'happy', `Every campaign has the files it needs.`];
     out.owl = ['off', 'Asleep', 'asleep', 'Not switched on. I would run the whole team every morning.'];
-    const task = { pixel: 'Writing asset briefs…', quill: 'Writing captions…', tempo: 'Picking times…', ref: 'Checking every post…' };
+    const task = { pixel: 'Writing asset briefs…', reel: 'Sending edit jobs…', quill: 'Writing captions…', tempo: 'Picking times…', ref: 'Checking every post…' };
     if (phase && out[phase]) out[phase] = ['busy', 'Working', 'working', task[phase]];
     return out;
   }
@@ -326,9 +380,9 @@
       <div class="dropz" data-bot-drop><div class="t"><strong>Start here: drop a photo or video</strong><br><span class="small" data-bot-dropmsg>${drop.msg ? esc(drop.msg) : 'Drop it on this box, paste it, or choose a file. It is attached to the campaign you pick, exactly as in Create.'}</span></div>
         <select aria-label="Campaign to attach the file to" data-bot-dropcamp>${pick.length ? pick.map(p => `<option value="${esc(p.id)}">${esc(p.date.slice(5))} · ${esc(cut(p.title, 38))}</option>`).join('') : '<option value="">No campaigns yet</option>'}</select>
         <button type="button" class="btn ghost smallbtn" data-bot-choose ${drop.busy || !pick.length ? 'disabled' : ''}>${drop.busy ? 'Attaching…' : 'Choose file'}</button><input type="file" data-bot-file accept="image/png,image/jpeg,image/webp,video/mp4,video/webm" multiple hidden></div>
-      <div class="flowlab"><span>Campaigns and files</span><i></i><span>asset briefs</span><i></i><span>captions</span><i></i><span>times</span><i></i><span>checks</span><i></i><span>Metricool</span></div>
+      <div class="flowlab"><span>Campaigns and files</span><i></i><span>asset briefs</span><i></i><span>video edits</span><i></i><span>captions</span><i></i><span>times</span><i></i><span>checks</span><i></i><span>Metricool</span></div>
       <div class="desks">${TEAM.map(([id, name, role, color], n) => { const [tone, mood, face, line] = t[id]; const state = face === 'asleep' ? 'asleep' : face === 'working' ? 'working' : 'idle';
-        return `<div class="desk ${state}${n < 4 ? ' flow' : ''}" data-bot="${id}"><div class="holo">${state === 'working' ? `<span>${esc(line)}</span>` : ''}</div>${state === 'asleep' ? '<span class="zz" aria-hidden="true">z z</span>' : ''}${botSvg(color, face)}<h4>${esc(name)}</h4><div class="role">${esc(role)}</div><span class="mood ${tone}">${esc(mood)}</span><div class="say">${state === 'working' ? 'On it.' : esc(line)}</div></div>`; }).join('')}</div></div>`;
+        return `<div class="desk ${state}${n < 5 ? ' flow' : ''}" data-bot="${id}"><div class="holo">${state === 'working' ? `<span>${esc(line)}</span>` : ''}</div>${state === 'asleep' ? '<span class="zz" aria-hidden="true">z z</span>' : ''}${botSvg(color, face)}<h4>${esc(name)}</h4><div class="role">${esc(role)}</div><span class="mood ${tone}">${esc(mood)}</span><div class="say">${state === 'working' ? 'On it.' : esc(line)}</div></div>`; }).join('')}</div></div>`;
   }
   // Attach dropped files through the app's own attach step in Create, so every rule there still applies.
   async function attach(files, postId) {
@@ -349,7 +403,7 @@
   const pause = ms => new Promise(r => setTimeout(r, ms));
   async function showWork() {          // purely visual: the plan is already prepared and saved
     const quick = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    for (const b of ['pixel', 'quill', 'tempo', 'ref']) { phase = b; render(); await pause(quick ? 60 : 850); }
+    for (const b of ['pixel', 'reel', 'quill', 'tempo', 'ref']) { phase = b; render(); await pause(quick ? 60 : 850); }
     phase = null;
   }
   // The team starts on its own when a new file is attached to any campaign.
@@ -393,7 +447,7 @@
         const p = c.p, an = c.an;
         if (p.date !== lastDay) { lastDay = p.date; list += `<div class="day">${esc(new Date(p.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }))}</div>`; }
         const badge = c.state === 'files' ? '<span class="chk stop">Needs files</span>' : c.state === 'ready' ? '<span class="chk ok">✓ Ready</span>' : '<span class="chk warn">Held back</span>';
-        list += `<details class="camp" data-bot-camp="${esc(p.id)}" ${openCamps.has(p.id) ? 'open' : ''}><summary><span><strong>${esc(p.title)}</strong><span class="small"> · ${esc(p.platform || '')} · ${c.mine.length} channel post${c.mine.length === 1 ? '' : 's'}</span></span><span class="sumr">${badge}<span class="small">${c.ok} of ${c.mine.length} ready</span><span class="nav-caret">⌄</span></span></summary>` + `<div class="assetrow"><div><strong>Files needed</strong> <span class="small">· ${an.files} attached</span><div>${an.needs.map(n => `<span class="need ${n.state}">${n.state === 'have' ? '✓ ' : ''}${esc(n.label)}${n.detail ? ' (' + esc(n.detail) + ')' : ''}</span>`).join('')}</div></div><div style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="btn ghost smallbtn" data-bot-prompt="image" data-bot-post="${esc(p.id)}">Copy image prompt</button><button type="button" class="btn ghost smallbtn" data-bot-prompt="video" data-bot-post="${esc(p.id)}">Copy video brief</button><button type="button" class="btn smallbtn" data-bot-editor="${esc(p.id)}">Copy edit job for the video editor</button></div><div class="small" style="flex-basis:100%">Video editor: copy this campaign’s edit job, open your RSH SPORTS session in Claude and paste it there. When the MP4 is ready, drop it on the Office tab with this campaign selected.</div>${kitSport(p) ? `<div class="small" style="flex-basis:100%">Kit clip: open your RSH Kit Animator artifact, choose <strong>${esc(kitSport(p).replace(/^./, c => c.toUpperCase()))}</strong>, set the team and colours, record the 4-second clip, then drop the saved MP4 on the Office tab with this campaign selected.</div>` : ''}</div>`;
+        list += `<details class="camp" data-bot-camp="${esc(p.id)}" ${openCamps.has(p.id) ? 'open' : ''}><summary><span><strong>${esc(p.title)}</strong><span class="small"> · ${esc(p.platform || '')} · ${c.mine.length} channel post${c.mine.length === 1 ? '' : 's'}</span></span><span class="sumr">${badge}<span class="small">${c.ok} of ${c.mine.length} ready</span><span class="nav-caret">⌄</span></span></summary>` + `<div class="assetrow"><div><strong>Files needed</strong> <span class="small">· ${an.files} attached</span><div>${an.needs.map(n => `<span class="need ${n.state}">${n.state === 'have' ? '✓ ' : ''}${esc(n.label)}${n.detail ? ' (' + esc(n.detail) + ')' : ''}</span>`).join('')}</div></div><div style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="btn ghost smallbtn" data-bot-prompt="image" data-bot-post="${esc(p.id)}">Copy image prompt</button><button type="button" class="btn ghost smallbtn" data-bot-prompt="video" data-bot-post="${esc(p.id)}">Copy video brief</button>${jobs[p.id] ? '' : `<button type="button" class="btn smallbtn" data-bot-askvideo="${esc(p.id)}">Have Reel make a video</button>`}<button type="button" class="btn ghost smallbtn" data-bot-editor="${esc(p.id)}">Copy edit job</button></div>${(() => { const j = jobs[p.id]; return j ? `<div class="small" style="flex-basis:100%"><strong>Video editor:</strong> ${j.status === 'queued' ? 'job waiting to be sent to RSH SPORTS.' : j.status === 'sent' ? 'job sent to RSH SPORTS ' + esc(new Date(j.sentAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })) + '. The video is attached here when it comes back.' : j.status === 'attached' ? 'edited video came back and is attached. Do its visual checks in Create.' : j.status === 'failed' ? 'the edit did not finish. ' + esc(j.reason || '') : 'video received, attaching…'}</div>` : needsVideo(p) && settings.autoEdit ? '<div class="small" style="flex-basis:100%"><strong>Video editor:</strong> this campaign needs a video; Reel sends the job on the next run.</div>' : ''; })()}${kitSport(p) ? `<div class="small" style="flex-basis:100%">Kit clip: open your RSH Kit Animator artifact, choose <strong>${esc(kitSport(p).replace(/^./, c => c.toUpperCase()))}</strong>, set the team and colours, record the 4-second clip, then drop the saved MP4 on the Office tab with this campaign selected.</div>` : ''}</div>`;
         for (const it of c.mine) {
           const key = it.postId + '|' + it.channel, open = openItem === key;
           list += `<div class="item" data-bot-item="${esc(key)}"><div><strong>${esc(NAME[it.channel])}</strong><div class="small">${it.caption.length} characters</div></div>
@@ -438,6 +492,7 @@
           <div><label class="h" for="rshBotTimes">Posting times, US Eastern</label><input type="text" id="rshBotTimes" value="${esc(settings.times.map(t => t + (settings.labels && settings.labels[t] ? ' ' + settings.labels[t] : '')).join(', '))}" size="38" placeholder="12:00 lunch break, 18:00 after practice"><div class="small" style="margin-top:4px">24-hour time, then an optional name. Separate slots with commas.</div></div>
           <div><label class="h" for="rshBotDays">Look ahead</label><select id="rshBotDays">${[7, 14, 21, 30].map(n => `<option value="${n}" ${settings.days === n ? 'selected' : ''}>${n} days</option>`).join('')}</select></div>
         </div>
+        <div style="margin-top:16px"><label style="display:inline-flex;gap:8px;align-items:flex-start;font-size:13px;cursor:pointer"><input type="checkbox" id="rshBotAutoEdit" ${settings.autoEdit ? 'checked' : ''} style="margin-top:2px"><span><strong>Send video jobs to the RSH SPORTS editor automatically</strong><br><span class="small">When a Reel or video campaign has no video, Reel sends the edit job to your RSH SPORTS session and attaches the finished MP4. At most three new jobs per run. This uses your Claude usage in that session.</span></span></label></div>
         <div class="offnote"><strong>Not switched on yet</strong><div class="small" style="margin-top:4px">Courier (sending ready posts to Metricool as drafts for review) and Night Owl (running the team every day by itself). Each needs your explicit go-ahead.</div></div>
         </div>
       </div>`;
@@ -454,8 +509,10 @@
     if (e.target.closest('[data-bot-close]')) { openItem = null; return render(); }
     const sv = e.target.closest('[data-bot-savecap]');
     if (sv) { const it = find(sv.dataset.botSavecap), ta = document.querySelector(`#rshBots [data-bot-cap="${CSS.escape(sv.dataset.botSavecap)}"]`); if (it && ta) { it.caption = ta.value; it.edited = true; } openItem = null; await save(); return render(); }
+    const av = e.target.closest('[data-bot-askvideo]');
+    if (av) { const q = (app().data().posts || []).find(x => x.id === av.dataset.botAskvideo); if (q && db && !jobs[q.id]) { jobs[q.id] = { postId: q.id, title: String(q.title || '').slice(0, 120), status: 'queued', queuedAt: new Date().toISOString(), asked: true }; try { await db.doc('editJobs/' + q.id).set(jobs[q.id]); } catch (_) {} render(); dispatch(); } return; }
     const edl = e.target.closest('[data-bot-editor]');
-    if (edl) { const q = (app().data().posts || []).find(x => x.id === edl.dataset.botEditor); if (q) { try { navigator.clipboard.writeText(editJob(q)).then(() => { edl.textContent = 'Copied. Paste it into RSH SPORTS'; setTimeout(() => { edl.textContent = 'Copy edit job for the video editor'; }, 2200); }, () => { edl.textContent = 'Copy failed'; }); } catch (_) {} } return; }
+    if (edl) { const q = (app().data().posts || []).find(x => x.id === edl.dataset.botEditor); if (q) { try { navigator.clipboard.writeText(editJob(q)).then(() => { edl.textContent = 'Copied'; setTimeout(() => { edl.textContent = 'Copy edit job'; }, 1800); }, () => { edl.textContent = 'Copy failed'; }); } catch (_) {} } return; }
     const pr = e.target.closest('[data-bot-prompt]');
     if (pr) { const q = (app().data().posts || []).find(x => x.id === pr.dataset.botPost); if (!q) return; const text = pr.dataset.botPrompt === 'video' ? videoBrief(q) : imagePrompt(q), old = pr.textContent, done = ok => { pr.textContent = ok ? 'Copied' : 'Copy failed'; setTimeout(() => { pr.textContent = old; }, 1600); }; try { navigator.clipboard.writeText(text).then(() => done(true), () => done(false)); } catch (_) { done(false); } return; }
     const cp = e.target.closest('[data-bot-copy]');
@@ -465,6 +522,7 @@
     const t = e.target;
     if (t.matches('[data-bot-file]')) { const files = [...t.files], camp = document.querySelector('#rshBots [data-bot-dropcamp]'); t.value = ''; return attach(files, camp && camp.value); }
     if (t.matches('[data-bot-dropcamp]')) return;
+    if (t.id === 'rshBotAutoEdit') { settings.autoEdit = t.checked; if (db) { try { await db.doc('bots/settings').set({ json: JSON.stringify(settings) }); } catch (_) {} } return render(); }
     if (t.dataset.botCh) { settings.channels = [...document.querySelectorAll('#rshBots [data-bot-ch]:checked')].map(x => x.dataset.botCh); note = 'Setup changed. Press “Run everything” to apply it.'; if (db) { try { await db.doc('bots/settings').set({ json: JSON.stringify(settings) }); } catch (_) {} } return render(); }
     if (t.id === 'rshBotTimes') { const labels = {}, ts = []; for (const part of t.value.split(',')) { const m = part.trim().match(/^([01]?\d|2[0-3]):([0-5]\d)\s*(.*)$/); if (!m) continue; const k = m[1].padStart(2, '0') + ':' + m[2]; if (!ts.includes(k)) ts.push(k); if (m[3].trim()) labels[k] = m[3].trim().slice(0, 30); } if (!ts.length) { note = 'Enter at least one time like 18:00.'; return render(); } settings.times = ts; settings.labels = labels; note = 'Setup changed. Press “Run everything” to apply it.'; if (db) { try { await db.doc('bots/settings').set({ json: JSON.stringify(settings) }); } catch (_) {} } return render(); }
     if (t.id === 'rshBotDays') { settings.days = Number(t.value) || 14; note = 'Setup changed. Press “Run everything” to apply it.'; if (db) { try { await db.doc('bots/settings').set({ json: JSON.stringify(settings) }); } catch (_) {} } return render(); }
@@ -484,13 +542,16 @@
     document.querySelectorAll('[data-view="bots"]').forEach(b => b.addEventListener('click', () => setTimeout(render, 0)));
     render();
     assetSig = signature();
-    window.addEventListener('rsh:saved', () => { onCampaignsChanged(); });   // fires after every saved change to the campaigns
+    window.addEventListener('rsh:saved', () => { onCampaignsChanged(); });
+    setInterval(() => { if (view.classList.contains('active') && document.visibilityState === 'visible') collect(); }, 60000);   // check for finished videos while the screen is open
+    document.querySelectorAll('[data-view="bots"]').forEach(b => b.addEventListener('click', () => collect()));   // fires after every saved change to the campaigns
     db = await use('db');
     if (db) {
       try { const s = await db.doc('bots/settings').get(); if (s.exists) settings = { ...DEFAULTS, ...JSON.parse(s.data().json) }; } catch (_) {}
       try { const p = await db.doc('bots/plan').get(); if (p.exists) plan = JSON.parse(p.data().json); } catch (_) {}
+      await collect();
     }
     render();
   }
-  window.RSH_BOTS = { start, captionFor, assetNeeds, imagePrompt, videoBrief, editJob };
+  window.RSH_BOTS = { handoff, collect, start, captionFor, assetNeeds, imagePrompt, videoBrief, editJob };
 })();
