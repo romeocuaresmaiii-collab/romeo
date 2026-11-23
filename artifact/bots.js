@@ -398,7 +398,7 @@
     const old = new Map(((plan && plan.items) || []).map(i => [i.postId + '|' + i.channel, i])), items = [];
     for (const p of inRange) for (const ch of targets(p)) {
       const prev = old.get(p.id + '|' + ch);
-      items.push(prev && prev.edited ? { ...prev, date: p.date } : { postId: p.id, channel: ch, date: p.date, time: '', caption: captionFor(p, ch), edited: false, ...(prev && prev.posted ? { posted: prev.posted } : {}) });
+      items.push(prev && prev.edited ? { ...prev, date: prev.placed ? prev.date : p.date } : { postId: p.id, channel: ch, date: p.date, time: '', caption: captionFor(p, ch), edited: false, ...(prev && prev.posted ? { posted: prev.posted } : {}) });
     }
     schedule(items); check(items, posts);
     const ready = items.filter(i => i.ready).length;
@@ -605,6 +605,61 @@
       </div>`;
   }
 
+  /* ---------- Scheduling: ready posts placed on calendar days and sent to Metricool ----------
+   * Only posts the Manager Bot marks ready (both approvals, all checks) can be placed or sent.
+   * Sending uses the viewer's Metricool connection; if this view cannot reach it, the post waits
+   * in collection scheduleJobs for a Claude session to send it. Metricool needs a public link to
+   * the photo or video (for example a Google Drive or Dropbox share link) for Instagram, TikTok,
+   * YouTube and Pinterest; posts without one can still go as a draft to finish in Metricool.
+   */
+  const BRAND = '5695688', MC = 'Metricool Social Media Management';
+  const readyItems = () => ((plan && plan.items) || []).filter(i => i.ready && !i.posted);
+  const placedOn = date => ((plan && plan.items) || []).filter(i => i.placed && i.date === date);
+  const todayIso = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+  async function place(key, date, time) {
+    const it = find(key); if (!it || !it.ready || !/^\d{4}-\d\d-\d\d$/.test(date) || date < todayIso()) return false;
+    it.date = date; if (/^\d\d:\d\d$/.test(time || '')) it.time = time; it.placed = true; it.edited = true; delete it.sent;
+    await save(); render(); notify(); return true;
+  }
+  async function unplace(key) { const it = find(key); if (!it || (it.sent && it.sent.status === 'scheduled')) return false; it.placed = false; delete it.sent; await save(); render(); notify(); return true; }
+  async function setMediaUrl(key, url) { const it = find(key); if (!it) return; it.mediaUrl = /^https:\/\//.test(url || '') ? String(url).trim().slice(0, 600) : ''; await save(); notify(); }
+  function nyOffset(date, time) {
+    try { const part = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', timeZoneName: 'shortOffset' }).formatToParts(new Date(`${date}T${time}:00Z`)).find(x => x.type === 'timeZoneName').value; const m = part.match(/GMT([+-]\d+)(?::(\d+))?/); const h = m ? Number(m[1]) : -5; return (h < 0 ? '-' : '+') + String(Math.abs(h)).padStart(2, '0') + ':' + ((m && m[2]) || '00'); } catch (_) { return '-05:00'; }
+  }
+  function metricoolPost(it, mode, ai) {
+    const p = (app().data().posts || []).find(x => x.id === it.postId) || {}, files = [p.creativeAsset].concat(p.creativeAssets || []).filter(Boolean);
+    const vid = files.some(a => /^video\//.test(a.mime || '')), title = String(p.title || '').slice(0, 90), ch = it.channel;
+    const info = { autoPublish: true, draft: mode === 'draft', providers: [{ network: ch }], text: it.caption, firstCommentText: '', publicationDate: { dateTime: `${it.date}T${it.time}:00`, timezone: 'America/New_York' }, media: it.mediaUrl ? [it.mediaUrl] : [], mediaAltText: [], descendants: [], shortener: false, smartLinkData: { ids: [] }, hasNotReadNotes: false };
+    if (ch === 'instagram') info.instagramData = { type: vid ? 'REEL' : 'POST', showReelOnFeed: true, isAiGenerated: !!ai };
+    if (ch === 'facebook') info.facebookData = { type: vid ? 'REEL' : 'POST', title: vid ? title : '' };
+    if (ch === 'tiktok') info.tiktokData = { privacyOption: 'PUBLIC_TO_EVERYONE', title, isAigc: !!ai };
+    if (ch === 'youtube') info.youtubeData = { title, type: 'short', privacy: 'public', madeForKids: false, isAiGeneratedContent: !!ai };
+    if (ch === 'pinterest') info.pinterestData = { boardId: settings.pinBoard || '', pinTitle: title, pinLink: (String(it.caption).match(/https:\/\/\S+/) || [''])[0], isAiGenerated: !!ai };
+    if (ch === 'threads') info.threadsData = {};
+    if (ch === 'bluesky') info.blueskyData = {};
+    return { blogId: BRAND, date: `${it.date}T${it.time}:00${nyOffset(it.date, it.time)}`, info: JSON.stringify(info) };
+  }
+  async function sendToMetricool(key, mode, ai) {
+    const it = find(key); if (!it || !it.ready || !it.placed) return { ok: false, reason: 'Only a ready post placed on a day can be sent.' };
+    if (`${it.date}T${it.time}` <= new Date(Date.now() + 10 * 60000).toISOString().slice(0, 16) && it.date <= todayIso()) return { ok: false, reason: 'That time has passed or is less than 10 minutes away. Pick a later time.' };
+    const args = metricoolPost(it, mode, ai), needsMedia = ['instagram', 'tiktok', 'youtube', 'pinterest'].includes(it.channel);
+    if (needsMedia && !it.mediaUrl && mode !== 'draft') return { ok: false, reason: `${NAME[it.channel]} needs the photo or video. Paste a public link to the file (Google Drive or Dropbox), or send it as a draft and add the file in Metricool.` };
+    const mcp = await use('mcp'); let res = null, err = null;
+    if (mcp) { try { res = await mcp.callTool(MC, 'createScheduledPost', args); } catch (e) { err = e; } }
+    if (res) {
+      const txt = JSON.stringify(res.payload !== undefined ? res.payload : res), url = (txt.match(/https:\/\/[^"\\\s]*metricool[^"\\\s]*/) || [''])[0];
+      if (/"isError"\s*:\s*true|error/i.test(txt) && !url) { it.sent = { status: 'error', at: new Date().toISOString(), reason: txt.slice(0, 240) }; await save(); render(); notify(); return { ok: false, reason: 'Metricool did not accept it: ' + txt.slice(0, 200) }; }
+      it.sent = { status: mode === 'draft' ? 'draft' : 'scheduled', at: new Date().toISOString(), plannerUrl: url }; await save(); render(); notify(); return { ok: true };
+    }
+    const code = (err && err.code) || 'no_connection';
+    if (err && err.code === 'tool_error') { it.sent = { status: 'error', at: new Date().toISOString(), reason: String(err.message || '').slice(0, 240) }; await save(); render(); notify(); return { ok: false, reason: 'Metricool did not accept it: ' + String(err.message || '').slice(0, 200) }; }
+    // This view cannot reach Metricool: leave the post with everything ready for a Claude session to send.
+    const id = (it.postId + '_' + it.channel).replace(/[^A-Za-z0-9_-]/g, '');
+    if (db) { try { await db.doc('scheduleJobs/' + id).set({ key, postId: it.postId, channel: it.channel, mode, status: 'queued', queuedAt: new Date().toISOString(), args: JSON.stringify(args), lastError: code }); } catch (_) {} }
+    it.sent = { status: 'queued', at: new Date().toISOString(), mode }; await save(); render(); notify();
+    return { ok: true, queued: true };
+  }
+
   function find(key) { return ((plan && plan.items) || []).find(i => i.postId + '|' + i.channel === key); }
   async function onClick(e) {
     const tb = e.target.closest('[data-bot-tab]'); if (tb) { tab = tb.dataset.botTab; return render(); }
@@ -672,5 +727,5 @@
     }
     render();
   }
-  window.RSH_BOTS = { freshVideos, watch, onChange: f => listeners.push(f), handoff, collect, start, captionFor, assetNeeds, imagePrompt, videoBrief, editJob };
+  window.RSH_BOTS = { readyItems, placedOn, place, unplace, setMediaUrl, sendToMetricool, metricoolPost, NAME, freshVideos, watch, onChange: f => listeners.push(f), handoff, collect, start, captionFor, assetNeeds, imagePrompt, videoBrief, editJob };
 })();

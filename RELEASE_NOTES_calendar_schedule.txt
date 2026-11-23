@@ -1,0 +1,13 @@
+RSH SPORTS MARKETING OS — artifact edition, build 42
+
+Calendar: place ready posts on a day and schedule them in Metricool
+- Click any day on the Calendar. A panel lists the posts that are ready (both approvals and every
+  check passed, from the 24/7 Bots plan). Add one to the day with a time, or move it from another day.
+- Send to Metricool: schedules it for the RSH Sports brand at that day and time (US Eastern), or
+  sends it as a draft to finish in Metricool. An option adds the AI label on Instagram, TikTok,
+  YouTube and Pinterest.
+- Instagram, TikTok, YouTube and Pinterest need the photo or video as a public link (Google Drive
+  or Dropbox share link); without one the post can only go as a draft.
+- Placed and sent posts show on their day. If this view cannot reach Metricool, the post waits in
+  a queue for a Claude session to send.
+Nothing that is not fully approved can be placed or sent.
