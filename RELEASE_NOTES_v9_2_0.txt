@@ -12,4 +12,5 @@ Artifact edition
 - Live panel on Home and the Executive Brief also shows followers per channel with the change
   over the period, and the posts scheduled in Metricool for the next 7 days (drafts flagged).
 - Results can be loaded into the artifact by Claude, so they show for every viewer, including
-  viewers without their own Metricool connection. A daily scheduled refresh keeps them current.
+  viewers without their own Metricool connection. Refreshing is done on request; a daily
+  scheduled refresh is designed but not switched on.
