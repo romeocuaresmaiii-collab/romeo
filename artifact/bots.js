@@ -219,7 +219,7 @@
     if (added) dispatch();
   }
   async function dispatch() {
-    if (dispatching || !db) return; dispatching = true;
+    if (dispatching || !db || editorState === 'unavailable') return; dispatching = true;   // a page that was refused once does not keep retrying
     try {
       const queued = Object.values(jobs).filter(j => j.status === 'queued'); if (!queued.length) return;
       const mcp = await use('mcp'); if (!mcp) { editorState = 'unavailable'; return; }
@@ -421,7 +421,7 @@
     const all = (app().data().posts || []).filter(q => q.date && (!plan || (q.date >= plan.from && q.date <= plan.to))), missing = all.filter(q => assetNeeds(q).missing).length;
     const js = Object.values(jobs), active = js.filter(j => j.status === 'sent').length, jWait = js.filter(j => j.status === 'queued').length, done = js.filter(j => j.status === 'attached').length, failed = js.filter(j => j.status === 'failed').length;
     out.reel = !settings.autoEdit ? ['off', 'Paused', 'asleep', 'Automatic editing is turned off in Setup.']
-      : editorState === 'unavailable' ? ['bad', 'Cut off', 'worried', `I can’t reach the RSH SPORTS editor from this view${jWait ? `, so ${jWait} job${jWait === 1 ? ' is' : 's are'} waiting` : ''}. Open the app from the owner account and allow the connection.`]
+      : jWait ? ['plain', 'Waiting', 'neutral', `${jWait} job${jWait === 1 ? ' is' : 's are'} packed and waiting to be picked up for the RSH SPORTS editor. This page can’t message the editor itself; a Claude session passes the job on.`]
       : failed ? ['bad', 'Stuck', 'worried', `${failed} edit${failed === 1 ? '' : 's'} came back with a problem. ${active ? active + ' still in the editor.' : ''}`]
       : active || jWait ? ['busy', 'Editing', 'working', `${active + jWait} video${active + jWait === 1 ? '' : 's'} with the RSH SPORTS editor. I attach each one when it comes back.`]
       : done ? ['good', 'Proud', 'happy', `${done} edited video${done === 1 ? '' : 's'} came back and ${done === 1 ? 'is' : 'are'} attached.`]
