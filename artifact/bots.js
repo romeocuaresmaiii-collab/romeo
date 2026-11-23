@@ -505,7 +505,7 @@ Answer with JSON only, exactly these keys:
       if (t.stage !== 'ready') out.push(['stop', t.stage === 'brief' ? 'Brief not finished' : t.stage === 'media' ? (t.assets ? 'Visual checks not done' : 'No media attached') : t.stage === 'manager' ? 'Waiting for manager review' : 'Waiting for Anthony’s approval']); else out.push(['ok', 'Approved']);
       if (new Date(`${it.date}T${it.time}:00`) < now) out.push(['stop', 'Time is in the past']);
       if (seen[`${it.date}|${it.time}|${it.channel}`] > 1) out.push(['stop', 'Two posts at the same time on this channel']);
-      if (busyM.has(`${it.date}|${it.time}|${it.channel}`)) out.push(['stop', 'Metricool already has a post at this time']);
+      if (busyM.has(`${it.date}|${it.time}|${it.channel}`) && !(it.sent && /scheduled|draft/.test(it.sent.status))) out.push(['stop', 'Metricool already has a post at this time']);
       if (it.caption.length > LIMIT[it.channel]) out.push(['stop', `Caption is ${it.caption.length} characters; ${NAME[it.channel]} allows ${LIMIT[it.channel]}`]);
       if (!it.caption.trim()) out.push(['stop', 'No caption']);
       const video = /reel|video|story/i.test(p.postType || '');
@@ -545,7 +545,7 @@ Answer with JSON only, exactly these keys:
     for (const p of inRange) for (const ch of targets(p)) {
       const prev = old.get(p.id + '|' + ch);
       const dd = dayFor(p, ch);
-      const it = prev && prev.edited ? { ...prev, date: prev.placed ? prev.date : dd.date } : { postId: p.id, channel: ch, date: dd.date, time: '', caption: captionFor(p, ch), edited: false, ...(prev && prev.posted ? { posted: prev.posted } : {}), ...(prev && prev.sent ? { sent: prev.sent, placed: prev.placed, mediaUrl: prev.mediaUrl } : {}) };
+      const it = prev && prev.edited ? { ...prev, date: prev.placed ? prev.date : dd.date } : { postId: p.id, channel: ch, date: dd.date, time: '', caption: captionFor(p, ch), edited: false, ...(prev && prev.posted ? { posted: prev.posted } : {}), ...(prev && prev.sent ? { sent: prev.sent, placed: prev.placed } : {}), ...(prev && prev.mediaUrl ? { mediaUrl: prev.mediaUrl } : {}) };
       if (dd.moved) it.moved = dd.moved; else delete it.moved; if (dd.dykWarn) it.dykWarn = dd.dykWarn; else delete it.dykWarn;
       items.push(it);
     }
@@ -1052,13 +1052,14 @@ Answer with JSON only, exactly these keys:
       step && step('Shrinking the video…'); const sh = await shrinkVideo(file, step); if (!sh.ok) return { ok: false, reason: `That file is ${(file.size / 1048576).toFixed(1)} MB (the limit is 16 MB) and could not be shrunk here: ${sh.reason}` }; data = sh.blob;
     }
     const up = await driveUpload(data, file.name, data.type || file.type, step); if (!up.ok) return up;
-    for (const x of (plan.items || [])) if (x.postId === it.postId && !(x.sent && /scheduled|draft/.test(x.sent.status)) && (x === it || !x.mediaUrl)) x.mediaUrl = up.link;
+    for (const x of (plan.items || [])) if (x.postId === it.postId && !(x.sent && /scheduled|draft/.test(x.sent.status)) && (x === it || !x.mediaUrl)) { x.mediaUrl = up.link; const f = fileFor(x); if (f) x.mediaFor = f.id; }
     await save(); render(); notify(); return { ok: true };
   }
   async function autoLink(it, step) {
     const a = fileFor(it); if (!a) return { ok: false, reason: `No ${needsFile(it) && (it.channel === 'facebook' || it.channel === 'youtube') ? 'video' : 'photo or video'} is attached to this campaign yet. Attach it in the campaign, then send again.` };
     plan.links = plan.links || {};
     if (plan.links[a.id]) { it.mediaUrl = plan.links[a.id]; return { ok: true }; }
+    const sib = ((plan && plan.items) || []).find(x => x.postId === it.postId && x !== it && x.mediaUrl && (!x.mediaFor || x.mediaFor === a.id)); if (sib) { it.mediaUrl = sib.mediaUrl; return { ok: true }; }
     step && step('Getting the file ready…');
     let blob; try { blob = await window.RSH_HOST.fileBlob(a); } catch (_) { return { ok: false, reason: 'The attached file could not be read. Attach it again in the campaign, then send again.' }; }
     if (blob.size > DRIVE_MAX) {
@@ -1066,7 +1067,7 @@ Answer with JSON only, exactly these keys:
       step && step('Shrinking the video…'); const sh = await shrinkVideo(blob, step); if (!sh.ok) return { ok: false, reason: `The video is ${(blob.size / 1048576).toFixed(1)} MB (the limit is 16 MB) and could not be shrunk here: ${sh.reason}` }; blob = sh.blob;
     }
     const up = await driveUpload(blob, a.name, a.mime, step); if (!up.ok) return up; const link = up.link;
-    plan.links[a.id] = link; it.mediaUrl = link; await save();
+    plan.links[a.id] = link; it.mediaUrl = link; it.mediaFor = a.id; await save();
     return { ok: true };
   }
 
