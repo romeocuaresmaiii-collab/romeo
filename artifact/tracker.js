@@ -162,7 +162,7 @@
         ${editing ? '' : `<section><div class="lab"><span>Attached files · ${files.length} of 10</span></div>${files.length ? `<div class="thumbs">${files.map(a => /^video\//.test(a.mime || '') ? `<div class="vid">▶ video</div>` : `<img src="${esc(window.RSH_HOST.mediaUrl(a))}" alt="${esc(a.name || 'Attached image')}" loading="lazy">`).join('')}</div>` : '<div class="val none">Nothing attached yet</div>'}</section>
         ${(p.approvalMeta && p.approvalMeta.notes) ? `<section><div class="lab"><span>Reviewer notes</span></div><div class="val">${esc(p.approvalMeta.notes)}</div></section>` : ''}`}
       </div>
-      <footer>${editing ? '<button type="button" class="btn smallbtn" data-detail-save>Save changes</button><button type="button" class="btn ghost smallbtn" data-detail-cancel>Cancel</button>' : '<button type="button" class="btn smallbtn" data-detail-edit>Edit this campaign</button><button type="button" class="btn ghost smallbtn" data-detail-copy="all">Copy the whole brief</button>'}</footer>`;
+      <footer>${editing ? '<button type="button" class="btn smallbtn" data-detail-save>Save changes</button><button type="button" class="btn ghost smallbtn" data-detail-cancel>Cancel</button>' : '<button type="button" class="btn smallbtn" data-detail-edit>Edit this campaign</button><button type="button" class="btn ghost smallbtn" data-detail-copy="all">Copy full brief for AI</button>'}</footer>`;
     if (!editing) { const c = box.querySelector('[data-detail-close]'); if (c) c.focus(); }
   }
   function briefText(p) { return `${p.title}\n${p.platform || ''} · ${p.date || 'no date'} · ${p.owner || ''}\n\n` + FIELDS.filter(f => p[f[0]]).map(f => `${f[1].toUpperCase()}\n${p[f[0]]}`).join('\n\n'); }
@@ -173,7 +173,7 @@
     if (e.target.closest('[data-detail-edit]')) { editing = true; detailNote = ''; return paintDetail(); }
     if (e.target.closest('[data-detail-cancel]')) { editing = false; return paintDetail(); }
     const cp = e.target.closest('[data-detail-copy]');
-    if (cp) { const text = cp.dataset.detailCopy === 'all' ? briefText(p) : String(p[cp.dataset.detailCopy] || ''), old = cp.textContent, done = ok => { cp.textContent = ok ? 'Copied' : 'Copy failed'; setTimeout(() => { cp.textContent = old; }, 1600); }; try { navigator.clipboard.writeText(text).then(() => done(true), () => done(false)); } catch (_) { done(false); } return; }
+    if (cp) { const text = cp.dataset.detailCopy === 'all' ? (app().aiBrief ? app().aiBrief(p.id) : briefText(p)) : String(p[cp.dataset.detailCopy] || ''), old = cp.textContent, done = ok => { cp.textContent = ok ? 'Copied' : 'Copy failed'; setTimeout(() => { cp.textContent = old; }, 1600); }; try { navigator.clipboard.writeText(text).then(() => done(true), () => done(false)); } catch (_) { done(false); } return; }
     if (e.target.closest('[data-detail-save]')) {
       const changes = {}; document.querySelectorAll('#rshDetail [data-detail-field]').forEach(el => { changes[el.dataset.detailField] = el.value; });
       const res = app().editCampaign(detailId, changes); editing = false;
