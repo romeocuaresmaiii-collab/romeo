@@ -656,18 +656,12 @@
     const pool = (it.channel === 'facebook' || it.channel === 'youtube') ? vid : (vid.length ? vid : pic);
     return pool.length ? pool[pool.length - 1] : null;   // the latest one attached (a revision replaces the older cut)
   }
-  async function autoLink(it, step) {
-    const a = fileFor(it); if (!a) return { ok: false, reason: `No ${needsFile(it) && (it.channel === 'facebook' || it.channel === 'youtube') ? 'video' : 'photo or video'} is attached to this campaign yet. Attach it in the campaign, then send again.` };
-    plan.links = plan.links || {};
-    if (plan.links[a.id]) { it.mediaUrl = plan.links[a.id]; return { ok: true }; }
+  async function driveUpload(blob, fname, mime, step) {
     const mcp = await use('mcp'); if (!mcp) return { ok: false, reason: 'This view cannot reach Google Drive. Paste a public link to the file in the box above, then send again.' };
     let fileArgs = false; try { const lt = await mcp.listTools(); fileArgs = !!lt.fileArgs && (lt.servers || []).some(x => x.server === GD); } catch (_) {}
     if (!fileArgs) return { ok: false, reason: 'Google Drive is not allowed for this page yet (or this browser cannot send files to it). Allow Google Drive when asked, or paste a public link in the box above.' };
-    step && step('Getting the file ready…');
-    let blob; try { blob = await window.RSH_HOST.fileBlob(a); } catch (_) { return { ok: false, reason: 'The attached file could not be read. Attach it again in the campaign, then send again.' }; }
-    if (blob.size > DRIVE_MAX) return { ok: false, reason: `The file is ${(blob.size / 1048576).toFixed(1)} MB; the app can upload files up to 16 MB to Google Drive. Upload it to Drive or Dropbox yourself and paste the link in the box above.` };
-    const type = a.mime || blob.type || 'video/mp4', ext = (type.split('/')[1] || 'mp4').replace('quicktime', 'mov').replace('jpeg', 'jpg');
-    const name = (String(a.name || 'rsh-post').replace(/\.[A-Za-z0-9]+$/, '').replace(/[^A-Za-z0-9 _()-]/g, '').trim() || 'rsh-post') + '.' + ext;
+    const type = mime || blob.type || 'video/mp4', ext = (type.split('/')[1] || 'mp4').replace('quicktime', 'mov').replace('jpeg', 'jpg');
+    const name = (String(fname || 'rsh-post').replace(/\.[A-Za-z0-9]+$/, '').replace(/[^A-Za-z0-9 _()-]/g, '').trim() || 'rsh-post') + '.' + ext;
     step && step('Uploading to Google Drive…');
     let id = '';
     try {
@@ -682,6 +676,25 @@
       const pl = r && r.payload !== undefined ? r.payload : r; link = (pl && pl.shareableLink) || ((JSON.stringify(pl).match(/https:\/\/drive\.google\.com[^"\\\s]*/) || [])[0]) || '';
     } catch (e) { return { ok: false, reason: 'The file is in your Google Drive but could not be shared: ' + String((e && e.message) || e).slice(0, 160) }; }
     link = link || `https://drive.google.com/file/d/${id}/view?usp=sharing`;
+    return { ok: true, link: link || `https://drive.google.com/file/d/${id}/view?usp=sharing` };
+  }
+  // A file picked right on the calendar card: straight to Google Drive, and its link goes on every unsent channel of that campaign.
+  async function attachForPost(key, file, step) {
+    const it = find(key); if (!it || !file) return { ok: false, reason: 'Pick a file first.' };
+    if (!/^(video|image)\//.test(file.type || '')) return { ok: false, reason: 'Pick a photo or a video.' };
+    if (file.size > DRIVE_MAX) return { ok: false, reason: `That file is ${(file.size / 1048576).toFixed(1)} MB; the app can send files up to 16 MB to Google Drive. Pick a smaller copy.` };
+    const up = await driveUpload(file, file.name, file.type, step); if (!up.ok) return up;
+    for (const x of (plan.items || [])) if (x.postId === it.postId && !(x.sent && /scheduled|draft/.test(x.sent.status)) && (x === it || !x.mediaUrl)) x.mediaUrl = up.link;
+    await save(); render(); notify(); return { ok: true };
+  }
+  async function autoLink(it, step) {
+    const a = fileFor(it); if (!a) return { ok: false, reason: `No ${needsFile(it) && (it.channel === 'facebook' || it.channel === 'youtube') ? 'video' : 'photo or video'} is attached to this campaign yet. Attach it in the campaign, then send again.` };
+    plan.links = plan.links || {};
+    if (plan.links[a.id]) { it.mediaUrl = plan.links[a.id]; return { ok: true }; }
+    step && step('Getting the file ready…');
+    let blob; try { blob = await window.RSH_HOST.fileBlob(a); } catch (_) { return { ok: false, reason: 'The attached file could not be read. Attach it again in the campaign, then send again.' }; }
+    if (blob.size > DRIVE_MAX) return { ok: false, reason: `The file is ${(blob.size / 1048576).toFixed(1)} MB; the app can upload files up to 16 MB to Google Drive. Use “Attach file” below to pick a smaller copy (under 16 MB), or paste a public link in the box above.` };
+    const up = await driveUpload(blob, a.name, a.mime, step); if (!up.ok) return up; const link = up.link;
     plan.links[a.id] = link; it.mediaUrl = link; await save();
     return { ok: true };
   }
@@ -775,5 +788,5 @@
     }
     render();
   }
-  window.RSH_BOTS = { fileFor, autoLink, needsFile, readyItems, placedOn, place, unplace, setMediaUrl, sendToMetricool, metricoolPost, NAME, freshVideos, watch, onChange: f => listeners.push(f), handoff, collect, start, captionFor, assetNeeds, imagePrompt, videoBrief, editJob };
+  window.RSH_BOTS = { attachForPost, driveUpload, fileFor, autoLink, needsFile, readyItems, placedOn, place, unplace, setMediaUrl, sendToMetricool, metricoolPost, NAME, freshVideos, watch, onChange: f => listeners.push(f), handoff, collect, start, captionFor, assetNeeds, imagePrompt, videoBrief, editJob };
 })();

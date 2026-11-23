@@ -118,7 +118,7 @@
           <div class="cap">${esc(i.caption)}</div>
           ${i.sent && i.sent.reason ? `<div class="small" style="color:#b42318">${esc(i.sent.reason)}</div>` : ''}
           ${i.sent && i.sent.plannerUrl ? `<a class="small" href="${esc(i.sent.plannerUrl)}" target="_blank" rel="noopener noreferrer">Open it in Metricool ↗</a>` : ''}
-          ${!(i.sent && /scheduled|draft/.test(i.sent.status)) ? `<label class="small">${i.mediaUrl ? 'Link to the file Metricool will use' : (B.fileFor(i) ? 'Leave empty: the app uploads the attached file to your Google Drive and makes the link when you send' : (B.needsFile(i) ? `No file attached yet; ${esc(N[i.channel])} needs one. Attach it in the campaign, or paste a public link` : 'Optional: a public link to a photo or video'))}<input type="url" data-day-media="${esc(key(i))}" value="${esc(i.mediaUrl || '')}" placeholder="https://drive.google.com/…"></label>` : ''}
+          ${!(i.sent && /scheduled|draft/.test(i.sent.status)) ? `<label class="small">${i.mediaUrl ? 'Link to the file Metricool will use' : (B.fileFor(i) ? 'Leave empty: the app uploads the campaign’s file to your Google Drive and makes the link when you send. Or press “Attach file” to pick a different one' : (B.needsFile(i) ? `No file attached yet; ${esc(N[i.channel])} needs one. Press “Attach file”, or paste a public link` : 'Optional: a public link to a photo or video'))}<input type="url" data-day-media="${esc(key(i))}" value="${esc(i.mediaUrl || '')}" placeholder="https://drive.google.com/…"></label><div class="acts"><button type="button" class="btn ghost smallbtn" data-day-attach="${esc(key(i))}">Attach file</button><input type="file" accept="video/*,image/*" hidden data-day-file="${esc(key(i))}"><span class="small">A photo or video up to 16 MB goes to your Google Drive and its link is filled in for you.</span></div>` : ''}
           <div class="acts"><input type="time" data-day-time="${esc(key(i))}" value="${esc(i.time)}" aria-label="Time" ${i.sent && /scheduled|draft/.test(i.sent.status) ? 'disabled' : ''}><span class="small">US Eastern</span>
           ${i.sent && /scheduled|draft/.test(i.sent.status) ? '' : `<button type="button" class="btn smallbtn" data-day-send="${esc(key(i))}">Send to Metricool</button><button type="button" class="btn ghost smallbtn" data-day-remove="${esc(key(i))}">Remove from day</button>`}</div></div>`; }).join('') : '<div class="small">Nothing placed on this day yet.</div>'}
         <h3>Ready to place</h3>
@@ -132,6 +132,7 @@
     if (e.target.closest('[data-day-close]')) return closeDay();
     const add = e.target.closest('[data-day-add]');
     if (add) { const k = add.dataset.dayAdd, t = (document.querySelector(`#rshDay [data-day-newtime="${CSS.escape(k)}"]`) || {}).value; dayMsg = (await B.place(k, dayOpen, t)) ? 'Placed on this day.' : 'That post can’t be placed on this day.'; return paintDay(); }
+    const at = e.target.closest('[data-day-attach]'); if (at) { const f = document.querySelector(`#rshDay [data-day-file="${CSS.escape(at.dataset.dayAttach)}"]`); if (f) f.click(); return; }
     const rm = e.target.closest('[data-day-remove]'); if (rm) { await B.unplace(rm.dataset.dayRemove); dayMsg = 'Removed from this day. The post is still ready.'; return paintDay(); }
     const sd = e.target.closest('[data-day-send]');
     if (sd) { const k = sd.dataset.daySend, t = (document.querySelector(`#rshDay [data-day-time="${CSS.escape(k)}"]`) || {}).value; if (t) await B.place(k, dayOpen, t);
@@ -142,6 +143,10 @@
     const t = e.target;
     if (t.name === 'rshDayMode') { sendMode = t.value; return; }
     if (t.matches('[data-day-ai]')) { aiFlag = t.checked; return; }
+    if (t.matches('[data-day-file]')) { const k = t.dataset.dayFile, f = t.files && t.files[0], btn = document.querySelector(`#rshDay [data-day-attach="${CSS.escape(k)}"]`); t.value = ''; if (!f) return;
+      if (btn) { btn.disabled = true; btn.textContent = 'Preparing…'; }
+      const r = await bots().attachForPost(k, f, s => { if (btn) btn.textContent = s; });
+      dayMsg = r.ok ? `“${f.name}” is in your Google Drive and its link is filled in. Press Send to Metricool.` : r.reason; return paintDay(); }
     if (t.matches('[data-day-media]')) { await bots().setMediaUrl(t.dataset.dayMedia, t.value); return; }
   }
   function markPlaced() {
