@@ -1,0 +1,15 @@
+RSH SPORTS MARKETING OS v5.1 — AUTOMATED QA (2026-11-18)
+
+PASS: Embedded JavaScript syntax check (node --check).
+PASS: Source-linked learning panel rendered four platform/format comparisons from dated November Metricool archive.
+PASS: Median & top result within-platform, same format and metric.
+PASS: A/B test creation writes unmeasured variants (numerator/denominator zero) and source URLs.
+PASS: Repeat action blocked by stable month/category key.
+PASS: Months without imported evidence cannot create data-backed tests.
+PASS: Export evidence-to-action HTML; includes provenance and approval caution.
+PASS: Buttons open Growth Experiments and existing planner.
+PASS: November archive counts, alternate-month import, calendar navigation, status and filters.
+PASS: Prior v5.0 Operations Audit, triage persistence, CSV/HTML export and planner conflict skip.
+PASS: Local HTTP homepage and SQLite Vault status endpoints.
+
+Not tested here: full Mac end-to-end UI, real multi-user login, direct Metricool sync, sales attribution, actual Anthony approval, future publishing. No external account changes.

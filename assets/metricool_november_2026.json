@@ -1,0 +1,3976 @@
+{
+  "snapshotDate": "2026-11-18",
+  "retrievedFrom": "Metricool RSH Sports connected account",
+  "brandId": 5695688,
+  "timezone": "America/New_York",
+  "publishedCoveredThrough": "2026-11-17",
+  "plannedCoveredFrom": "2026-11-18",
+  "plannedCoveredThrough": "2026-11-30",
+  "notes": [
+    "Read-only Metricool snapshot, not live synchronization.",
+    "Published counts are individual platform post records, not unique creatives.",
+    "Scheduled entries can be cross-posted to several social networks; some are drafts and all statuses are as returned on November 18.",
+    "Preview images hosted on Instagram/Facebook or other providers can expire; source post/media links remain available when supplied.",
+    "Recent Pinterest post impressions may be incomplete due to reporting delay.",
+    "Items in the local editorial calendar remain separate and are not changed.",
+    "Published records now include Threads, Bluesky, Instagram Stories and Facebook Stories where returned by the connected account; some Story permalinks may expire."
+  ],
+  "published": [
+    {
+      "id": "pub-tiktok-7709178638817611022",
+      "date": "2026-11-17",
+      "platforms": [
+        "TikTok"
+      ],
+      "format": "Video",
+      "status": "Published",
+      "title": "Putting in the reps for lacrosse season.",
+      "caption": "Putting in the reps for lacrosse season.",
+      "url": "https://www.tiktok.com/@rsh_sports/video/7709178638817611022",
+      "media": "https://static.metricool.com/tkvideocovers/202611/5695688-7709178638817611022.jpg",
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 100.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-tiktok-7709156433580903693",
+      "date": "2026-11-17",
+      "platforms": [
+        "TikTok"
+      ],
+      "format": "Video",
+      "status": "Published",
+      "title": "Did you know gaming could help pay for college?",
+      "caption": "Did you know gaming could help pay for college?",
+      "url": "https://www.tiktok.com/@rsh_sports/video/7709156433580903693",
+      "media": "https://static.metricool.com/tkvideocovers/202611/5695688-7709156433580903693.jpeg",
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 115.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-threads-Df2XeM4iBub",
+      "date": "2026-11-17",
+      "platforms": [
+        "Threads"
+      ],
+      "format": "Text / media post",
+      "status": "Published",
+      "title": "Putting in the reps now, so you’re ready when the season comes around",
+      "caption": "Putting in the reps now, so you’re ready when the season comes around",
+      "url": "https://www.threads.com/@team.rshsports/post/Df2XeM4iBub",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 10.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-threads-Df2NudhhIrH",
+      "date": "2026-11-17",
+      "platforms": [
+        "Threads"
+      ],
+      "format": "Text / media post",
+      "status": "Published",
+      "title": "Did you know gaming could help pay for college?",
+      "caption": "Did you know gaming could help pay for college?",
+      "url": "https://www.threads.com/@team.rshsports/post/Df2NudhhIrH",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 2.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-pinterest-1114218764100449091",
+      "date": "2026-11-17",
+      "platforms": [
+        "Pinterest"
+      ],
+      "format": "Pin",
+      "status": "Published",
+      "title": "RSH Sports Baseball Cap - Classic Baseball Gear and Accessories",
+      "caption": "RSH Sports Baseball Cap - Classic Baseball Gear and Accessories",
+      "url": "https://www.pinterest.com/pin/1114218764100449091",
+      "media": "https://i.pinimg.com/400x300/a7/1f/f8/a71ff83deb2429969f53e380badeb10b.jpg",
+      "mediaUrl": null,
+      "metricLabel": "impressions",
+      "metricValue": 0.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-instagram-Df2Xds7Gwfu",
+      "date": "2026-11-17",
+      "platforms": [
+        "Instagram"
+      ],
+      "format": "Feed",
+      "status": "Published",
+      "title": "Putting in the reps now, so you’re ready when the season comes around🥍",
+      "caption": "Putting in the reps now, so you’re ready when the season comes around🥍",
+      "url": "https://www.instagram.com/p/Df2Xds7Gwfu/",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 10.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-instagram-Df2NZbbFPI3",
+      "date": "2026-11-17",
+      "platforms": [
+        "Instagram"
+      ],
+      "format": "Reel",
+      "status": "Published",
+      "title": "Did you know gaming could help pay for college? Esports scholarships.",
+      "caption": "Did you know gaming could help pay for college? Esports scholarships.",
+      "url": "https://www.instagram.com/reel/Df2NZbbFPI3/",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 112.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-facebook-122164496835141147",
+      "date": "2026-11-17",
+      "platforms": [
+        "Facebook"
+      ],
+      "format": "Feed",
+      "status": "Published",
+      "title": "Putting in the reps now, so you’re ready when the season comes around.",
+      "caption": "Putting in the reps now, so you’re ready when the season comes around.",
+      "url": "https://facebook.com/122111431419141147/posts/122164496835141147",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "impressions",
+      "metricValue": 12.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-facebook-1752184562540540",
+      "date": "2026-11-17",
+      "platforms": [
+        "Facebook"
+      ],
+      "format": "Reel",
+      "status": "Published",
+      "title": "Esports scholarships: gaming could help pay for college.",
+      "caption": "Esports scholarships: gaming could help pay for college.",
+      "url": "https://www.facebook.com/reel/1752184562540540/",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 36.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-story-facebook-5695688-864542210081049-1433967418820124.jpeg",
+      "date": "2026-11-17",
+      "platforms": [
+        "Facebook"
+      ],
+      "format": "Story",
+      "status": "Published",
+      "title": "Facebook Story · 17 Nov",
+      "caption": "Facebook Story (caption not provided by source)",
+      "url": null,
+      "media": "https://static.metricool.com/fbstories/202611/5695688-864542210081049-1433967418820124.jpeg",
+      "mediaUrl": "https://static.metricool.com/fbstories/202611/5695688-864542210081049-1433967418820124.jpeg",
+      "metricLabel": null,
+      "metricValue": null,
+      "source": "Metricool / published story insights"
+    },
+    {
+      "id": "pub-bluesky-3n2jcu6bjgu2d",
+      "date": "2026-11-17",
+      "platforms": [
+        "Bluesky"
+      ],
+      "format": "Text / media post",
+      "status": "Published",
+      "title": "Gaming could help pay for college: esports scholarships",
+      "caption": "Gaming could help pay for college: esports scholarships",
+      "url": "https://bsky.app/profile/rshsports.bsky.social/post/3n2jcu6bjgu2d",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "likes",
+      "metricValue": null,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-bluesky-3n2jhqhq4dc2f",
+      "date": "2026-11-17",
+      "platforms": [
+        "Bluesky"
+      ],
+      "format": "Text / media post",
+      "status": "Published",
+      "title": "Putting in the reps for lacrosse season",
+      "caption": "Putting in the reps for lacrosse season",
+      "url": "https://bsky.app/profile/rshsports.bsky.social/post/3n2jhqhq4dc2f",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "likes",
+      "metricValue": null,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-tiktok-7708909120274976014",
+      "date": "2026-11-16",
+      "platforms": [
+        "TikTok"
+      ],
+      "format": "Video",
+      "status": "Published",
+      "title": "No crowds, lights or applause: work nobody sees.",
+      "caption": "No crowds, lights or applause: work nobody sees.",
+      "url": "https://www.tiktok.com/@rsh_sports/video/7708909120274976014",
+      "media": "https://static.metricool.com/tkvideocovers/202611/5695688-7708909120274976014.jpeg",
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 67.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-threads-Df0fp4shZeg",
+      "date": "2026-11-16",
+      "platforms": [
+        "Threads"
+      ],
+      "format": "Text / media post",
+      "status": "Published",
+      "title": "No crowds. No lights. No applause: work nobody sees",
+      "caption": "No crowds. No lights. No applause: work nobody sees",
+      "url": "https://www.threads.com/@team.rshsports/post/Df0fp4shZeg",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": null,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-threads-Df0N-QZiPMZ",
+      "date": "2026-11-16",
+      "platforms": [
+        "Threads"
+      ],
+      "format": "Text / media post",
+      "status": "Published",
+      "title": "Wrestlers repeat stance and movement drills",
+      "caption": "Wrestlers repeat stance and movement drills",
+      "url": "https://www.threads.com/@team.rshsports/post/Df0N-QZiPMZ",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 23.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-pinterest-1114218764100364995",
+      "date": "2026-11-16",
+      "platforms": [
+        "Pinterest"
+      ],
+      "format": "Pin",
+      "status": "Published",
+      "title": "RSH Sports Youth Golf Collection - Junior Golf Apparel",
+      "caption": "RSH Sports Youth Golf Collection - Junior Golf Apparel",
+      "url": "https://www.pinterest.com/pin/1114218764100364995",
+      "media": "https://i.pinimg.com/400x300/ae/f6/4a/aef64a5f538b70a4d9d4e65b61dc9aee.jpg",
+      "mediaUrl": null,
+      "metricLabel": "impressions",
+      "metricValue": 3.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-instagram-Df0OApTG3cW",
+      "date": "2026-11-16",
+      "platforms": [
+        "Instagram"
+      ],
+      "format": "Feed",
+      "status": "Published",
+      "title": "Did you know? Wrestlers repeat stance and movement drills to improve balance, reactions, footwork and control.",
+      "caption": "Did you know? Wrestlers repeat stance and movement drills to improve balance, reactions, footwork and control.",
+      "url": "https://www.instagram.com/p/Df0OApTG3cW/",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 7.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-instagram-Df0ffChDnxc",
+      "date": "2026-11-16",
+      "platforms": [
+        "Instagram"
+      ],
+      "format": "Reel",
+      "status": "Published",
+      "title": "No crowds. No lights. No applause. Just the work nobody sees.",
+      "caption": "No crowds. No lights. No applause. Just the work nobody sees.",
+      "url": "https://www.instagram.com/reel/Df0ffChDnxc/",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 115.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-facebook-122164295019141147",
+      "date": "2026-11-16",
+      "platforms": [
+        "Facebook"
+      ],
+      "format": "Feed",
+      "status": "Published",
+      "title": "Did you know? Wrestlers repeat stance and movement drills.",
+      "caption": "Did you know? Wrestlers repeat stance and movement drills.",
+      "url": "https://facebook.com/122111431419141147/posts/122164295019141147",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "impressions",
+      "metricValue": 9.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-facebook-1784457795967467",
+      "date": "2026-11-16",
+      "platforms": [
+        "Facebook"
+      ],
+      "format": "Reel",
+      "status": "Published",
+      "title": "No crowds. No lights. No applause: training nobody sees.",
+      "caption": "No crowds. No lights. No applause: training nobody sees.",
+      "url": "https://www.facebook.com/reel/1784457795967467/",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 210.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-story-facebook-5695688-864542210081049-1647270624078358.jpeg",
+      "date": "2026-11-16",
+      "platforms": [
+        "Facebook"
+      ],
+      "format": "Story",
+      "status": "Published",
+      "title": "Facebook Story · 16 Nov",
+      "caption": "Facebook Story (caption not provided by source)",
+      "url": null,
+      "media": "https://static.metricool.com/fbstories/202611/5695688-864542210081049-1647270624078358.jpeg",
+      "mediaUrl": "https://static.metricool.com/fbstories/202611/5695688-864542210081049-1647270624078358.jpeg",
+      "metricLabel": null,
+      "metricValue": null,
+      "source": "Metricool / published story insights"
+    },
+    {
+      "id": "pub-bluesky-3n2henalhmt2p",
+      "date": "2026-11-16",
+      "platforms": [
+        "Bluesky"
+      ],
+      "format": "Text / media post",
+      "status": "Published",
+      "title": "Wrestling stance and movement drills",
+      "caption": "Wrestling stance and movement drills",
+      "url": "https://bsky.app/profile/rshsports.bsky.social/post/3n2henalhmt2p",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "likes",
+      "metricValue": null,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-bluesky-3n2hn6c6in22n",
+      "date": "2026-11-16",
+      "platforms": [
+        "Bluesky"
+      ],
+      "format": "Text / media post",
+      "status": "Published",
+      "title": "No crowds, no lights: work nobody sees",
+      "caption": "No crowds, no lights: work nobody sees",
+      "url": "https://bsky.app/profile/rshsports.bsky.social/post/3n2hn6c6in22n",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "likes",
+      "metricValue": null,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-tiktok-7708537636561947917",
+      "date": "2026-11-15",
+      "platforms": [
+        "TikTok"
+      ],
+      "format": "Video",
+      "status": "Published",
+      "title": "Six minutes on the wrestling mat: the work nobody sees.",
+      "caption": "Six minutes on the wrestling mat: the work nobody sees.",
+      "url": "https://www.tiktok.com/@rsh_sports/video/7708537636561947917",
+      "media": "https://static.metricool.com/tkvideocovers/202611/5695688-7708537636561947917.jpeg",
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 228.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-tiktok-7708452125533031693",
+      "date": "2026-11-15",
+      "platforms": [
+        "TikTok"
+      ],
+      "format": "Video",
+      "status": "Published",
+      "title": "Hockey: one last check, one deep breath.",
+      "caption": "Hockey: one last check, one deep breath.",
+      "url": "https://www.tiktok.com/@rsh_sports/video/7708452125533031693",
+      "media": "https://static.metricool.com/tkvideocovers/202611/5695688-7708452125533031693.jpg",
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 526.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-threads-Dfw65_0iMtW",
+      "date": "2026-11-15",
+      "platforms": [
+        "Threads"
+      ],
+      "format": "Text / media post",
+      "status": "Published",
+      "title": "One last check. One deep breath. Hockey game day",
+      "caption": "One last check. One deep breath. Hockey game day",
+      "url": "https://www.threads.com/@team.rshsports/post/Dfw65_0iMtW",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 1.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-pinterest-1114218764100284187",
+      "date": "2026-11-15",
+      "platforms": [
+        "Pinterest"
+      ],
+      "format": "Pin",
+      "status": "Published",
+      "title": "RSH Sports Youth Golf Collection - Custom Golf Uniforms",
+      "caption": "RSH Sports Youth Golf Collection - Custom Golf Uniforms",
+      "url": "https://www.pinterest.com/pin/1114218764100284187",
+      "media": "https://i.pinimg.com/400x300/0b/ed/90/0bed90c1db8de8dffcaad6a4f2bd299a.jpg",
+      "mediaUrl": null,
+      "metricLabel": "impressions",
+      "metricValue": 7.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-instagram-DfxUovum3xM",
+      "date": "2026-11-15",
+      "platforms": [
+        "Instagram"
+      ],
+      "format": "Feed",
+      "status": "Published",
+      "title": "There’s always that moment when you know it’s almost time. One last check. One deep breath.",
+      "caption": "There’s always that moment when you know it’s almost time. One last check. One deep breath.",
+      "url": "https://www.instagram.com/p/DfxUovum3xM/",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 19.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-facebook-122164056927141147",
+      "date": "2026-11-15",
+      "platforms": [
+        "Facebook"
+      ],
+      "format": "Feed",
+      "status": "Published",
+      "title": "There’s always that moment when you know it’s almost time: hockey.",
+      "caption": "There’s always that moment when you know it’s almost time: hockey.",
+      "url": "https://facebook.com/122111431419141147/posts/122164056927141147",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "impressions",
+      "metricValue": 13.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-facebook-1451489123854620",
+      "date": "2026-11-15",
+      "platforms": [
+        "Facebook"
+      ],
+      "format": "Reel",
+      "status": "Published",
+      "title": "Six minutes on the mat: wrestlers earn every rep.",
+      "caption": "Six minutes on the mat: wrestlers earn every rep.",
+      "url": "https://www.facebook.com/reel/1451489123854620/",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 215.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-story-facebook-5695688-864542210081049-4574149006206004.jpeg",
+      "date": "2026-11-15",
+      "platforms": [
+        "Facebook"
+      ],
+      "format": "Story",
+      "status": "Published",
+      "title": "Facebook Story · 15 Nov",
+      "caption": "Facebook Story (caption not provided by source)",
+      "url": null,
+      "media": "https://static.metricool.com/fbstories/202611/5695688-864542210081049-4574149006206004.jpeg",
+      "mediaUrl": "https://static.metricool.com/fbstories/202611/5695688-864542210081049-4574149006206004.jpeg",
+      "metricLabel": null,
+      "metricValue": null,
+      "source": "Metricool / published story insights"
+    },
+    {
+      "id": "pub-bluesky-3n2dl4c4vbg27",
+      "date": "2026-11-15",
+      "platforms": [
+        "Bluesky"
+      ],
+      "format": "Text / media post",
+      "status": "Published",
+      "title": "Hockey: one last check before game day",
+      "caption": "Hockey: one last check before game day",
+      "url": "https://bsky.app/profile/rshsports.bsky.social/post/3n2dl4c4vbg27",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "likes",
+      "metricValue": null,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-bluesky-3n2f4oifdxx25",
+      "date": "2026-11-15",
+      "platforms": [
+        "Bluesky"
+      ],
+      "format": "Text / media post",
+      "status": "Published",
+      "title": "Wrestling: six minutes on the mat",
+      "caption": "Wrestling: six minutes on the mat",
+      "url": "https://bsky.app/profile/rshsports.bsky.social/post/3n2f4oifdxx25",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "likes",
+      "metricValue": null,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-youtube-Hvl4Hwgfcpk",
+      "date": "2026-11-14",
+      "platforms": [
+        "YouTube"
+      ],
+      "format": "Video",
+      "status": "Published",
+      "title": "Quote of the day - Cheerleading",
+      "caption": "Quote of the day - Cheerleading",
+      "url": "https://www.youtube.com/watch?v=Hvl4Hwgfcpk",
+      "media": "https://i.ytimg.com/vi/Hvl4Hwgfcpk/hqdefault.jpg",
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 51.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-tiktok-7708166421011893517",
+      "date": "2026-11-14",
+      "platforms": [
+        "TikTok"
+      ],
+      "format": "Video",
+      "status": "Published",
+      "title": "Cheerleading is the energy that fuels the game.",
+      "caption": "Cheerleading is the energy that fuels the game.",
+      "url": "https://www.tiktok.com/@rsh_sports/video/7708166421011893517",
+      "media": "https://static.metricool.com/tkvideocovers/202611/5695688-7708166421011893517.jpeg",
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 200.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-pinterest-1114218764100209175",
+      "date": "2026-11-14",
+      "platforms": [
+        "Pinterest"
+      ],
+      "format": "Pin",
+      "status": "Published",
+      "title": "Elite Soccer Uniform Design - Built to Compete",
+      "caption": "Elite Soccer Uniform Design - Built to Compete",
+      "url": "https://www.pinterest.com/pin/1114218764100209175",
+      "media": "https://i.pinimg.com/400x300/1c/5d/c5/1c5dc5cf8aabb4ecf6c643cd88b0c36f.jpg",
+      "mediaUrl": null,
+      "metricLabel": "impressions",
+      "metricValue": 7.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-facebook-938154829379014",
+      "date": "2026-11-14",
+      "platforms": [
+        "Facebook"
+      ],
+      "format": "Reel",
+      "status": "Published",
+      "title": "Cheerleaders: we are the energy that fuels the game.",
+      "caption": "Cheerleaders: we are the energy that fuels the game.",
+      "url": "https://www.facebook.com/reel/938154829379014/",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 198.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-story-facebook-5695688-864542210081049-2607381899736508.jpeg",
+      "date": "2026-11-14",
+      "platforms": [
+        "Facebook"
+      ],
+      "format": "Story",
+      "status": "Published",
+      "title": "Facebook Story · 14 Nov",
+      "caption": "Facebook Story (caption not provided by source)",
+      "url": null,
+      "media": "https://static.metricool.com/fbstories/202611/5695688-864542210081049-2607381899736508.jpeg",
+      "mediaUrl": "https://static.metricool.com/fbstories/202611/5695688-864542210081049-2607381899736508.jpeg",
+      "metricLabel": null,
+      "metricValue": null,
+      "source": "Metricool / published story insights"
+    },
+    {
+      "id": "pub-bluesky-3n2cm7easwx2p",
+      "date": "2026-11-14",
+      "platforms": [
+        "Bluesky"
+      ],
+      "format": "Text / media post",
+      "status": "Published",
+      "title": "Cheerleaders: team energy",
+      "caption": "Cheerleaders: team energy",
+      "url": "https://bsky.app/profile/rshsports.bsky.social/post/3n2cm7easwx2p",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "likes",
+      "metricValue": null,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-youtube-amwwa6nj0Rg",
+      "date": "2026-11-13",
+      "platforms": [
+        "YouTube"
+      ],
+      "format": "Video",
+      "status": "Published",
+      "title": "Quote of the day - Women’s Wrestling",
+      "caption": "Quote of the day - Women’s Wrestling",
+      "url": "https://www.youtube.com/watch?v=amwwa6nj0Rg",
+      "media": "https://i.ytimg.com/vi/amwwa6nj0Rg/hqdefault.jpg",
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 46.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-tiktok-7707795878710463757",
+      "date": "2026-11-13",
+      "platforms": [
+        "TikTok"
+      ],
+      "format": "Video",
+      "status": "Published",
+      "title": "She wrestles to prove she's the best in the room.",
+      "caption": "She wrestles to prove she's the best in the room.",
+      "url": "https://www.tiktok.com/@rsh_sports/video/7707795878710463757",
+      "media": "https://static.metricool.com/tkvideocovers/202611/5695688-7707795878710463757.jpeg",
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 135.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-threads-DfsxTfOtyZO",
+      "date": "2026-11-13",
+      "platforms": [
+        "Threads"
+      ],
+      "format": "Text / media post",
+      "status": "Published",
+      "title": "She doesn't wrestle to prove she belongs",
+      "caption": "She doesn't wrestle to prove she belongs",
+      "url": "https://www.threads.com/@team.rshsports/post/DfsxTfOtyZO",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 3.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-pinterest-1114218764100117458",
+      "date": "2026-11-13",
+      "platforms": [
+        "Pinterest"
+      ],
+      "format": "Pin",
+      "status": "Published",
+      "title": "Soccer Training Motivation - Train Hard Play Smart",
+      "caption": "Soccer Training Motivation - Train Hard Play Smart",
+      "url": "https://www.pinterest.com/pin/1114218764100117458",
+      "media": "https://i.pinimg.com/400x300/1f/2b/3e/1f2b3e3a4e9bc00a0f1184543c698b54.jpg",
+      "mediaUrl": null,
+      "metricLabel": "impressions",
+      "metricValue": 9.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-instagram-DfsxIDajKiC",
+      "date": "2026-11-13",
+      "platforms": [
+        "Instagram"
+      ],
+      "format": "Reel",
+      "status": "Published",
+      "title": "She doesn't wrestle to prove she belongs. She wrestles to be the best.",
+      "caption": "She doesn't wrestle to prove she belongs. She wrestles to be the best.",
+      "url": "https://www.instagram.com/reel/DfsxIDajKiC/",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 114.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-facebook-1438085301774848",
+      "date": "2026-11-13",
+      "platforms": [
+        "Facebook"
+      ],
+      "format": "Reel",
+      "status": "Published",
+      "title": "She doesn't wrestle to prove she belongs.",
+      "caption": "She doesn't wrestle to prove she belongs.",
+      "url": "https://www.facebook.com/reel/1438085301774848/",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 201.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-story-facebook-5695688-864542210081049-2305034343675102.jpeg",
+      "date": "2026-11-13",
+      "platforms": [
+        "Facebook"
+      ],
+      "format": "Story",
+      "status": "Published",
+      "title": "Facebook Story · 13 Nov",
+      "caption": "Facebook Story (caption not provided by source)",
+      "url": null,
+      "media": "https://static.metricool.com/fbstories/202611/5695688-864542210081049-2305034343675102.jpeg",
+      "mediaUrl": "https://static.metricool.com/fbstories/202611/5695688-864542210081049-2305034343675102.jpeg",
+      "metricLabel": null,
+      "metricValue": null,
+      "source": "Metricool / published story insights"
+    },
+    {
+      "id": "pub-bluesky-3n2a3rkvory2f",
+      "date": "2026-11-13",
+      "platforms": [
+        "Bluesky"
+      ],
+      "format": "Text / media post",
+      "status": "Published",
+      "title": "She wrestles to prove she is the best",
+      "caption": "She wrestles to prove she is the best",
+      "url": "https://bsky.app/profile/rshsports.bsky.social/post/3n2a3rkvory2f",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "likes",
+      "metricValue": null,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-youtube-mjWbn17SD4c",
+      "date": "2026-11-12",
+      "platforms": [
+        "YouTube"
+      ],
+      "format": "Video",
+      "status": "Published",
+      "title": "Men's Adult Football Practice Jersey",
+      "caption": "Men's Adult Football Practice Jersey",
+      "url": "https://www.youtube.com/watch?v=mjWbn17SD4c",
+      "media": "https://i.ytimg.com/vi/mjWbn17SD4c/hqdefault.jpg",
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 16.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-tiktok-7707424709259840782",
+      "date": "2026-11-12",
+      "platforms": [
+        "TikTok"
+      ],
+      "format": "Video",
+      "status": "Published",
+      "title": "Put in the work: football practice jerseys.",
+      "caption": "Put in the work: football practice jerseys.",
+      "url": "https://www.tiktok.com/@rsh_sports/video/7707424709259840782",
+      "media": "https://static.metricool.com/tkvideocovers/202611/5695688-7707424709259840782.jpeg",
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 113.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-threads-DfqMZwbhoVh",
+      "date": "2026-11-12",
+      "platforms": [
+        "Threads"
+      ],
+      "format": "Text / media post",
+      "status": "Published",
+      "title": "Put in the work: men's football practice jerseys",
+      "caption": "Put in the work: men's football practice jerseys",
+      "url": "https://www.threads.com/@team.rshsports/post/DfqMZwbhoVh",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 1.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-threads-Dfpz8FNiu8W",
+      "date": "2026-11-12",
+      "platforms": [
+        "Threads"
+      ],
+      "format": "Text / media post",
+      "status": "Published",
+      "title": "The first mile can humble you",
+      "caption": "The first mile can humble you",
+      "url": "https://www.threads.com/@team.rshsports/post/Dfpz8FNiu8W",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 32.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-pinterest-1114218764100069043",
+      "date": "2026-11-12",
+      "platforms": [
+        "Pinterest"
+      ],
+      "format": "Pin",
+      "status": "Published",
+      "title": "Own the Field - Field Hockey Motivation",
+      "caption": "Own the Field - Field Hockey Motivation",
+      "url": "https://www.pinterest.com/pin/1114218764100069043",
+      "media": "https://i.pinimg.com/400x300/74/ef/a0/74efa04af2545da087bc97e54501fb63.jpg",
+      "mediaUrl": null,
+      "metricLabel": "impressions",
+      "metricValue": 7.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-pinterest-1114218764100033825",
+      "date": "2026-11-12",
+      "platforms": [
+        "Pinterest"
+      ],
+      "format": "Pin",
+      "status": "Published",
+      "title": "Build Confidence - Youth Basketball Motivation",
+      "caption": "Build Confidence - Youth Basketball Motivation",
+      "url": "https://www.pinterest.com/pin/1114218764100033825",
+      "media": "https://i.pinimg.com/400x300/69/3a/b7/693ab7df902e5a93cf986c24467bf657.jpg",
+      "mediaUrl": null,
+      "metricLabel": "impressions",
+      "metricValue": 7.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-pinterest-1114218764100001092",
+      "date": "2026-11-12",
+      "platforms": [
+        "Pinterest"
+      ],
+      "format": "Pin",
+      "status": "Published",
+      "title": "Built for Competition - Team Uniform Inspiration",
+      "caption": "Built for Competition - Team Uniform Inspiration",
+      "url": "https://www.pinterest.com/pin/1114218764100001092",
+      "media": "https://i.pinimg.com/400x300/2f/c8/82/2fc8821e38b506dd4d7485ef9788687b.jpg",
+      "mediaUrl": null,
+      "metricLabel": "impressions",
+      "metricValue": 8.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-instagram-Dfp0AXEn1B-",
+      "date": "2026-11-12",
+      "platforms": [
+        "Instagram"
+      ],
+      "format": "Feed",
+      "status": "Published",
+      "title": "The first mile can humble you. Keep moving anyway.",
+      "caption": "The first mile can humble you. Keep moving anyway.",
+      "url": "https://www.instagram.com/p/Dfp0AXEn1B-/",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 6.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-instagram-DfqMRbkkuCM",
+      "date": "2026-11-12",
+      "platforms": [
+        "Instagram"
+      ],
+      "format": "Reel",
+      "status": "Published",
+      "title": "Put in the work, rep your team: football practice jerseys.",
+      "caption": "Put in the work, rep your team: football practice jerseys.",
+      "url": "https://www.instagram.com/reel/DfqMRbkkuCM/",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 56.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-facebook-122163661965141147",
+      "date": "2026-11-12",
+      "platforms": [
+        "Facebook"
+      ],
+      "format": "Feed",
+      "status": "Published",
+      "title": "The first mile can humble you. Keep moving anyway.",
+      "caption": "The first mile can humble you. Keep moving anyway.",
+      "url": "https://facebook.com/122111431419141147/posts/122163661965141147",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "impressions",
+      "metricValue": 5.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-facebook-1709740504079226",
+      "date": "2026-11-12",
+      "platforms": [
+        "Facebook"
+      ],
+      "format": "Reel",
+      "status": "Published",
+      "title": "Put in the work, rep your team: football practice jerseys.",
+      "caption": "Put in the work, rep your team: football practice jerseys.",
+      "url": "https://www.facebook.com/reel/1709740504079226/",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 297.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-story-facebook-5695688-864542210081049-3720285124803211.jpeg",
+      "date": "2026-11-12",
+      "platforms": [
+        "Facebook"
+      ],
+      "format": "Story",
+      "status": "Published",
+      "title": "Facebook Story · 12 Nov",
+      "caption": "Facebook Story (caption not provided by source)",
+      "url": null,
+      "media": "https://static.metricool.com/fbstories/202611/5695688-864542210081049-3720285124803211.jpeg",
+      "mediaUrl": "https://static.metricool.com/fbstories/202611/5695688-864542210081049-3720285124803211.jpeg",
+      "metricLabel": null,
+      "metricValue": null,
+      "source": "Metricool / published story insights"
+    },
+    {
+      "id": "pub-bluesky-3n257ggc4kk24",
+      "date": "2026-11-12",
+      "platforms": [
+        "Bluesky"
+      ],
+      "format": "Text / media post",
+      "status": "Published",
+      "title": "The first mile can humble you",
+      "caption": "The first mile can humble you",
+      "url": "https://bsky.app/profile/rshsports.bsky.social/post/3n257ggc4kk24",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "likes",
+      "metricValue": null,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-bluesky-3n25lc72ldu2i",
+      "date": "2026-11-12",
+      "platforms": [
+        "Bluesky"
+      ],
+      "format": "Text / media post",
+      "status": "Published",
+      "title": "Football practice jerseys",
+      "caption": "Football practice jerseys",
+      "url": "https://bsky.app/profile/rshsports.bsky.social/post/3n25lc72ldu2i",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "likes",
+      "metricValue": null,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-youtube-21A7Pg5Zzg0",
+      "date": "2026-11-11",
+      "platforms": [
+        "YouTube"
+      ],
+      "format": "Video",
+      "status": "Published",
+      "title": "Men's Pro MMA Shorts",
+      "caption": "Men's Pro MMA Shorts",
+      "url": "https://www.youtube.com/watch?v=21A7Pg5Zzg0",
+      "media": "https://i.ytimg.com/vi/21A7Pg5Zzg0/hqdefault.jpg",
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 25.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-tiktok-7707053473967197453",
+      "date": "2026-11-11",
+      "platforms": [
+        "TikTok"
+      ],
+      "format": "Video",
+      "status": "Published",
+      "title": "Men's pro MMA shorts: built for the fight.",
+      "caption": "Men's pro MMA shorts: built for the fight.",
+      "url": "https://www.tiktok.com/@rsh_sports/video/7707053473967197453",
+      "media": "https://static.metricool.com/tkvideocovers/202611/5695688-7707053473967197453.jpeg",
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 31.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-threads-Dfnni1chOGi",
+      "date": "2026-11-11",
+      "platforms": [
+        "Threads"
+      ],
+      "format": "Text / media post",
+      "status": "Published",
+      "title": "Built for the fight: MMA shorts",
+      "caption": "Built for the fight: MMA shorts",
+      "url": "https://www.threads.com/@team.rshsports/post/Dfnni1chOGi",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": null,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-threads-DfmpmijCLah",
+      "date": "2026-11-11",
+      "platforms": [
+        "Threads"
+      ],
+      "format": "Text / media post",
+      "status": "Published",
+      "title": "Honoring veterans and their service",
+      "caption": "Honoring veterans and their service",
+      "url": "https://www.threads.com/@team.rshsports/post/DfmpmijCLah",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 4.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-pinterest-1114218764099954854",
+      "date": "2026-11-11",
+      "platforms": [
+        "Pinterest"
+      ],
+      "format": "Pin",
+      "status": "Published",
+      "title": "Training Days Look Like This - Volleyball Motivation",
+      "caption": "Training Days Look Like This - Volleyball Motivation",
+      "url": "https://www.pinterest.com/pin/1114218764099954854",
+      "media": "https://i.pinimg.com/400x300/51/1e/87/511e870bc9ad5a790abafed1b6dc6522.jpg",
+      "mediaUrl": null,
+      "metricLabel": "impressions",
+      "metricValue": 8.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-instagram-Dfmp9m4G1g2",
+      "date": "2026-11-11",
+      "platforms": [
+        "Instagram"
+      ],
+      "format": "Feed",
+      "status": "Published",
+      "title": "Today, we honor those who served. Thank you to every veteran for your courage and service.",
+      "caption": "Today, we honor those who served. Thank you to every veteran for your courage and service.",
+      "url": "https://www.instagram.com/p/Dfmp9m4G1g2/",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 12.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-instagram-DfnnbplDqgp",
+      "date": "2026-11-11",
+      "platforms": [
+        "Instagram"
+      ],
+      "format": "Reel",
+      "status": "Published",
+      "title": "Built for the fight, ready for every round: MMA shorts.",
+      "caption": "Built for the fight, ready for every round: MMA shorts.",
+      "url": "https://www.instagram.com/reel/DfnnbplDqgp/",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 20.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-facebook-122163302673141147",
+      "date": "2026-11-11",
+      "platforms": [
+        "Facebook"
+      ],
+      "format": "Feed",
+      "status": "Published",
+      "title": "Today we honor those who served: Veterans Day.",
+      "caption": "Today we honor those who served: Veterans Day.",
+      "url": "https://facebook.com/122111431419141147/posts/122163302673141147",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "impressions",
+      "metricValue": 6.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-facebook-1472445361435415",
+      "date": "2026-11-11",
+      "platforms": [
+        "Facebook"
+      ],
+      "format": "Reel",
+      "status": "Published",
+      "title": "Built for the fight: men's MMA shorts.",
+      "caption": "Built for the fight: men's MMA shorts.",
+      "url": "https://www.facebook.com/reel/1472445361435415/",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 203.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-story-facebook-5695688-864542210081049-1673439827465492.jpeg",
+      "date": "2026-11-11",
+      "platforms": [
+        "Facebook"
+      ],
+      "format": "Story",
+      "status": "Published",
+      "title": "Facebook Story · 11 Nov",
+      "caption": "Facebook Story (caption not provided by source)",
+      "url": null,
+      "media": "https://static.metricool.com/fbstories/202611/5695688-864542210081049-1673439827465492.jpeg",
+      "mediaUrl": "https://static.metricool.com/fbstories/202611/5695688-864542210081049-1673439827465492.jpeg",
+      "metricLabel": null,
+      "metricValue": null,
+      "source": "Metricool / published story insights"
+    },
+    {
+      "id": "pub-bluesky-3n224n3gkvl2p",
+      "date": "2026-11-11",
+      "platforms": [
+        "Bluesky"
+      ],
+      "format": "Text / media post",
+      "status": "Published",
+      "title": "Honoring the service of veterans",
+      "caption": "Honoring the service of veterans",
+      "url": "https://bsky.app/profile/rshsports.bsky.social/post/3n224n3gkvl2p",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "likes",
+      "metricValue": null,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-bluesky-3n232sjap4r2n",
+      "date": "2026-11-11",
+      "platforms": [
+        "Bluesky"
+      ],
+      "format": "Text / media post",
+      "status": "Published",
+      "title": "Built for the fight: MMA shorts",
+      "caption": "Built for the fight: MMA shorts",
+      "url": "https://bsky.app/profile/rshsports.bsky.social/post/3n232sjap4r2n",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "likes",
+      "metricValue": null,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-youtube-8zEsVebB4pU",
+      "date": "2026-11-10",
+      "platforms": [
+        "YouTube"
+      ],
+      "format": "Video",
+      "status": "Published",
+      "title": "Why Can Field Hockey Players Only Use ONE Side of the Stick?",
+      "caption": "Why Can Field Hockey Players Only Use ONE Side of the Stick?",
+      "url": "https://www.youtube.com/watch?v=8zEsVebB4pU",
+      "media": "https://i.ytimg.com/vi/8zEsVebB4pU/hqdefault.jpg",
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 19.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-tiktok-7706682556577516813",
+      "date": "2026-11-10",
+      "platforms": [
+        "TikTok"
+      ],
+      "format": "Video",
+      "status": "Published",
+      "title": "Field hockey: only one side of the stick?",
+      "caption": "Field hockey: only one side of the stick?",
+      "url": "https://www.tiktok.com/@rsh_sports/video/7706682556577516813",
+      "media": "https://static.metricool.com/tkvideocovers/202611/5695688-7706682556577516813.jpeg",
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 352.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-threads-DflC4sbOSFL",
+      "date": "2026-11-10",
+      "platforms": [
+        "Threads"
+      ],
+      "format": "Text / media post",
+      "status": "Published",
+      "title": "Field hockey: only one side of the stick",
+      "caption": "Field hockey: only one side of the stick",
+      "url": "https://www.threads.com/@team.rshsports/post/DflC4sbOSFL",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 1.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-threads-DfkSSGuCHjS",
+      "date": "2026-11-10",
+      "platforms": [
+        "Threads"
+      ],
+      "format": "Text / media post",
+      "status": "Published",
+      "title": "Work before the game matters too",
+      "caption": "Work before the game matters too",
+      "url": "https://www.threads.com/@team.rshsports/post/DfkSSGuCHjS",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 29.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-pinterest-1114218764099908123",
+      "date": "2026-11-10",
+      "platforms": [
+        "Pinterest"
+      ],
+      "format": "Pin",
+      "status": "Published",
+      "title": "Progress Builds Champions - Youth Basketball",
+      "caption": "Progress Builds Champions - Youth Basketball",
+      "url": "https://www.pinterest.com/pin/1114218764099908123",
+      "media": "https://i.pinimg.com/400x300/a7/5c/ce/a75cced3908d8f624ba70f0bb6dff999.jpg",
+      "mediaUrl": null,
+      "metricLabel": "impressions",
+      "metricValue": 10.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-pinterest-1114218764099884936",
+      "date": "2026-11-10",
+      "platforms": [
+        "Pinterest"
+      ],
+      "format": "Pin",
+      "status": "Published",
+      "title": "Ridgeview Wolves - Custom Baseball Uniform Design",
+      "caption": "Ridgeview Wolves - Custom Baseball Uniform Design",
+      "url": "https://www.pinterest.com/pin/1114218764099884936",
+      "media": "https://i.pinimg.com/400x300/44/a1/03/44a1039ad7e3d601891c99e6077e752f.jpg",
+      "mediaUrl": null,
+      "metricLabel": "impressions",
+      "metricValue": 11.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-pinterest-1114218764099877019",
+      "date": "2026-11-10",
+      "platforms": [
+        "Pinterest"
+      ],
+      "format": "Pin",
+      "status": "Published",
+      "title": "Soccer Built - Train Hard Play Smart",
+      "caption": "Soccer Built - Train Hard Play Smart",
+      "url": "https://www.pinterest.com/pin/1114218764099877019",
+      "media": "https://i.pinimg.com/400x300/91/45/0b/91450b44a8049a9fcd43bd1e52c06795.jpg",
+      "mediaUrl": null,
+      "metricLabel": "impressions",
+      "metricValue": 10.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-instagram-DfkSqZRFdkP",
+      "date": "2026-11-10",
+      "platforms": [
+        "Instagram"
+      ],
+      "format": "Feed",
+      "status": "Published",
+      "title": "The work before the game matters too.",
+      "caption": "The work before the game matters too.",
+      "url": "https://www.instagram.com/p/DfkSqZRFdkP/",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 9.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-instagram-DflCvS0jsUx",
+      "date": "2026-11-10",
+      "platforms": [
+        "Instagram"
+      ],
+      "format": "Reel",
+      "status": "Published",
+      "title": "Did you know field hockey players can only use ONE side of the stick?",
+      "caption": "Did you know field hockey players can only use ONE side of the stick?",
+      "url": "https://www.instagram.com/reel/DflCvS0jsUx/",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 117.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-facebook-122163158019141147",
+      "date": "2026-11-10",
+      "platforms": [
+        "Facebook"
+      ],
+      "format": "Feed",
+      "status": "Published",
+      "title": "The work before the basketball game matters too.",
+      "caption": "The work before the basketball game matters too.",
+      "url": "https://facebook.com/122111431419141147/posts/122163158019141147",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "impressions",
+      "metricValue": 3.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-facebook-1851028172697627",
+      "date": "2026-11-10",
+      "platforms": [
+        "Facebook"
+      ],
+      "format": "Reel",
+      "status": "Published",
+      "title": "Did you know field hockey players can only use ONE side of the stick?",
+      "caption": "Did you know field hockey players can only use ONE side of the stick?",
+      "url": "https://www.facebook.com/reel/1851028172697627/",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 408.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-story-facebook-5695688-864542210081049-1473948417992997.jpeg",
+      "date": "2026-11-10",
+      "platforms": [
+        "Facebook"
+      ],
+      "format": "Story",
+      "status": "Published",
+      "title": "Facebook Story · 10 Nov",
+      "caption": "Facebook Story (caption not provided by source)",
+      "url": null,
+      "media": "https://static.metricool.com/fbstories/202611/5695688-864542210081049-1473948417992997.jpeg",
+      "mediaUrl": "https://static.metricool.com/fbstories/202611/5695688-864542210081049-1473948417992997.jpeg",
+      "metricLabel": null,
+      "metricValue": null,
+      "source": "Metricool / published story insights"
+    },
+    {
+      "id": "pub-bluesky-3mzxsqjs5u42a",
+      "date": "2026-11-10",
+      "platforms": [
+        "Bluesky"
+      ],
+      "format": "Text / media post",
+      "status": "Published",
+      "title": "Basketball: work before the game matters",
+      "caption": "Basketball: work before the game matters",
+      "url": "https://bsky.app/profile/rshsports.bsky.social/post/3mzxsqjs5u42a",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "likes",
+      "metricValue": null,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-bluesky-3mzykgk3pnn2y",
+      "date": "2026-11-10",
+      "platforms": [
+        "Bluesky"
+      ],
+      "format": "Text / media post",
+      "status": "Published",
+      "title": "Field hockey: only one side of the stick",
+      "caption": "Field hockey: only one side of the stick",
+      "url": "https://bsky.app/profile/rshsports.bsky.social/post/3mzykgk3pnn2y",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "likes",
+      "metricValue": null,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-pinterest-1114218764099810944",
+      "date": "2026-11-09",
+      "platforms": [
+        "Pinterest"
+      ],
+      "format": "Pin",
+      "status": "Published",
+      "title": "Riverdale Wildcats Custom Football Jersey",
+      "caption": "Riverdale Wildcats Custom Football Jersey",
+      "url": "https://www.pinterest.com/pin/1114218764099810944",
+      "media": "https://i.pinimg.com/400x300/2f/c8/82/2fc8821e38b506dd4d7485ef9788687b.jpg",
+      "mediaUrl": null,
+      "metricLabel": "impressions",
+      "metricValue": 5.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-threads-DffP8WwDVzl",
+      "date": "2026-11-08",
+      "platforms": [
+        "Threads"
+      ],
+      "format": "Text / media post",
+      "status": "Published",
+      "title": "They show up too: parents and supporters",
+      "caption": "They show up too: parents and supporters",
+      "url": "https://www.threads.com/@team.rshsports/post/DffP8WwDVzl",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 16.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-instagram-DffP_ljm_Tf",
+      "date": "2026-11-08",
+      "platforms": [
+        "Instagram"
+      ],
+      "format": "Feed",
+      "status": "Published",
+      "title": "They show up too. For practices, long drives, wins, losses and everything in between.",
+      "caption": "They show up too. For practices, long drives, wins, losses and everything in between.",
+      "url": "https://www.instagram.com/p/DffP_ljm_Tf/",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 15.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-facebook-122162683821141147",
+      "date": "2026-11-08",
+      "platforms": [
+        "Facebook"
+      ],
+      "format": "Feed",
+      "status": "Published",
+      "title": "They show up too. For practices and the long drives: parents and families.",
+      "caption": "They show up too. For practices and the long drives: parents and families.",
+      "url": "https://facebook.com/122111431419141147/posts/122162683821141147",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "impressions",
+      "metricValue": 5.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-bluesky-3mzsvedb6nv26",
+      "date": "2026-11-08",
+      "platforms": [
+        "Bluesky"
+      ],
+      "format": "Text / media post",
+      "status": "Published",
+      "title": "Parents and supporters show up too",
+      "caption": "Parents and supporters show up too",
+      "url": "https://bsky.app/profile/rshsports.bsky.social/post/3mzsvedb6nv26",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "likes",
+      "metricValue": null,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-youtube-8ijXsE4bItk",
+      "date": "2026-11-07",
+      "platforms": [
+        "YouTube"
+      ],
+      "format": "Video",
+      "status": "Published",
+      "title": "Champions Are Made When Nobody's Watching - Esports",
+      "caption": "Champions Are Made When Nobody's Watching - Esports",
+      "url": "https://www.youtube.com/watch?v=8ijXsE4bItk",
+      "media": "https://i.ytimg.com/vi/8ijXsE4bItk/hqdefault.jpg",
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 34.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-tiktok-7705569563798228237",
+      "date": "2026-11-07",
+      "platforms": [
+        "TikTok"
+      ],
+      "format": "Video",
+      "status": "Published",
+      "title": "Esports champions are built when nobody's watching.",
+      "caption": "Esports champions are built when nobody's watching.",
+      "url": "https://www.tiktok.com/@rsh_sports/video/7705569563798228237",
+      "media": "https://static.metricool.com/tkvideocovers/202611/5695688-7705569563798228237.jpeg",
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 89.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-threads-DfdUlTLzjRG",
+      "date": "2026-11-07",
+      "platforms": [
+        "Threads"
+      ],
+      "format": "Text / media post",
+      "status": "Published",
+      "title": "Esports: champions built when nobody's watching",
+      "caption": "Esports: champions built when nobody's watching",
+      "url": "https://www.threads.com/@team.rshsports/post/DfdUlTLzjRG",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": null,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-threads-Dfcx3doCE1w",
+      "date": "2026-11-07",
+      "platforms": [
+        "Threads"
+      ],
+      "format": "Text / media post",
+      "status": "Published",
+      "title": "Quiet training and chasing something bigger",
+      "caption": "Quiet training and chasing something bigger",
+      "url": "https://www.threads.com/@team.rshsports/post/Dfcx3doCE1w",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": null,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-instagram-DfcyOBRGoQ2",
+      "date": "2026-11-07",
+      "platforms": [
+        "Instagram"
+      ],
+      "format": "Feed",
+      "status": "Published",
+      "title": "The quiet, unglamorous side of chasing something bigger.",
+      "caption": "The quiet, unglamorous side of chasing something bigger.",
+      "url": "https://www.instagram.com/p/DfcyOBRGoQ2/",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 6.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-instagram-DfdUaqwAr6l",
+      "date": "2026-11-07",
+      "platforms": [
+        "Instagram"
+      ],
+      "format": "Reel",
+      "status": "Published",
+      "title": "Champions are built when nobody's watching: esports jerseys.",
+      "caption": "Champions are built when nobody's watching: esports jerseys.",
+      "url": "https://www.instagram.com/reel/DfdUaqwAr6l/",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 127.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-facebook-122162542539141147",
+      "date": "2026-11-07",
+      "platforms": [
+        "Facebook"
+      ],
+      "format": "Feed",
+      "status": "Published",
+      "title": "The quiet, unglamorous side of chasing something bigger: softball.",
+      "caption": "The quiet, unglamorous side of chasing something bigger: softball.",
+      "url": "https://facebook.com/122111431419141147/posts/122162542539141147",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "impressions",
+      "metricValue": 2.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-facebook-4614491788829858",
+      "date": "2026-11-07",
+      "platforms": [
+        "Facebook"
+      ],
+      "format": "Reel",
+      "status": "Published",
+      "title": "Champions are built when nobody's watching: esports.",
+      "caption": "Champions are built when nobody's watching: esports.",
+      "url": "https://www.facebook.com/reel/4614491788829858/",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 305.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-story-facebook-5695688-864542210081049-4697538453904425.jpeg",
+      "date": "2026-11-07",
+      "platforms": [
+        "Facebook"
+      ],
+      "format": "Story",
+      "status": "Published",
+      "title": "Facebook Story · 7 Nov",
+      "caption": "Facebook Story (caption not provided by source)",
+      "url": null,
+      "media": "https://static.metricool.com/fbstories/202611/5695688-864542210081049-4697538453904425.jpeg",
+      "mediaUrl": "https://static.metricool.com/fbstories/202611/5695688-864542210081049-4697538453904425.jpeg",
+      "metricLabel": null,
+      "metricValue": null,
+      "source": "Metricool / published story insights"
+    },
+    {
+      "id": "pub-bluesky-3mzqi7ippa32y",
+      "date": "2026-11-07",
+      "platforms": [
+        "Bluesky"
+      ],
+      "format": "Text / media post",
+      "status": "Published",
+      "title": "Quiet training and chasing something bigger",
+      "caption": "Quiet training and chasing something bigger",
+      "url": "https://bsky.app/profile/rshsports.bsky.social/post/3mzqi7ippa32y",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "likes",
+      "metricValue": null,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-bluesky-3mzqyznzgdb26",
+      "date": "2026-11-07",
+      "platforms": [
+        "Bluesky"
+      ],
+      "format": "Text / media post",
+      "status": "Published",
+      "title": "Esports champions train when nobody watches",
+      "caption": "Esports champions train when nobody watches",
+      "url": "https://bsky.app/profile/rshsports.bsky.social/post/3mzqyznzgdb26",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "likes",
+      "metricValue": 1.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-youtube-4cbbbUYEfJA",
+      "date": "2026-11-06",
+      "platforms": [
+        "YouTube"
+      ],
+      "format": "Video",
+      "status": "Published",
+      "title": "Every Team Has Its Own Story - Custom Uniforms",
+      "caption": "Every Team Has Its Own Story - Custom Uniforms",
+      "url": "https://www.youtube.com/watch?v=4cbbbUYEfJA",
+      "media": "https://i.ytimg.com/vi/4cbbbUYEfJA/hqdefault.jpg",
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 30.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-tiktok-7705198588543962382",
+      "date": "2026-11-06",
+      "platforms": [
+        "TikTok"
+      ],
+      "format": "Video",
+      "status": "Published",
+      "title": "Custom uniforms: every team has its own story.",
+      "caption": "Custom uniforms: every team has its own story.",
+      "url": "https://www.tiktok.com/@rsh_sports/video/7705198588543962382",
+      "media": "https://static.metricool.com/tkvideocovers/202611/5695688-7705198588543962382.jpeg",
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 93.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-threads-Dfav0tOhUof",
+      "date": "2026-11-06",
+      "platforms": [
+        "Threads"
+      ],
+      "format": "Text / media post",
+      "status": "Published",
+      "title": "Every team has its own story: custom uniforms",
+      "caption": "Every team has its own story: custom uniforms",
+      "url": "https://www.threads.com/@team.rshsports/post/Dfav0tOhUof",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": null,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-instagram-DfavquaDWEk",
+      "date": "2026-11-06",
+      "platforms": [
+        "Instagram"
+      ],
+      "format": "Reel",
+      "status": "Published",
+      "title": "Every team has its own story. Wear yours with pride: custom uniforms.",
+      "caption": "Every team has its own story. Wear yours with pride: custom uniforms.",
+      "url": "https://www.instagram.com/reel/DfavquaDWEk/",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 76.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-facebook-2619657988499348",
+      "date": "2026-11-06",
+      "platforms": [
+        "Facebook"
+      ],
+      "format": "Reel",
+      "status": "Published",
+      "title": "Every team has its own story: custom uniforms.",
+      "caption": "Every team has its own story: custom uniforms.",
+      "url": "https://www.facebook.com/reel/2619657988499348/",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 237.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-story-facebook-5695688-864542210081049-3630542933787543.jpeg",
+      "date": "2026-11-06",
+      "platforms": [
+        "Facebook"
+      ],
+      "format": "Story",
+      "status": "Published",
+      "title": "Facebook Story · 6 Nov",
+      "caption": "Facebook Story (caption not provided by source)",
+      "url": null,
+      "media": "https://static.metricool.com/fbstories/202611/5695688-864542210081049-3630542933787543.jpeg",
+      "mediaUrl": "https://static.metricool.com/fbstories/202611/5695688-864542210081049-3630542933787543.jpeg",
+      "metricLabel": null,
+      "metricValue": null,
+      "source": "Metricool / published story insights"
+    },
+    {
+      "id": "pub-bluesky-3mzoijivdv32o",
+      "date": "2026-11-06",
+      "platforms": [
+        "Bluesky"
+      ],
+      "format": "Text / media post",
+      "status": "Published",
+      "title": "Every team has its own story: custom uniforms",
+      "caption": "Every team has its own story: custom uniforms",
+      "url": "https://bsky.app/profile/rshsports.bsky.social/post/3mzoijivdv32o",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "likes",
+      "metricValue": null,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-youtube-4QaQ2AklnHY",
+      "date": "2026-11-05",
+      "platforms": [
+        "YouTube"
+      ],
+      "format": "Video",
+      "status": "Published",
+      "title": "Quote of the day - Women in Sports",
+      "caption": "Quote of the day - Women in Sports",
+      "url": "https://www.youtube.com/watch?v=4QaQ2AklnHY",
+      "media": "https://i.ytimg.com/vi/4QaQ2AklnHY/hqdefault.jpg",
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 57.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-tiktok-7704827051521494285",
+      "date": "2026-11-05",
+      "platforms": [
+        "TikTok"
+      ],
+      "format": "Video",
+      "status": "Published",
+      "title": "Pressure doesn't scare her: women's sports.",
+      "caption": "Pressure doesn't scare her: women's sports.",
+      "url": "https://www.tiktok.com/@rsh_sports/video/7704827051521494285",
+      "media": "https://static.metricool.com/tkvideocovers/202611/5695688-7704827051521494285.jpeg",
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 199.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-threads-DfYKz6zo6qB",
+      "date": "2026-11-05",
+      "platforms": [
+        "Threads"
+      ],
+      "format": "Text / media post",
+      "status": "Published",
+      "title": "Pressure doesn’t scare her: women in sport",
+      "caption": "Pressure doesn’t scare her: women in sport",
+      "url": "https://www.threads.com/@team.rshsports/post/DfYKz6zo6qB",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 1.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-threads-DfXT4bNR9ia",
+      "date": "2026-11-05",
+      "platforms": [
+        "Threads"
+      ],
+      "format": "Text / media post",
+      "status": "Published",
+      "title": "Wrestling season starts here",
+      "caption": "Wrestling season starts here",
+      "url": "https://www.threads.com/@team.rshsports/post/DfXT4bNR9ia",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 2.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-pinterest-1114218764099413473",
+      "date": "2026-11-05",
+      "platforms": [
+        "Pinterest"
+      ],
+      "format": "Pin",
+      "status": "Published",
+      "title": "Built Through Encouragement - Youth Basketball",
+      "caption": "Built Through Encouragement - Youth Basketball",
+      "url": "https://www.pinterest.com/pin/1114218764099413473",
+      "media": "https://i.pinimg.com/400x300/a7/0b/e1/a70be1fc023830c09e221e87bd259407.jpg",
+      "mediaUrl": null,
+      "metricLabel": "impressions",
+      "metricValue": 53.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-instagram-DfYKtpZFREi",
+      "date": "2026-11-05",
+      "platforms": [
+        "Instagram"
+      ],
+      "format": "Reel",
+      "status": "Published",
+      "title": "Pressure doesn’t scare her: women in sport motivation.",
+      "caption": "Pressure doesn’t scare her: women in sport motivation.",
+      "url": "https://www.instagram.com/reel/DfYKtpZFREi/",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 76.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-instagram-DfXUo3JjJ2o",
+      "date": "2026-11-05",
+      "platforms": [
+        "Instagram"
+      ],
+      "format": "Reel",
+      "status": "Published",
+      "title": "Wrestling season starts here: moments before practice.",
+      "caption": "Wrestling season starts here: moments before practice.",
+      "url": "https://www.instagram.com/reel/DfXUo3JjJ2o/",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 142.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-facebook-1834129211136265",
+      "date": "2026-11-05",
+      "platforms": [
+        "Facebook"
+      ],
+      "format": "Reel",
+      "status": "Published",
+      "title": "Pressure doesn’t scare her: women in sport.",
+      "caption": "Pressure doesn’t scare her: women in sport.",
+      "url": "https://www.facebook.com/reel/1834129211136265/",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 228.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-facebook-1817367349482239",
+      "date": "2026-11-05",
+      "platforms": [
+        "Facebook"
+      ],
+      "format": "Reel",
+      "status": "Published",
+      "title": "Wrestling season starts here: before practice.",
+      "caption": "Wrestling season starts here: before practice.",
+      "url": "https://www.facebook.com/reel/1817367349482239/",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 115.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-story-facebook-5695688-864542210081049-3413840015471513.jpeg",
+      "date": "2026-11-05",
+      "platforms": [
+        "Facebook"
+      ],
+      "format": "Story",
+      "status": "Published",
+      "title": "Facebook Story · 5 Nov",
+      "caption": "Facebook Story (caption not provided by source)",
+      "url": null,
+      "media": "https://static.metricool.com/fbstories/202611/5695688-864542210081049-3413840015471513.jpeg",
+      "mediaUrl": "https://static.metricool.com/fbstories/202611/5695688-864542210081049-3413840015471513.jpeg",
+      "metricLabel": null,
+      "metricValue": null,
+      "source": "Metricool / published story insights"
+    },
+    {
+      "id": "pub-story-facebook-5695688-864542210081049-1709393670887008.jpeg",
+      "date": "2026-11-05",
+      "platforms": [
+        "Facebook"
+      ],
+      "format": "Story",
+      "status": "Published",
+      "title": "Facebook Story · 5 Nov",
+      "caption": "Facebook Story (caption not provided by source)",
+      "url": null,
+      "media": "https://static.metricool.com/fbstories/202611/5695688-864542210081049-1709393670887008.jpeg",
+      "mediaUrl": "https://static.metricool.com/fbstories/202611/5695688-864542210081049-1709393670887008.jpeg",
+      "metricLabel": null,
+      "metricValue": null,
+      "source": "Metricool / published story insights"
+    },
+    {
+      "id": "pub-bluesky-3mzl5cyr57w22",
+      "date": "2026-11-05",
+      "platforms": [
+        "Bluesky"
+      ],
+      "format": "Text / media post",
+      "status": "Published",
+      "title": "Wrestling season starts here",
+      "caption": "Wrestling season starts here",
+      "url": "https://bsky.app/profile/rshsports.bsky.social/post/3mzl5cyr57w22",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "likes",
+      "metricValue": null,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-bluesky-3mzlxzajuct22",
+      "date": "2026-11-05",
+      "platforms": [
+        "Bluesky"
+      ],
+      "format": "Text / media post",
+      "status": "Published",
+      "title": "Pressure does not scare her",
+      "caption": "Pressure does not scare her",
+      "url": "https://bsky.app/profile/rshsports.bsky.social/post/3mzlxzajuct22",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "likes",
+      "metricValue": null,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-youtube-H7QFVuNUTXE",
+      "date": "2026-11-04",
+      "platforms": [
+        "YouTube"
+      ],
+      "format": "Video",
+      "status": "Published",
+      "title": "RSH Sports MMA Shorts",
+      "caption": "RSH Sports MMA Shorts",
+      "url": "https://www.youtube.com/watch?v=H7QFVuNUTXE",
+      "media": "https://i.ytimg.com/vi/H7QFVuNUTXE/hqdefault.jpg",
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 21.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-tiktok-7704455776353438989",
+      "date": "2026-11-04",
+      "platforms": [
+        "TikTok"
+      ],
+      "format": "Video",
+      "status": "Published",
+      "title": "RSH MMA shorts: ready for every round.",
+      "caption": "RSH MMA shorts: ready for every round.",
+      "url": "https://www.tiktok.com/@rsh_sports/video/7704455776353438989",
+      "media": "https://static.metricool.com/tkvideocovers/202611/5695688-7704455776353438989.jpeg",
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 129.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-threads-DfVl8UdRSUB",
+      "date": "2026-11-04",
+      "platforms": [
+        "Threads"
+      ],
+      "format": "Text / media post",
+      "status": "Published",
+      "title": "Ready for every round: MMA shorts",
+      "caption": "Ready for every round: MMA shorts",
+      "url": "https://www.threads.com/@team.rshsports/post/DfVl8UdRSUB",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": null,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-threads-DfUyI27ilZ5",
+      "date": "2026-11-04",
+      "platforms": [
+        "Threads"
+      ],
+      "format": "Text / media post",
+      "status": "Published",
+      "title": "The gym starts quiet: basketball warm-ups",
+      "caption": "The gym starts quiet: basketball warm-ups",
+      "url": "https://www.threads.com/@team.rshsports/post/DfUyI27ilZ5",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 8.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-threads-DfTVjikCKdT",
+      "date": "2026-11-04",
+      "platforms": [
+        "Threads"
+      ],
+      "format": "Text / media post",
+      "status": "Published",
+      "title": "Did you know? Lacrosse cradling",
+      "caption": "Did you know? Lacrosse cradling",
+      "url": "https://www.threads.com/@team.rshsports/post/DfTVjikCKdT",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 11.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-pinterest-1114218764099388314",
+      "date": "2026-11-04",
+      "platforms": [
+        "Pinterest"
+      ],
+      "format": "Pin",
+      "status": "Published",
+      "title": "Train Compete Win - Field Hockey Motivation",
+      "caption": "Train Compete Win - Field Hockey Motivation",
+      "url": "https://www.pinterest.com/pin/1114218764099388314",
+      "media": "https://i.pinimg.com/400x300/63/54/19/635419842984114032813d06ef241dd0.jpg",
+      "mediaUrl": null,
+      "metricLabel": "impressions",
+      "metricValue": 112.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-instagram-DfUyPk3DK9M",
+      "date": "2026-11-04",
+      "platforms": [
+        "Instagram"
+      ],
+      "format": "Feed",
+      "status": "Published",
+      "title": "The gym starts quiet. Then warm-ups begin, and the bench comes alive.",
+      "caption": "The gym starts quiet. Then warm-ups begin, and the bench comes alive.",
+      "url": "https://www.instagram.com/p/DfUyPk3DK9M/",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 18.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-instagram-DfTVln6Fzig",
+      "date": "2026-11-04",
+      "platforms": [
+        "Instagram"
+      ],
+      "format": "Feed",
+      "status": "Published",
+      "title": "Did you know? Lacrosse cradling helps keep the ball secure as a player moves.",
+      "caption": "Did you know? Lacrosse cradling helps keep the ball secure as a player moves.",
+      "url": "https://www.instagram.com/p/DfTVln6Fzig/",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 23.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-instagram-DfVl2aAgDWA",
+      "date": "2026-11-04",
+      "platforms": [
+        "Instagram"
+      ],
+      "format": "Reel",
+      "status": "Published",
+      "title": "Ready for every round: RSH Sports MMA shorts.",
+      "caption": "Ready for every round: RSH Sports MMA shorts.",
+      "url": "https://www.instagram.com/reel/DfVl2aAgDWA/",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 94.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-story-instagram-5695688-17841478536655614-4022983751343714721.jpeg",
+      "date": "2026-11-04",
+      "platforms": [
+        "Instagram"
+      ],
+      "format": "Story",
+      "status": "Published",
+      "title": "Instagram Story · 4 Nov",
+      "caption": "Instagram Story (caption not provided by source)",
+      "url": "https://www.instagram.com/stories/team.rshsports/4022983751343714721",
+      "media": "https://metricool-download.s3.eu-west-1.amazonaws.com/igstories/202611/5695688-17841478536655614-4022983751343714721.jpeg",
+      "mediaUrl": "https://metricool-download.s3.eu-west-1.amazonaws.com/igstories/202611/5695688-17841478536655614-4022983751343714721.jpeg",
+      "metricLabel": "reach",
+      "metricValue": 7.0,
+      "source": "Metricool / published story insights"
+    },
+    {
+      "id": "pub-story-instagram-5695688-17841478536655614-4022983368613439745.jpeg",
+      "date": "2026-11-04",
+      "platforms": [
+        "Instagram"
+      ],
+      "format": "Story",
+      "status": "Published",
+      "title": "Instagram Story · 4 Nov",
+      "caption": "Instagram Story (caption not provided by source)",
+      "url": "https://www.instagram.com/stories/team.rshsports/4022983368613439745",
+      "media": "https://metricool-download.s3.eu-west-1.amazonaws.com/igstories/202611/5695688-17841478536655614-4022983368613439745.jpeg",
+      "mediaUrl": "https://metricool-download.s3.eu-west-1.amazonaws.com/igstories/202611/5695688-17841478536655614-4022983368613439745.jpeg",
+      "metricLabel": "reach",
+      "metricValue": 9.0,
+      "source": "Metricool / published story insights"
+    },
+    {
+      "id": "pub-story-instagram-5695688-17841478536655614-4022983065088435598.jpeg",
+      "date": "2026-11-04",
+      "platforms": [
+        "Instagram"
+      ],
+      "format": "Story",
+      "status": "Published",
+      "title": "Instagram Story · 4 Nov",
+      "caption": "Instagram Story (caption not provided by source)",
+      "url": "https://www.instagram.com/stories/team.rshsports/4022983065088435598",
+      "media": "https://metricool-download.s3.eu-west-1.amazonaws.com/igstories/202611/5695688-17841478536655614-4022983065088435598.jpeg",
+      "mediaUrl": "https://metricool-download.s3.eu-west-1.amazonaws.com/igstories/202611/5695688-17841478536655614-4022983065088435598.jpeg",
+      "metricLabel": "reach",
+      "metricValue": 10.0,
+      "source": "Metricool / published story insights"
+    },
+    {
+      "id": "pub-facebook-122162006883141147",
+      "date": "2026-11-04",
+      "platforms": [
+        "Facebook"
+      ],
+      "format": "Feed",
+      "status": "Published",
+      "title": "The basketball gym starts quiet and the bench comes alive.",
+      "caption": "The basketball gym starts quiet and the bench comes alive.",
+      "url": "https://facebook.com/122111431419141147/posts/122162006883141147",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "impressions",
+      "metricValue": 8.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-facebook-122161885869141147",
+      "date": "2026-11-04",
+      "platforms": [
+        "Facebook"
+      ],
+      "format": "Feed",
+      "status": "Published",
+      "title": "Did you know? Lacrosse cradling and control.",
+      "caption": "Did you know? Lacrosse cradling and control.",
+      "url": "https://facebook.com/122111431419141147/posts/122161885869141147",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "impressions",
+      "metricValue": 1.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-facebook-1677837403695217",
+      "date": "2026-11-04",
+      "platforms": [
+        "Facebook"
+      ],
+      "format": "Reel",
+      "status": "Published",
+      "title": "Ready for every round: MMA shorts.",
+      "caption": "Ready for every round: MMA shorts.",
+      "url": "https://www.facebook.com/reel/1677837403695217/",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 231.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-story-facebook-5695688-864542210081049-1412446050617001.jpeg",
+      "date": "2026-11-04",
+      "platforms": [
+        "Facebook"
+      ],
+      "format": "Story",
+      "status": "Published",
+      "title": "Facebook Story · 4 Nov",
+      "caption": "Facebook Story (caption not provided by source)",
+      "url": null,
+      "media": "https://static.metricool.com/fbstories/202611/5695688-864542210081049-1412446050617001.jpeg",
+      "mediaUrl": "https://static.metricool.com/fbstories/202611/5695688-864542210081049-1412446050617001.jpeg",
+      "metricLabel": null,
+      "metricValue": null,
+      "source": "Metricool / published story insights"
+    },
+    {
+      "id": "pub-bluesky-3mzhb4fxw5s25",
+      "date": "2026-11-04",
+      "platforms": [
+        "Bluesky"
+      ],
+      "format": "Text / media post",
+      "status": "Published",
+      "title": "Lacrosse cradling: did you know?",
+      "caption": "Lacrosse cradling: did you know?",
+      "url": "https://bsky.app/profile/rshsports.bsky.social/post/3mzhb4fxw5s25",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "likes",
+      "metricValue": null,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-bluesky-3mziob6fkkk2n",
+      "date": "2026-11-04",
+      "platforms": [
+        "Bluesky"
+      ],
+      "format": "Text / media post",
+      "status": "Published",
+      "title": "Basketball gym starts quiet",
+      "caption": "Basketball gym starts quiet",
+      "url": "https://bsky.app/profile/rshsports.bsky.social/post/3mziob6fkkk2n",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "likes",
+      "metricValue": null,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-youtube-vNyiabM1hzQ",
+      "date": "2026-11-03",
+      "platforms": [
+        "YouTube"
+      ],
+      "format": "Video",
+      "status": "Published",
+      "title": "The Real Reason Hats Rain Onto the Ice",
+      "caption": "The Real Reason Hats Rain Onto the Ice",
+      "url": "https://www.youtube.com/watch?v=vNyiabM1hzQ",
+      "media": "https://i.ytimg.com/vi/vNyiabM1hzQ/hqdefault.jpg",
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 39.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-tiktok-7704085063222185230",
+      "date": "2026-11-03",
+      "platforms": [
+        "TikTok"
+      ],
+      "format": "Video",
+      "status": "Published",
+      "title": "Hockey hat trick: three goals and hundreds of hats.",
+      "caption": "Hockey hat trick: three goals and hundreds of hats.",
+      "url": "https://www.tiktok.com/@rsh_sports/video/7704085063222185230",
+      "media": "https://static.metricool.com/tkvideocovers/202611/5695688-7704085063222185230.jpeg",
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 427.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-threads-DfTBUpVFdGo",
+      "date": "2026-11-03",
+      "platforms": [
+        "Threads"
+      ],
+      "format": "Text / media post",
+      "status": "Published",
+      "title": "Hockey hat trick: hats on the ice",
+      "caption": "Hockey hat trick: hats on the ice",
+      "url": "https://www.threads.com/@team.rshsports/post/DfTBUpVFdGo",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 11.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-threads-DfSXpn8Coph",
+      "date": "2026-11-03",
+      "platforms": [
+        "Threads"
+      ],
+      "format": "Text / media post",
+      "status": "Published",
+      "title": "Custom sublimated basketball jerseys",
+      "caption": "Custom sublimated basketball jerseys",
+      "url": "https://www.threads.com/@team.rshsports/post/DfSXpn8Coph",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 6.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-pinterest-1114218764099318392",
+      "date": "2026-11-03",
+      "platforms": [
+        "Pinterest"
+      ],
+      "format": "Pin",
+      "status": "Published",
+      "title": "Better Players, Brighter Tomorrows - Youth Basketball",
+      "caption": "Better Players, Brighter Tomorrows - Youth Basketball",
+      "url": "https://www.pinterest.com/pin/1114218764099318392",
+      "media": "https://i.pinimg.com/400x300/9a/72/54/9a7254826facae24feb1f0dd9c7f9a97.jpg",
+      "mediaUrl": null,
+      "metricLabel": "impressions",
+      "metricValue": 112.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-pinterest-1114218764099291807",
+      "date": "2026-11-03",
+      "platforms": [
+        "Pinterest"
+      ],
+      "format": "Pin",
+      "status": "Published",
+      "title": "Same Goal, Stronger Together - Volleyball",
+      "caption": "Same Goal, Stronger Together - Volleyball",
+      "url": "https://www.pinterest.com/pin/1114218764099291807",
+      "media": "https://i.pinimg.com/400x300/ec/94/79/ec94794424e50a5664eeed5353a84f1d.jpg",
+      "mediaUrl": null,
+      "metricLabel": "impressions",
+      "metricValue": 25.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-instagram-DfSXmgWG21C",
+      "date": "2026-11-03",
+      "platforms": [
+        "Instagram"
+      ],
+      "format": "Feed",
+      "status": "Published",
+      "title": "Make your mark on the court with custom sublimated basketball jerseys.",
+      "caption": "Make your mark on the court with custom sublimated basketball jerseys.",
+      "url": "https://www.instagram.com/p/DfSXmgWG21C/",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 16.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-instagram-DfTBOFqDR7u",
+      "date": "2026-11-03",
+      "platforms": [
+        "Instagram"
+      ],
+      "format": "Reel",
+      "status": "Published",
+      "title": "Hockey hat trick: 3 goals, 1 player, hundreds of hats.",
+      "caption": "Hockey hat trick: 3 goals, 1 player, hundreds of hats.",
+      "url": "https://www.instagram.com/reel/DfTBOFqDR7u/",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 174.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-facebook-122161779735141147",
+      "date": "2026-11-03",
+      "platforms": [
+        "Facebook"
+      ],
+      "format": "Feed",
+      "status": "Published",
+      "title": "Make your mark on the court: sublimated basketball jerseys.",
+      "caption": "Make your mark on the court: sublimated basketball jerseys.",
+      "url": "https://facebook.com/122111431419141147/posts/122161779735141147",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "impressions",
+      "metricValue": 5.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-facebook-2131617987743585",
+      "date": "2026-11-03",
+      "platforms": [
+        "Facebook"
+      ],
+      "format": "Reel",
+      "status": "Published",
+      "title": "Hockey hat trick: three goals, hundreds of hats.",
+      "caption": "Hockey hat trick: three goals, hundreds of hats.",
+      "url": "https://www.facebook.com/reel/2131617987743585/",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 210.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-bluesky-3mzgcwz75nd26",
+      "date": "2026-11-03",
+      "platforms": [
+        "Bluesky"
+      ],
+      "format": "Text / media post",
+      "status": "Published",
+      "title": "Custom basketball jerseys",
+      "caption": "Custom basketball jerseys",
+      "url": "https://bsky.app/profile/rshsports.bsky.social/post/3mzgcwz75nd26",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "likes",
+      "metricValue": null,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-bluesky-3mzgx5kbrpy25",
+      "date": "2026-11-03",
+      "platforms": [
+        "Bluesky"
+      ],
+      "format": "Text / media post",
+      "status": "Published",
+      "title": "Hockey hat trick and hats on ice",
+      "caption": "Hockey hat trick and hats on ice",
+      "url": "https://bsky.app/profile/rshsports.bsky.social/post/3mzgx5kbrpy25",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "likes",
+      "metricValue": null,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-youtube-cOqPZS0eXzw",
+      "date": "2026-11-02",
+      "platforms": [
+        "YouTube"
+      ],
+      "format": "Video",
+      "status": "Published",
+      "title": "RSH Sports Reversible Wrestling Singlet",
+      "caption": "RSH Sports Reversible Wrestling Singlet",
+      "url": "https://www.youtube.com/watch?v=cOqPZS0eXzw",
+      "media": "https://i.ytimg.com/vi/cOqPZS0eXzw/hqdefault.jpg",
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 128.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-tiktok-7703713613428657421",
+      "date": "2026-11-02",
+      "platforms": [
+        "TikTok"
+      ],
+      "format": "Video",
+      "status": "Published",
+      "title": "Two looks: reversible wrestling singlets.",
+      "caption": "Two looks: reversible wrestling singlets.",
+      "url": "https://www.tiktok.com/@rsh_sports/video/7703713613428657421",
+      "media": "https://static.metricool.com/tkvideocovers/202611/5695688-7703713613428657421.jpeg",
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 453.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-threads-DfQcYLbCfEF",
+      "date": "2026-11-02",
+      "platforms": [
+        "Threads"
+      ],
+      "format": "Text / media post",
+      "status": "Published",
+      "title": "Two looks: reversible wrestling singlets",
+      "caption": "Two looks: reversible wrestling singlets",
+      "url": "https://www.threads.com/@team.rshsports/post/DfQcYLbCfEF",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": null,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-threads-DfQVTe9iMP3",
+      "date": "2026-11-02",
+      "platforms": [
+        "Threads"
+      ],
+      "format": "Text / media post",
+      "status": "Published",
+      "title": "Softball: a little talk, a few laughs",
+      "caption": "Softball: a little talk, a few laughs",
+      "url": "https://www.threads.com/@team.rshsports/post/DfQVTe9iMP3",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 3.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-threads-DfPy1XAiKoh",
+      "date": "2026-11-02",
+      "platforms": [
+        "Threads"
+      ],
+      "format": "Text / media post",
+      "status": "Published",
+      "title": "Your team, your colors: custom wrestling singlets",
+      "caption": "Your team, your colors: custom wrestling singlets",
+      "url": "https://www.threads.com/@team.rshsports/post/DfPy1XAiKoh",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 1.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-instagram-DfQVX-oG2g0",
+      "date": "2026-11-02",
+      "platforms": [
+        "Instagram"
+      ],
+      "format": "Feed",
+      "status": "Published",
+      "title": "A little talk, a few laughs, and back to work together.",
+      "caption": "A little talk, a few laughs, and back to work together.",
+      "url": "https://www.instagram.com/p/DfQVX-oG2g0/",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 9.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-instagram-DfPyyUbmxxj",
+      "date": "2026-11-02",
+      "platforms": [
+        "Instagram"
+      ],
+      "format": "Feed",
+      "status": "Published",
+      "title": "Your team, your colors, your design — custom sublimated wrestling singlets.",
+      "caption": "Your team, your colors, your design — custom sublimated wrestling singlets.",
+      "url": "https://www.instagram.com/p/DfPyyUbmxxj/",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 15.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-instagram-DfQcP_kEws1",
+      "date": "2026-11-02",
+      "platforms": [
+        "Instagram"
+      ],
+      "format": "Reel",
+      "status": "Published",
+      "title": "Two looks, more ways to represent your style: reversible singlets.",
+      "caption": "Two looks, more ways to represent your style: reversible singlets.",
+      "url": "https://www.instagram.com/reel/DfQcP_kEws1/",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 124.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-facebook-122161594275141147",
+      "date": "2026-11-02",
+      "platforms": [
+        "Facebook"
+      ],
+      "format": "Feed",
+      "status": "Published",
+      "title": "A little talk, a few laughs, back to work: softball teamwork.",
+      "caption": "A little talk, a few laughs, back to work: softball teamwork.",
+      "url": "https://facebook.com/122111431419141147/posts/122161594275141147",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "impressions",
+      "metricValue": 4.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-facebook-122161575549141147",
+      "date": "2026-11-02",
+      "platforms": [
+        "Facebook"
+      ],
+      "format": "Feed",
+      "status": "Published",
+      "title": "Your team, your colors, your design: custom wrestling singlets.",
+      "caption": "Your team, your colors, your design: custom wrestling singlets.",
+      "url": "https://facebook.com/122111431419141147/posts/122161575549141147",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "impressions",
+      "metricValue": 4.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-facebook-3082843138725515",
+      "date": "2026-11-02",
+      "platforms": [
+        "Facebook"
+      ],
+      "format": "Reel",
+      "status": "Published",
+      "title": "Two looks: reversible wrestling singlets.",
+      "caption": "Two looks: reversible wrestling singlets.",
+      "url": "https://www.facebook.com/reel/3082843138725515/",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 112.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-bluesky-3mzdsedaugc26",
+      "date": "2026-11-02",
+      "platforms": [
+        "Bluesky"
+      ],
+      "format": "Text / media post",
+      "status": "Published",
+      "title": "Custom wrestling singlet team colors",
+      "caption": "Custom wrestling singlet team colors",
+      "url": "https://bsky.app/profile/rshsports.bsky.social/post/3mzdsedaugc26",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "likes",
+      "metricValue": null,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-bluesky-3mzed7s7onc2n",
+      "date": "2026-11-02",
+      "platforms": [
+        "Bluesky"
+      ],
+      "format": "Text / media post",
+      "status": "Published",
+      "title": "Softball teammate conversations",
+      "caption": "Softball teammate conversations",
+      "url": "https://bsky.app/profile/rshsports.bsky.social/post/3mzed7s7onc2n",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "likes",
+      "metricValue": null,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-youtube-lSXBADVIQ3w",
+      "date": "2026-11-01",
+      "platforms": [
+        "YouTube"
+      ],
+      "format": "Video",
+      "status": "Published",
+      "title": "Match Point Pressure - Esports",
+      "caption": "Match Point Pressure - Esports",
+      "url": "https://www.youtube.com/watch?v=lSXBADVIQ3w",
+      "media": "https://i.ytimg.com/vi/lSXBADVIQ3w/hqdefault.jpg",
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 16.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-tiktok-7703342598114626829",
+      "date": "2026-11-01",
+      "platforms": [
+        "TikTok"
+      ],
+      "format": "Video",
+      "status": "Published",
+      "title": "Match point: esports jerseys.",
+      "caption": "Match point: esports jerseys.",
+      "url": "https://www.tiktok.com/@rsh_sports/video/7703342598114626829",
+      "media": "https://static.metricool.com/tkvideocovers/202611/5695688-7703342598114626829.jpeg",
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 87.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-threads-DfN3mgJk-JI",
+      "date": "2026-11-01",
+      "platforms": [
+        "Threads"
+      ],
+      "format": "Text / media post",
+      "status": "Published",
+      "title": "Match point pressure: esports jerseys",
+      "caption": "Match point pressure: esports jerseys",
+      "url": "https://www.threads.com/@team.rshsports/post/DfN3mgJk-JI",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": null,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-threads-DfNAxxFDQcZ",
+      "date": "2026-11-01",
+      "platforms": [
+        "Threads"
+      ],
+      "format": "Text / media post",
+      "status": "Published",
+      "title": "Good teammates make long days better",
+      "caption": "Good teammates make long days better",
+      "url": "https://www.threads.com/@team.rshsports/post/DfNAxxFDQcZ",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 2.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-pinterest-1114218764099073482",
+      "date": "2026-11-01",
+      "platforms": [
+        "Pinterest"
+      ],
+      "format": "Pin",
+      "status": "Published",
+      "title": "Show Up as One - Hockey Team Style and Identity",
+      "caption": "Show Up as One - Hockey Team Style and Identity",
+      "url": "https://www.pinterest.com/pin/1114218764099073482",
+      "media": "https://i.pinimg.com/400x300/23/51/10/23511071fc87fd482bb44f0a9566aa09.jpg",
+      "mediaUrl": null,
+      "metricLabel": "impressions",
+      "metricValue": 140.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-instagram-DfNA1VCm4c5",
+      "date": "2026-11-01",
+      "platforms": [
+        "Instagram"
+      ],
+      "format": "Feed",
+      "status": "Published",
+      "title": "Good teammates make the long days better.",
+      "caption": "Good teammates make the long days better.",
+      "url": "https://www.instagram.com/p/DfNA1VCm4c5/",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 10.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-instagram-DfN3hCQDiLk",
+      "date": "2026-11-01",
+      "platforms": [
+        "Instagram"
+      ],
+      "format": "Reel",
+      "status": "Published",
+      "title": "Match point pressure: esports jerseys and focus.",
+      "caption": "Match point pressure: esports jerseys and focus.",
+      "url": "https://www.instagram.com/reel/DfN3hCQDiLk/",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 136.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-facebook-122161382745141147",
+      "date": "2026-11-01",
+      "platforms": [
+        "Facebook"
+      ],
+      "format": "Feed",
+      "status": "Published",
+      "title": "Good teammates make the long days better: baseball.",
+      "caption": "Good teammates make the long days better: baseball.",
+      "url": "https://facebook.com/122111431419141147/posts/122161382745141147",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "impressions",
+      "metricValue": 7.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-facebook-1752448976055384",
+      "date": "2026-11-01",
+      "platforms": [
+        "Facebook"
+      ],
+      "format": "Reel",
+      "status": "Published",
+      "title": "Match point pressure: esports jerseys.",
+      "caption": "Match point pressure: esports jerseys.",
+      "url": "https://www.facebook.com/reel/1752448976055384/",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "views",
+      "metricValue": 323.0,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-bluesky-3mzb3hkjmhm25",
+      "date": "2026-11-01",
+      "platforms": [
+        "Bluesky"
+      ],
+      "format": "Text / media post",
+      "status": "Published",
+      "title": "Good teammates make long days better",
+      "caption": "Good teammates make long days better",
+      "url": "https://bsky.app/profile/rshsports.bsky.social/post/3mzb3hkjmhm25",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "likes",
+      "metricValue": null,
+      "source": "Metricool / published post insights"
+    },
+    {
+      "id": "pub-bluesky-3mzbw5hdxgo26",
+      "date": "2026-11-01",
+      "platforms": [
+        "Bluesky"
+      ],
+      "format": "Text / media post",
+      "status": "Published",
+      "title": "Match point esports pressure",
+      "caption": "Match point esports pressure",
+      "url": "https://bsky.app/profile/rshsports.bsky.social/post/3mzbw5hdxgo26",
+      "media": null,
+      "mediaUrl": null,
+      "metricLabel": "likes",
+      "metricValue": 3.0,
+      "source": "Metricool / published post insights"
+    }
+  ],
+  "planned": [
+    {
+      "id": "plan-422783008",
+      "date": "2026-11-18",
+      "timeET": "10:00",
+      "platforms": [
+        "Facebook",
+        "Instagram",
+        "TikTok",
+        "YouTube",
+        "Threads",
+        "Bluesky"
+      ],
+      "format": "Video",
+      "status": "Scheduled (pending)",
+      "title": "Womens wrestling / singlet color vote",
+      "captionPreview": "Womens wrestling / singlet color vote",
+      "url": null,
+      "media": "https://static.metricool.com/common/202611/5695688-mtr_15316273278275393454.png",
+      "mediaUrl": "https://static.metricool.com/video/5306206/202611/7896061a87cd47dd.mp4",
+      "metricLabel": null,
+      "metricValue": null,
+      "source": "Metricool Planner / queued snapshot",
+      "metricoolId": "422783008",
+      "isDraft": false
+    },
+    {
+      "id": "plan-422783261",
+      "date": "2026-11-18",
+      "timeET": "10:00",
+      "platforms": [
+        "YouTube"
+      ],
+      "format": "Video",
+      "status": "Scheduled (pending)",
+      "title": "RSH Sports Wear channel introduction / duplicate visual asset",
+      "captionPreview": "RSH Sports Wear channel introduction / duplicate visual asset",
+      "url": null,
+      "media": "https://static.metricool.com/common/202611/5695688-mtr_15316273278275393454.png",
+      "mediaUrl": "https://static.metricool.com/video/5306206/202611/7896061a87cd47dd.mp4",
+      "metricLabel": null,
+      "metricValue": null,
+      "source": "Metricool Planner / queued snapshot",
+      "metricoolId": "422783261",
+      "isDraft": false
+    },
+    {
+      "id": "plan-430253571",
+      "date": "2026-11-18",
+      "timeET": "13:30",
+      "platforms": [
+        "Facebook",
+        "Instagram"
+      ],
+      "format": "Image",
+      "status": "Scheduled (pending)",
+      "title": "Basketball: quiet gym before work",
+      "captionPreview": "Basketball: quiet gym before work",
+      "url": null,
+      "media": "https://static.metricool.com/common/202611/5695688-mtr_5985081784726369071.png",
+      "mediaUrl": "https://static.metricool.com/common/202611/5695688-mtr_5985081784726369071.png",
+      "metricLabel": null,
+      "metricValue": null,
+      "source": "Metricool Planner / queued snapshot",
+      "metricoolId": "430253571",
+      "isDraft": false
+    },
+    {
+      "id": "plan-430253717",
+      "date": "2026-11-18",
+      "timeET": "13:30",
+      "platforms": [
+        "Threads",
+        "Bluesky"
+      ],
+      "format": "Image",
+      "status": "Scheduled (pending)",
+      "title": "Basketball: quiet gym social copy",
+      "captionPreview": "Basketball: quiet gym social copy",
+      "url": null,
+      "media": "https://static.metricool.com/common/202611/5695688-mtr_12745565135800992314.png",
+      "mediaUrl": "https://static.metricool.com/common/202611/5695688-mtr_12745565135800992314.png",
+      "metricLabel": null,
+      "metricValue": null,
+      "source": "Metricool Planner / queued snapshot",
+      "metricoolId": "430253717",
+      "isDraft": false
+    },
+    {
+      "id": "plan-421305369",
+      "date": "2026-11-18",
+      "timeET": "15:30",
+      "platforms": [
+        "Pinterest"
+      ],
+      "format": "Image",
+      "status": "Scheduled (pending)",
+      "title": "Baseball custom navy jersey / team identity",
+      "captionPreview": "Baseball custom navy jersey / team identity",
+      "url": null,
+      "media": "https://static.metricool.com/common/202611/5695688-mtr_10951049553794616227.png",
+      "mediaUrl": "https://static.metricool.com/common/202611/5695688-mtr_10951049553794616227.png",
+      "metricLabel": null,
+      "metricValue": null,
+      "source": "Metricool Planner / queued snapshot",
+      "metricoolId": "421305369",
+      "isDraft": false
+    },
+    {
+      "id": "plan-421306203",
+      "date": "2026-11-19",
+      "timeET": "11:30",
+      "platforms": [
+        "Pinterest"
+      ],
+      "format": "Image",
+      "status": "Scheduled (pending)",
+      "title": "Baseball dugout conversations / teamwork",
+      "captionPreview": "Baseball dugout conversations / teamwork",
+      "url": null,
+      "media": "https://static.metricool.com/common/202611/5695688-mtr_3847017505527826632.png",
+      "mediaUrl": "https://static.metricool.com/common/202611/5695688-mtr_3847017505527826632.png",
+      "metricLabel": null,
+      "metricValue": null,
+      "source": "Metricool Planner / queued snapshot",
+      "metricoolId": "421306203",
+      "isDraft": false
+    },
+    {
+      "id": "plan-430253931",
+      "date": "2026-11-19",
+      "timeET": "15:30",
+      "platforms": [
+        "Threads",
+        "Bluesky"
+      ],
+      "format": "Image",
+      "status": "Scheduled (pending)",
+      "title": "Boxing: another day in the gym",
+      "captionPreview": "Boxing: another day in the gym",
+      "url": null,
+      "media": "https://static.metricool.com/common/202611/5695688-mtr_512102699966042866.png",
+      "mediaUrl": "https://static.metricool.com/common/202611/5695688-mtr_512102699966042866.png",
+      "metricLabel": null,
+      "metricValue": null,
+      "source": "Metricool Planner / queued snapshot",
+      "metricoolId": "430253931",
+      "isDraft": false
+    },
+    {
+      "id": "plan-430254107",
+      "date": "2026-11-19",
+      "timeET": "15:30",
+      "platforms": [
+        "Facebook",
+        "Instagram"
+      ],
+      "format": "Image",
+      "status": "Scheduled (pending)",
+      "title": "Boxing: another day in the gym",
+      "captionPreview": "Boxing: another day in the gym",
+      "url": null,
+      "media": "https://static.metricool.com/common/202611/5695688-mtr_512102699966042866.png",
+      "mediaUrl": "https://static.metricool.com/common/202611/5695688-mtr_512102699966042866.png",
+      "metricLabel": null,
+      "metricValue": null,
+      "source": "Metricool Planner / queued snapshot",
+      "metricoolId": "430254107",
+      "isDraft": false
+    },
+    {
+      "id": "plan-429979064",
+      "date": "2026-11-19",
+      "timeET": "18:00",
+      "platforms": [
+        "Facebook",
+        "Instagram",
+        "TikTok",
+        "Threads",
+        "Bluesky"
+      ],
+      "format": "Video",
+      "status": "Scheduled (pending)",
+      "title": "Boxing: the toughest opponent in your head",
+      "captionPreview": "Boxing: the toughest opponent in your head",
+      "url": null,
+      "media": "https://static.metricool.com/common/202611/5695688-mtr_4275313837381433392.png",
+      "mediaUrl": "https://static.metricool.com/video/5306206/202611/772896aa185c47fb.mp4",
+      "metricLabel": null,
+      "metricValue": null,
+      "source": "Metricool Planner / queued snapshot",
+      "metricoolId": "429979064",
+      "isDraft": false
+    },
+    {
+      "id": "plan-429981062",
+      "date": "2026-11-19",
+      "timeET": "18:00",
+      "platforms": [
+        "YouTube"
+      ],
+      "format": "Video",
+      "status": "Scheduled (pending)",
+      "title": "Boxing motivational Short / separate YouTube copy",
+      "captionPreview": "Boxing motivational Short / separate YouTube copy",
+      "url": null,
+      "media": "https://static.metricool.com/common/202611/5695688-mtr_12055534162129472617.png",
+      "mediaUrl": "https://static.metricool.com/video/5306206/202611/772896aa185c47fb.mp4",
+      "metricLabel": null,
+      "metricValue": null,
+      "source": "Metricool Planner / queued snapshot",
+      "metricoolId": "429981062",
+      "isDraft": false
+    },
+    {
+      "id": "plan-428703900",
+      "date": "2026-11-20",
+      "timeET": "16:00",
+      "platforms": [
+        "Facebook",
+        "Instagram"
+      ],
+      "format": "Image",
+      "status": "Metricool Draft",
+      "title": "Hockey locker room / warm-up image",
+      "captionPreview": "Hockey locker room / warm-up image",
+      "url": null,
+      "media": "https://static.metricool.com/common/202611/5695688-mtr_5597415565657591830.png",
+      "mediaUrl": "https://static.metricool.com/common/202611/5695688-mtr_5597415565657591830.png",
+      "metricLabel": null,
+      "metricValue": null,
+      "source": "Metricool Planner / queued snapshot",
+      "metricoolId": "428703900",
+      "isDraft": true
+    },
+    {
+      "id": "plan-428704281",
+      "date": "2026-11-20",
+      "timeET": "16:00",
+      "platforms": [
+        "Threads",
+        "Bluesky"
+      ],
+      "format": "Image",
+      "status": "Metricool Draft",
+      "title": "Hockey locker room / warm-up social copy",
+      "captionPreview": "Hockey locker room / warm-up social copy",
+      "url": null,
+      "media": "https://static.metricool.com/common/202611/5695688-mtr_8502676386106638220.png",
+      "mediaUrl": "https://static.metricool.com/common/202611/5695688-mtr_8502676386106638220.png",
+      "metricLabel": null,
+      "metricValue": null,
+      "source": "Metricool Planner / queued snapshot",
+      "metricoolId": "428704281",
+      "isDraft": true
+    },
+    {
+      "id": "plan-421307507",
+      "date": "2026-11-20",
+      "timeET": "17:30",
+      "platforms": [
+        "Pinterest"
+      ],
+      "format": "Image",
+      "status": "Scheduled (pending)",
+      "title": "Esports jersey black / electric blue",
+      "captionPreview": "Esports jersey black / electric blue",
+      "url": null,
+      "media": "https://static.metricool.com/common/202611/5695688-mtr_6830143277483870868.png",
+      "mediaUrl": "https://static.metricool.com/common/202611/5695688-mtr_6830143277483870868.png",
+      "metricLabel": null,
+      "metricValue": null,
+      "source": "Metricool Planner / queued snapshot",
+      "metricoolId": "421307507",
+      "isDraft": false
+    },
+    {
+      "id": "plan-429988135",
+      "date": "2026-11-20",
+      "timeET": "18:00",
+      "platforms": [
+        "Facebook",
+        "Instagram",
+        "TikTok",
+        "Threads",
+        "Bluesky"
+      ],
+      "format": "Video",
+      "status": "Scheduled (pending)",
+      "title": "Basketball: everyone who showed up",
+      "captionPreview": "Basketball: everyone who showed up",
+      "url": null,
+      "media": "https://static.metricool.com/common/202611/5695688-mtr_1708672341033194900.png",
+      "mediaUrl": "https://static.metricool.com/video/5306206/202611/ea219849f16a4bb7.mp4",
+      "metricLabel": null,
+      "metricValue": null,
+      "source": "Metricool Planner / queued snapshot",
+      "metricoolId": "429988135",
+      "isDraft": false
+    },
+    {
+      "id": "plan-429988524",
+      "date": "2026-11-20",
+      "timeET": "18:00",
+      "platforms": [
+        "YouTube"
+      ],
+      "format": "Video",
+      "status": "Scheduled (pending)",
+      "title": "Basketball motivational Short / YouTube copy",
+      "captionPreview": "Basketball motivational Short / YouTube copy",
+      "url": null,
+      "media": "https://static.metricool.com/common/202611/5695688-mtr_8950991176726258837.png",
+      "mediaUrl": "https://static.metricool.com/video/5306206/202611/ea219849f16a4bb7.mp4",
+      "metricLabel": null,
+      "metricValue": null,
+      "source": "Metricool Planner / queued snapshot",
+      "metricoolId": "429988524",
+      "isDraft": false
+    },
+    {
+      "id": "plan-421308584",
+      "date": "2026-11-21",
+      "timeET": "10:30",
+      "platforms": [
+        "Pinterest"
+      ],
+      "format": "Image",
+      "status": "Scheduled (pending)",
+      "title": "Esports jersey black / gold",
+      "captionPreview": "Esports jersey black / gold",
+      "url": null,
+      "media": "https://static.metricool.com/common/202611/5695688-mtr_14312577928758000172.png",
+      "mediaUrl": "https://static.metricool.com/common/202611/5695688-mtr_14312577928758000172.png",
+      "metricLabel": null,
+      "metricValue": null,
+      "source": "Metricool Planner / queued snapshot",
+      "metricoolId": "421308584",
+      "isDraft": false
+    },
+    {
+      "id": "plan-428706098",
+      "date": "2026-11-21",
+      "timeET": "13:00",
+      "platforms": [
+        "Facebook",
+        "Instagram"
+      ],
+      "format": "Image",
+      "status": "Metricool Draft",
+      "title": "Strength training / PR and recovery",
+      "captionPreview": "Strength training / PR and recovery",
+      "url": null,
+      "media": "https://static.metricool.com/common/202611/5695688-mtr_6262083667039426892.png",
+      "mediaUrl": "https://static.metricool.com/common/202611/5695688-mtr_6262083667039426892.png",
+      "metricLabel": null,
+      "metricValue": null,
+      "source": "Metricool Planner / queued snapshot",
+      "metricoolId": "428706098",
+      "isDraft": true
+    },
+    {
+      "id": "plan-428706601",
+      "date": "2026-11-21",
+      "timeET": "13:00",
+      "platforms": [
+        "Threads",
+        "Bluesky"
+      ],
+      "format": "Image",
+      "status": "Metricool Draft",
+      "title": "Strength training / PR and recovery social copy",
+      "captionPreview": "Strength training / PR and recovery social copy",
+      "url": null,
+      "media": "https://static.metricool.com/common/202611/5695688-mtr_587117068573974443.png",
+      "mediaUrl": "https://static.metricool.com/common/202611/5695688-mtr_587117068573974443.png",
+      "metricLabel": null,
+      "metricValue": null,
+      "source": "Metricool Planner / queued snapshot",
+      "metricoolId": "428706601",
+      "isDraft": true
+    },
+    {
+      "id": "plan-429993081",
+      "date": "2026-11-21",
+      "timeET": "18:00",
+      "platforms": [
+        "YouTube"
+      ],
+      "format": "Video",
+      "status": "Scheduled (pending)",
+      "title": "Wrestling: earn the singlet / YouTube copy",
+      "captionPreview": "Wrestling: earn the singlet / YouTube copy",
+      "url": null,
+      "media": "https://static.metricool.com/common/202611/5695688-mtr_15074392903101879167.png",
+      "mediaUrl": "https://static.metricool.com/video/5306206/202611/dbc8bd78447048dc.mp4",
+      "metricLabel": null,
+      "metricValue": null,
+      "source": "Metricool Planner / queued snapshot",
+      "metricoolId": "429993081",
+      "isDraft": false
+    },
+    {
+      "id": "plan-429994515",
+      "date": "2026-11-21",
+      "timeET": "18:00",
+      "platforms": [
+        "Facebook",
+        "Instagram",
+        "TikTok",
+        "Threads",
+        "Bluesky"
+      ],
+      "format": "Video",
+      "status": "Scheduled (pending)",
+      "title": "Wrestle gassed: earn the singlet",
+      "captionPreview": "Wrestle gassed: earn the singlet",
+      "url": null,
+      "media": "https://static.metricool.com/common/202611/5695688-mtr_15074392903101879167.png",
+      "mediaUrl": "https://static.metricool.com/video/5306206/202611/dbc8bd78447048dc.mp4",
+      "metricLabel": null,
+      "metricValue": null,
+      "source": "Metricool Planner / queued snapshot",
+      "metricoolId": "429994515",
+      "isDraft": false
+    },
+    {
+      "id": "plan-421309806",
+      "date": "2026-11-22",
+      "timeET": "10:30",
+      "platforms": [
+        "Pinterest"
+      ],
+      "format": "Image",
+      "status": "Scheduled (pending)",
+      "title": "Basketball gameplay and competition",
+      "captionPreview": "Basketball gameplay and competition",
+      "url": null,
+      "media": "https://static.metricool.com/common/202611/5695688-mtr_11434419721207973206.png",
+      "mediaUrl": "https://static.metricool.com/common/202611/5695688-mtr_11434419721207973206.png",
+      "metricLabel": null,
+      "metricValue": null,
+      "source": "Metricool Planner / queued snapshot",
+      "metricoolId": "421309806",
+      "isDraft": false
+    },
+    {
+      "id": "plan-428708114",
+      "date": "2026-11-22",
+      "timeET": "17:30",
+      "platforms": [
+        "Facebook",
+        "Instagram"
+      ],
+      "format": "Image",
+      "status": "Metricool Draft",
+      "title": "Flag football: quick cuts and decisions",
+      "captionPreview": "Flag football: quick cuts and decisions",
+      "url": null,
+      "media": "https://static.metricool.com/common/202611/5695688-mtr_541400832982395400.png",
+      "mediaUrl": "https://static.metricool.com/common/202611/5695688-mtr_541400832982395400.png",
+      "metricLabel": null,
+      "metricValue": null,
+      "source": "Metricool Planner / queued snapshot",
+      "metricoolId": "428708114",
+      "isDraft": true
+    },
+    {
+      "id": "plan-428708307",
+      "date": "2026-11-22",
+      "timeET": "17:30",
+      "platforms": [
+        "Threads",
+        "Bluesky"
+      ],
+      "format": "Image",
+      "status": "Metricool Draft",
+      "title": "Flag football: quick cuts social copy",
+      "captionPreview": "Flag football: quick cuts social copy",
+      "url": null,
+      "media": "https://static.metricool.com/common/202611/5695688-mtr_6629309876339083271.png",
+      "mediaUrl": "https://static.metricool.com/common/202611/5695688-mtr_6629309876339083271.png",
+      "metricLabel": null,
+      "metricValue": null,
+      "source": "Metricool Planner / queued snapshot",
+      "metricoolId": "428708307",
+      "isDraft": true
+    },
+    {
+      "id": "plan-429997530",
+      "date": "2026-11-22",
+      "timeET": "18:00",
+      "platforms": [
+        "Facebook",
+        "Instagram",
+        "TikTok",
+        "Threads",
+        "Bluesky"
+      ],
+      "format": "Video",
+      "status": "Scheduled (pending)",
+      "title": "Football: earn the jersey",
+      "captionPreview": "Football: earn the jersey",
+      "url": null,
+      "media": "https://static.metricool.com/common/202611/5695688-mtr_12457889577505071043.png",
+      "mediaUrl": "https://static.metricool.com/video/5306206/202611/b251eac42fc44c98.mp4",
+      "metricLabel": null,
+      "metricValue": null,
+      "source": "Metricool Planner / queued snapshot",
+      "metricoolId": "429997530",
+      "isDraft": false
+    },
+    {
+      "id": "plan-430072329",
+      "date": "2026-11-22",
+      "timeET": "18:00",
+      "platforms": [
+        "YouTube"
+      ],
+      "format": "Video",
+      "status": "Scheduled (pending)",
+      "title": "Football: earn the jersey / YouTube copy",
+      "captionPreview": "Football: earn the jersey / YouTube copy",
+      "url": null,
+      "media": "https://static.metricool.com/common/202611/5695688-mtr_12457889577505071043.png",
+      "mediaUrl": "https://static.metricool.com/video/5306206/202611/b251eac42fc44c98.mp4",
+      "metricLabel": null,
+      "metricValue": null,
+      "source": "Metricool Planner / queued snapshot",
+      "metricoolId": "430072329",
+      "isDraft": false
+    },
+    {
+      "id": "plan-421311205",
+      "date": "2026-11-23",
+      "timeET": "10:00",
+      "platforms": [
+        "Pinterest"
+      ],
+      "format": "Image",
+      "status": "Scheduled (pending)",
+      "title": "Basketball motivation: keep pushing",
+      "captionPreview": "Basketball motivation: keep pushing",
+      "url": null,
+      "media": "https://static.metricool.com/common/202611/5695688-mtr_1378906053163229484.png",
+      "mediaUrl": "https://static.metricool.com/common/202611/5695688-mtr_1378906053163229484.png",
+      "metricLabel": null,
+      "metricValue": null,
+      "source": "Metricool Planner / queued snapshot",
+      "metricoolId": "421311205",
+      "isDraft": false
+    },
+    {
+      "id": "plan-430003388",
+      "date": "2026-11-23",
+      "timeET": "18:00",
+      "platforms": [
+        "YouTube"
+      ],
+      "format": "Video",
+      "status": "Scheduled (pending)",
+      "title": "Boxing training partners / YouTube copy",
+      "captionPreview": "Boxing training partners / YouTube copy",
+      "url": null,
+      "media": "https://static.metricool.com/common/202611/5695688-mtr_11075302710643132394.png",
+      "mediaUrl": "https://static.metricool.com/video/5306206/202611/e82ab5954c9649e5.mp4",
+      "metricLabel": null,
+      "metricValue": null,
+      "source": "Metricool Planner / queued snapshot",
+      "metricoolId": "430003388",
+      "isDraft": false
+    },
+    {
+      "id": "plan-430005031",
+      "date": "2026-11-23",
+      "timeET": "18:00",
+      "platforms": [
+        "Facebook",
+        "Instagram",
+        "TikTok",
+        "Threads",
+        "Bluesky"
+      ],
+      "format": "Video",
+      "status": "Scheduled (pending)",
+      "title": "Boxing: iron sharpens iron",
+      "captionPreview": "Boxing: iron sharpens iron",
+      "url": null,
+      "media": "https://static.metricool.com/common/202611/5695688-mtr_11075302710643132394.png",
+      "mediaUrl": "https://static.metricool.com/video/5306206/202611/e82ab5954c9649e5.mp4",
+      "metricLabel": null,
+      "metricValue": null,
+      "source": "Metricool Planner / queued snapshot",
+      "metricoolId": "430005031",
+      "isDraft": false
+    },
+    {
+      "id": "plan-428709333",
+      "date": "2026-11-23",
+      "timeET": "20:00",
+      "platforms": [
+        "Facebook",
+        "Instagram"
+      ],
+      "format": "Image",
+      "status": "Metricool Draft",
+      "title": "Wrestling has changed: skills and discipline",
+      "captionPreview": "Wrestling has changed: skills and discipline",
+      "url": null,
+      "media": "https://static.metricool.com/common/202611/5695688-mtr_5740244962331644495.png",
+      "mediaUrl": "https://static.metricool.com/common/202611/5695688-mtr_5740244962331644495.png",
+      "metricLabel": null,
+      "metricValue": null,
+      "source": "Metricool Planner / queued snapshot",
+      "metricoolId": "428709333",
+      "isDraft": true
+    },
+    {
+      "id": "plan-428709629",
+      "date": "2026-11-23",
+      "timeET": "20:00",
+      "platforms": [
+        "Threads",
+        "Bluesky"
+      ],
+      "format": "Image",
+      "status": "Metricool Draft",
+      "title": "Wrestling skills and discipline social copy",
+      "captionPreview": "Wrestling skills and discipline social copy",
+      "url": null,
+      "media": "https://static.metricool.com/common/202611/5695688-mtr_17474481344299398335.png",
+      "mediaUrl": "https://static.metricool.com/common/202611/5695688-mtr_17474481344299398335.png",
+      "metricLabel": null,
+      "metricValue": null,
+      "source": "Metricool Planner / queued snapshot",
+      "metricoolId": "428709629",
+      "isDraft": true
+    },
+    {
+      "id": "plan-430022480",
+      "date": "2026-11-24",
+      "timeET": "10:00",
+      "platforms": [
+        "YouTube"
+      ],
+      "format": "Video",
+      "status": "Scheduled (pending)",
+      "title": "Wrestling ankle band trivia / YouTube copy",
+      "captionPreview": "Wrestling ankle band trivia / YouTube copy",
+      "url": null,
+      "media": "https://static.metricool.com/common/202611/5695688-mtr_15715423771761880063.jpg",
+      "mediaUrl": "https://static.metricool.com/video/5306206/202611/d980d5b4a884454d.mp4",
+      "metricLabel": null,
+      "metricValue": null,
+      "source": "Metricool Planner / queued snapshot",
+      "metricoolId": "430022480",
+      "isDraft": false
+    },
+    {
+      "id": "plan-430023619",
+      "date": "2026-11-24",
+      "timeET": "10:00",
+      "platforms": [
+        "Facebook",
+        "Instagram",
+        "TikTok",
+        "Threads",
+        "Bluesky"
+      ],
+      "format": "Video",
+      "status": "Scheduled (pending)",
+      "title": "Wrestling trivia: red and green ankle bands",
+      "captionPreview": "Wrestling trivia: red and green ankle bands",
+      "url": null,
+      "media": "https://static.metricool.com/common/202611/5695688-mtr_4819074847970110518.jpg",
+      "mediaUrl": "https://static.metricool.com/video/5306206/202611/d980d5b4a884454d.mp4",
+      "metricLabel": null,
+      "metricValue": null,
+      "source": "Metricool Planner / queued snapshot",
+      "metricoolId": "430023619",
+      "isDraft": false
+    },
+    {
+      "id": "plan-430063522",
+      "date": "2026-11-25",
+      "timeET": "10:00",
+      "platforms": [
+        "YouTube"
+      ],
+      "format": "Video",
+      "status": "Scheduled (pending)",
+      "title": "Before the crowd: sunset practice / YouTube copy",
+      "captionPreview": "Before the crowd: sunset practice / YouTube copy",
+      "url": null,
+      "media": "https://static.metricool.com/common/202611/5695688-mtr_11081900659946999261.png",
+      "mediaUrl": "https://static.metricool.com/video/5306206/202611/e387fb2129214cb9.mp4",
+      "metricLabel": null,
+      "metricValue": null,
+      "source": "Metricool Planner / queued snapshot",
+      "metricoolId": "430063522",
+      "isDraft": false
+    },
+    {
+      "id": "plan-430064548",
+      "date": "2026-11-25",
+      "timeET": "10:00",
+      "platforms": [
+        "Facebook",
+        "Instagram",
+        "TikTok",
+        "Threads",
+        "Bluesky"
+      ],
+      "format": "Video",
+      "status": "Scheduled (pending)",
+      "title": "Before the jerseys: sunset practice",
+      "captionPreview": "Before the jerseys: sunset practice",
+      "url": null,
+      "media": "https://static.metricool.com/common/202611/5695688-mtr_366077564710774872.png",
+      "mediaUrl": "https://static.metricool.com/video/5306206/202611/e387fb2129214cb9.mp4",
+      "metricLabel": null,
+      "metricValue": null,
+      "source": "Metricool Planner / queued snapshot",
+      "metricoolId": "430064548",
+      "isDraft": false
+    },
+    {
+      "id": "plan-430078477",
+      "date": "2026-11-26",
+      "timeET": "18:00",
+      "platforms": [
+        "Facebook",
+        "Instagram",
+        "TikTok",
+        "Threads",
+        "Bluesky"
+      ],
+      "format": "Video",
+      "status": "Scheduled (pending)",
+      "title": "Soccer: one cone one more rep",
+      "captionPreview": "Soccer: one cone one more rep",
+      "url": null,
+      "media": "https://static.metricool.com/common/202611/5695688-mtr_16957284115450530443.png",
+      "mediaUrl": "https://static.metricool.com/video/5306206/202611/0708e126268f4deb.mp4",
+      "metricLabel": null,
+      "metricValue": null,
+      "source": "Metricool Planner / queued snapshot",
+      "metricoolId": "430078477",
+      "isDraft": false
+    },
+    {
+      "id": "plan-430078937",
+      "date": "2026-11-26",
+      "timeET": "18:00",
+      "platforms": [
+        "YouTube"
+      ],
+      "format": "Video",
+      "status": "Scheduled (pending)",
+      "title": "Soccer: one more rep / YouTube copy",
+      "captionPreview": "Soccer: one more rep / YouTube copy",
+      "url": null,
+      "media": "https://static.metricool.com/common/202611/5695688-mtr_16957284115450530443.png",
+      "mediaUrl": "https://static.metricool.com/video/5306206/202611/0708e126268f4deb.mp4",
+      "metricLabel": null,
+      "metricValue": null,
+      "source": "Metricool Planner / queued snapshot",
+      "metricoolId": "430078937",
+      "isDraft": false
+    },
+    {
+      "id": "plan-430082722",
+      "date": "2026-11-27",
+      "timeET": "18:00",
+      "platforms": [
+        "YouTube"
+      ],
+      "format": "Video",
+      "status": "Scheduled (pending)",
+      "title": "Basketball quote: shoot it like you know",
+      "captionPreview": "Basketball quote: shoot it like you know",
+      "url": null,
+      "media": "https://static.metricool.com/common/202611/5695688-mtr_2850278740166065412.png",
+      "mediaUrl": "https://static.metricool.com/video/5306206/202611/6795c5c0ada84596.mp4",
+      "metricLabel": null,
+      "metricValue": null,
+      "source": "Metricool Planner / queued snapshot",
+      "metricoolId": "430082722",
+      "isDraft": false
+    },
+    {
+      "id": "plan-430083945",
+      "date": "2026-11-27",
+      "timeET": "18:00",
+      "platforms": [
+        "Facebook",
+        "Instagram",
+        "TikTok",
+        "Threads",
+        "Bluesky"
+      ],
+      "format": "Video",
+      "status": "Scheduled (pending)",
+      "title": "Basketball quote: shoot it like you know",
+      "captionPreview": "Basketball quote: shoot it like you know",
+      "url": null,
+      "media": "https://static.metricool.com/common/202611/5695688-mtr_2850278740166065412.png",
+      "mediaUrl": "https://static.metricool.com/video/5306206/202611/6795c5c0ada84596.mp4",
+      "metricLabel": null,
+      "metricValue": null,
+      "source": "Metricool Planner / queued snapshot",
+      "metricoolId": "430083945",
+      "isDraft": false
+    },
+    {
+      "id": "plan-430086775",
+      "date": "2026-11-28",
+      "timeET": "18:00",
+      "platforms": [
+        "Facebook",
+        "Instagram",
+        "TikTok",
+        "Threads",
+        "Bluesky"
+      ],
+      "format": "Video",
+      "status": "Scheduled (pending)",
+      "title": "Soccer quote: the bench isn't where your story ends",
+      "captionPreview": "Soccer quote: the bench isn't where your story ends",
+      "url": null,
+      "media": "https://static.metricool.com/common/202611/5695688-mtr_13242950742722002861.png",
+      "mediaUrl": "https://static.metricool.com/video/5306206/202611/6da0c4573e454ee5.mp4",
+      "metricLabel": null,
+      "metricValue": null,
+      "source": "Metricool Planner / queued snapshot",
+      "metricoolId": "430086775",
+      "isDraft": false
+    },
+    {
+      "id": "plan-430087952",
+      "date": "2026-11-28",
+      "timeET": "18:00",
+      "platforms": [
+        "YouTube"
+      ],
+      "format": "Video",
+      "status": "Scheduled (pending)",
+      "title": "Soccer quote: the bench / YouTube copy",
+      "captionPreview": "Soccer quote: the bench / YouTube copy",
+      "url": null,
+      "media": "https://static.metricool.com/common/202611/5695688-mtr_6160879360535545006.png",
+      "mediaUrl": "https://static.metricool.com/video/5306206/202611/6da0c4573e454ee5.mp4",
+      "metricLabel": null,
+      "metricValue": null,
+      "source": "Metricool Planner / queued snapshot",
+      "metricoolId": "430087952",
+      "isDraft": false
+    },
+    {
+      "id": "plan-430091967",
+      "date": "2026-11-29",
+      "timeET": "18:00",
+      "platforms": [
+        "YouTube"
+      ],
+      "format": "Video",
+      "status": "Scheduled (pending)",
+      "title": "Goalkeeper quote: fear the fall / YouTube copy",
+      "captionPreview": "Goalkeeper quote: fear the fall / YouTube copy",
+      "url": null,
+      "media": "https://static.metricool.com/common/202611/5695688-mtr_5224978021051394781.png",
+      "mediaUrl": "https://static.metricool.com/video/5306206/202611/1ad4900b59644606.mp4",
+      "metricLabel": null,
+      "metricValue": null,
+      "source": "Metricool Planner / queued snapshot",
+      "metricoolId": "430091967",
+      "isDraft": false
+    },
+    {
+      "id": "plan-430098224",
+      "date": "2026-11-29",
+      "timeET": "18:00",
+      "platforms": [
+        "Facebook",
+        "Instagram",
+        "TikTok",
+        "Threads",
+        "Bluesky"
+      ],
+      "format": "Video",
+      "status": "Scheduled (pending)",
+      "title": "Goalkeeper quote: fear the fall",
+      "captionPreview": "Goalkeeper quote: fear the fall",
+      "url": null,
+      "media": "https://static.metricool.com/common/202611/5695688-mtr_5224978021051394781.png",
+      "mediaUrl": "https://static.metricool.com/video/5306206/202611/1ad4900b59644606.mp4",
+      "metricLabel": null,
+      "metricValue": null,
+      "source": "Metricool Planner / queued snapshot",
+      "metricoolId": "430098224",
+      "isDraft": false
+    },
+    {
+      "id": "plan-430103782",
+      "date": "2026-11-30",
+      "timeET": "18:00",
+      "platforms": [
+        "Facebook",
+        "Instagram",
+        "TikTok",
+        "Threads",
+        "Bluesky"
+      ],
+      "format": "Video",
+      "status": "Scheduled (pending)",
+      "title": "Hockey: two seconds before puck drop",
+      "captionPreview": "Hockey: two seconds before puck drop",
+      "url": null,
+      "media": "https://static.metricool.com/common/202611/5695688-mtr_468689054139556656.png",
+      "mediaUrl": "https://static.metricool.com/video/5306206/202611/7c5455aa1fce424c.mp4",
+      "metricLabel": null,
+      "metricValue": null,
+      "source": "Metricool Planner / queued snapshot",
+      "metricoolId": "430103782",
+      "isDraft": false
+    },
+    {
+      "id": "plan-430105245",
+      "date": "2026-11-30",
+      "timeET": "18:00",
+      "platforms": [
+        "YouTube"
+      ],
+      "format": "Video",
+      "status": "Scheduled (pending)",
+      "title": "Hockey: two seconds before puck drop / YouTube copy",
+      "captionPreview": "Hockey: two seconds before puck drop / YouTube copy",
+      "url": null,
+      "media": "https://static.metricool.com/common/202611/5695688-mtr_16194583258781865894.png",
+      "mediaUrl": "https://static.metricool.com/video/5306206/202611/7c5455aa1fce424c.mp4",
+      "metricLabel": null,
+      "metricValue": null,
+      "source": "Metricool Planner / queued snapshot",
+      "metricoolId": "430105245",
+      "isDraft": false
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+RSH Sports Marketing OS v8.5.1 — Generate Reliability Fix
+
+- Smart Creator now gives inline success or error feedback.
+- Startup rendering errors from old workspace records are isolated so Generate can remain clickable.
+- A missing target date is filled with the current U.S. Eastern date.
+- Generate button clearly says it creates an image CONCEPT and caption; no actual photo is generated.
+- Does not change existing browser data, images, campaigns, approvals or Metricool posts.
+
+Your existing JSON backup and local Data Vault remain compatible.

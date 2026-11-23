@@ -1,0 +1,14 @@
+RSH SPORTS MARKETING OS v9.0.3 — CONTENT STUDIO & REVIEWS
+
+Incremental update from v9.0.2. Existing browser data, local Data Vault, media files, and ZIP backup APIs are not altered.
+
+- Fixed stale v9.0.1 browser/server comparison that caused a false “older server” alert on v9.0.2. Both client and Python server now declare v9.0.3.
+- Added real-time campaign search and review-stage filters. The queue can show matching drafts, manager reviews, Anthony-pending items, or confirmed items.
+- Added explicit review readiness summary: attached media count, required media types, five current-media manual QA checks, manager stage and Anthony stage.
+- Added Previous/Next media controls and Open in Create shortcut inside Reviews.
+- Clarified feedback when saving partial visual-QA checklists; partial checks do not grant approval.
+- All approval gates, no-vendor-logo requirements, existing content and backup/restore endpoints remain unchanged.
+
+START: Extract ZIP, open Terminal in the extracted RSH_Sports_Marketing_OS_v9_0_3 folder, run python3 server.py. Open http://127.0.0.1:8765. Stop any old server first. Existing data should remain on the same Mac/user profile, but keep original full ZIP backup.
+
+TEST LIMITATION: Static syntax and local HTTP smoke tests can run here; production Mac video codecs, actual photo rendering, and persistent user-browser data require manual confirmation on the user's Mac.

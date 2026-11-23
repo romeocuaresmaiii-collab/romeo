@@ -1,0 +1,16 @@
+RSH SPORTS OS v6.0 — LATER REVIEW CHECKLIST
+
+No need to check these immediately. When you are ready:
+[ ] Export a JSON backup from v5.1 (Setup & Backup).
+[ ] Stop its Terminal server (Control+C). Extract v6.0 and run python3 server.py.
+[ ] Open http://127.0.0.1:8765 in the same Chrome browser; confirm old content exists.
+[ ] Go to Growth Operating System → 6 Quality & Outcomes.
+[ ] Product Evidence: check form validation with an authorized actual RSH product URL.
+[ ] Historical Pair Study: compare two source-linked November examples; confirm results are described as historical rather than experimental.
+[ ] Campaign Release Gate: select a saved draft and inspect missing requirements.
+[ ] Record a QA snapshot and export an Anthony gate report. This does not approve the draft.
+[ ] Check Content Library (November counts), Daily Command Center, Calendar and Approval Desk.
+[ ] Check Setup & Backup → Data Vault. Save a revision and confirm reload/restore before relying on it.
+[ ] Check that Shopify and team invitations remain paused and no posts were published.
+
+If anything is wrong, keep your v5.1 backup and existing files. Do not clear Chrome local storage. Restore the backup into the current app only after checking the correct version.

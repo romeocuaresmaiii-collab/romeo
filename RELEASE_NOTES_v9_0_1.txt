@@ -1,0 +1,16 @@
+RSH SPORTS MARKETING OS v9.0.1 — APPROVAL SAFETY PATCH
+
+Built incrementally from user-supplied v9.0. The app layout, saved data format, media storage, and integrations are preserved.
+
+FIX
+- Manager approval now requires the five saved visual QA checks to match the current attached media, in addition to the existing four editorial confirmation boxes.
+- Anthony final confirmation recording is blocked if the media is missing, insufficient for its post format, or visual QA is stale.
+- Failure messages direct reviewers to review the current files in Create.
+
+UNCHANGED
+- All existing records, local storage locations, navigation, Metricool snapshots, and offline policies.
+- No actual external notifications, authenticated approval, or publishing added.
+
+NOTES
+- Static/code regression tests run in the development environment; on-Mac browser playback and app data persistence still require a local acceptance test.
+- This is a safety gate for local manual QA, not automatic image or logo detection.

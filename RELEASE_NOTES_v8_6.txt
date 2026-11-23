@@ -1,0 +1,9 @@
+RSH v8.6 — MULTI-FILE ASSET LIBRARY
+- 10 mixed photo/video files per campaign (5–10 batch selection supported)
+- MP4, WebM, MOV video preview and image gallery
+- Native binary streaming uploads; 12 MB/photo or 120 MB/video
+- Preserve legacy single-image references
+- Media-order/cover controls and detach from draft
+- Manual visual QA must be repeated when media changes
+- Launch QA checks required format media before review
+- Local-only storage, no publishing or reviewer-identity verification

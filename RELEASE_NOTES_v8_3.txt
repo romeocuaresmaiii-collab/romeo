@@ -1,0 +1,5 @@
+RSH Sports Marketing OS v8.3 — Easier Everyday Work
+
+Kept: all existing marketing tools, local storage key, Data Vault, November archive, approval history.
+Added: safe three-step campaign wizard on Home, clearer microcopy, optional collapsed lessons, draft safety checks, duplicate detection.
+No account connections, live publishing, paid APIs or system permissions changed.

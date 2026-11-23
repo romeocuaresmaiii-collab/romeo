@@ -1,0 +1,21 @@
+RSH SPORTS MARKETING OS v9.0 — DEVELOPMENT TEST RESULTS
+
+PASS — JavaScript syntax check with Node.js.
+PASS — Browser UI tests (Chromium rendered from local HTML):
+  * All five main navigation actions.
+  * Smart Create loads three distinct approaches and preserves strict logo-free sports prompt rules.
+  * Choose an approach, edit text, save Draft; appears in Calendar and Reviews.
+  * Caption edit produces before/after history and requires fresh review.
+  * Dated November Metricool Insight groups use per-platform metric labels and sample sizes.
+  * Missing December month shows no-source warning instead of inventing results.
+  * Optional manual comment-topic observations save in the current workspace and export to CSV.
+PASS — Legacy saved workspace test: a v8-style approved campaign with an older media reference loads; editing its caption invalidates its recorded approval. Removing a media attachment logs the change and resets review checks.
+PASS — Local Python server app-info returns version 9.0.0.
+PASS — Direct local media storage endpoints tested with three PNG files and one MP4 using correct same-origin headers; files could be read back from the server.
+PASS — SQLite Data Vault status endpoint is available.
+
+LIMITATIONS OF DEVELOPMENT VALIDATION
+- The test environment blocks browser network navigation to localhost. Browser interaction tests were run on the actual HTML without a live-server browser session; server media APIs were verified independently.
+- Full end-to-end Mac browser + SQLite + video playback acceptance testing is still required.
+- No actual social posts were published, scheduled, approved, or modified in external services.
+- This is an internal prototype, not a claim of superiority over commercial tools or a 10/10 production-readiness certification.

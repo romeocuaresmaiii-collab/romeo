@@ -1,0 +1,13 @@
+RSH SPORTS MARKETING OS v9.0.2 — PORTABLE COMPLETE BACKUPS
+
+Added to existing v9.0.1 app without changing its database, approvals, or integration settings:
+- Complete ZIP export of current browser workspace and all referenced local media, including legacy image assets.
+- SHA-256 integrity manifest for workspace and each media attachment.
+- Check media button lists missing referenced file IDs before export.
+- Restore complete ZIP with strict entry/size/path checks and byte-for-byte integrity verification.
+- Existing media never overwritten; differing IDs with different bytes cause restore failure.
+- Current browser workspace exported to JSON as a safety copy before ZIP restore.
+- The Local Vault is NOT overwritten by restore. You may save a new revision manually after reviewing the restored workspace.
+- Existing JSON export/import and original approval workflows remain available.
+
+LIMITATIONS: A complete ZIP can only include media still present in the app-support storage location on the current Mac. Media absent from the current Mac cannot be recovered from a JSON export. The ZIP is an offline file containing campaign data and media; store it securely.

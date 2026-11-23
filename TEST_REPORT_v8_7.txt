@@ -1,0 +1,29 @@
+RSH Sports Marketing OS v8.7 — Stability Verification
+
+REPRODUCED FAILURE AND FIX
+1. Opening a workspace that already contained a saved campaign caused the startup quality audit to reference visualAssets before initialization. This caused a JavaScript startup exception and could make multiple buttons look unresponsive.
+2. After fixing (1), an earlier Calendar renderer referenced SIMPLE_FORMATS before initialization. That also interrupted startup when posts existed.
+3. Both initialization-order errors have now been fixed. The application also isolates non-critical screen render failures to avoid one widget disabling the others.
+
+VERIFIED DEVELOPMENT TESTS
+- Main navigation (Home / Create / Calendar / Reviews / Insights).
+- Advanced navigation (Content Library / Growth OS / Executive / Settings).
+- Quick Actions search, result filtering, and close.
+- Generate single-photo idea and no-logo / sport-uniform prompt.
+- Review and save draft.
+- Attach five images and a video, gallery browsing and video playback preview.
+- Ten-file attachment limit.
+- Manual quality checks and review submission.
+- Reset old review checks when media changes.
+- JSON backup export.
+- Workspace data reopened in a fresh simulated browser page, preserving campaign and attached-media references.
+- Local Python media API, HTTP Range streaming, and invalid-image rejection.
+- Server version endpoint, error banner, and navigation after a recorded error.
+- JavaScript syntax and Python compile checks.
+
+KNOWN LIMITATIONS
+- This is NOT a guarantee that every control in every future user-data condition can never fail.
+- Final acceptance testing with your own Mac, browser data, files and network remains essential.
+- Metricool is connected to ChatGPT but not directly synchronized with this local app.
+- Media is stored on the Mac separately from JSON backups; keep a copy of original media assets.
+- This app does not publish posts, verify reviewer identities, or create images; these remain deliberately outside the scope.

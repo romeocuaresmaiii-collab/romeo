@@ -1,0 +1,14 @@
+RSH Marketing OS v9.0 — Acceptance Test Plan
+
+1. Confirm App v9.0.0 Connected.
+2. Create > Single Photo > Wrestling > Parents + Athletes + Coaches > Generate.
+3. Select all three variant cards and confirm distinct concepts, captions and prompts.
+4. Confirm every prompt contains correct uniform and explicit no third-party logos for jerseys, socks, shoes and accessories.
+5. Save a draft; attach 3 photos and 1 MP4; complete visual checks and submit to Reviews.
+6. In Reviews, preview images/video and confirm attachment revision history.
+7. Request changes in Reviews, enter corrections, and verify the campaign returns to Draft.
+8. Edit the caption in Calendar; verify approval flags reset and caption before/after appears in Reviews.
+9. Insights: choose November 2026 Instagram; check Feed and Reel medians are separately labeled with source links.
+10. Switch to a month without a snapshot; confirm the app shows a missing-data warning, not fabricated numbers.
+11. Optional: save a comment-topic observation, reload, and check persistence.
+12. Save Mac Data Vault revision, restart app, and confirm campaigns and evidence persist. Keep original media files backed up.

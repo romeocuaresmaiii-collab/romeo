@@ -1,0 +1,9 @@
+RELEASE SUMMARY
+- 21 legacy nav modules retained, 1 new subtab within Growth Operating System, and an on-home quality signal.
+- Provenance-first marketing evidence and safe comparison to avoid retroactive A/B test mislabeling.
+- 30-day product source age threshold for review (not a live inventory check).
+- Local release quality report and all-campaign export.
+- Review/publish approvals unchanged and not authenticated. Prior app data must be backed up before install.
+
+VALIDATION: Full Chromium interaction + server/Vault regression tests are included in scripts outside the shipping package.
+APPROVAL: internal prototype only. Keep live-platform actions paused until formal team authorization.

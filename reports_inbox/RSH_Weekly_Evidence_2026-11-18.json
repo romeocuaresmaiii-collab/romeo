@@ -1,0 +1,161 @@
+{
+  "schema": "rsh_weekly_evidence_v1",
+  "brand": "RSH Sports",
+  "source": "Metricool RSH Sports brand analytics accessed via connected ChatGPT plugin",
+  "captured_date": "2026-11-18",
+  "timezone": "America/New_York",
+  "periods": {
+    "previous": {
+      "start": "2026-11-04",
+      "end": "2026-11-10"
+    },
+    "recent": {
+      "start": "2026-11-11",
+      "end": "2026-11-17"
+    }
+  },
+  "metrics": [
+    {
+      "platform": "Instagram",
+      "metric": "Reel views",
+      "previous": 632,
+      "recent": 417,
+      "previous_rows": 6,
+      "recent_rows": 6,
+      "unit": "views"
+    },
+    {
+      "platform": "Instagram",
+      "metric": "Reel interactions",
+      "previous": 4,
+      "recent": 13,
+      "previous_rows": 6,
+      "recent_rows": 6,
+      "unit": "interactions"
+    },
+    {
+      "platform": "Facebook",
+      "metric": "Reel views",
+      "previous": 1524,
+      "recent": 1360,
+      "previous_rows": 7,
+      "recent_rows": 7,
+      "unit": "views"
+    },
+    {
+      "platform": "Facebook",
+      "metric": "Reel interactions",
+      "previous": 18,
+      "recent": 33,
+      "previous_rows": 7,
+      "recent_rows": 7,
+      "unit": "interactions"
+    },
+    {
+      "platform": "TikTok",
+      "metric": "Video views",
+      "previous": 862,
+      "recent": 1515,
+      "previous_rows": 5,
+      "recent_rows": 7,
+      "unit": "views"
+    },
+    {
+      "platform": "TikTok",
+      "metric": "Video interactions",
+      "previous": 40,
+      "recent": 70,
+      "previous_rows": 5,
+      "recent_rows": 7,
+      "unit": "interactions"
+    },
+    {
+      "platform": "Pinterest",
+      "metric": "Impressions",
+      "previous": 47922,
+      "recent": 39269,
+      "previous_rows": 7,
+      "recent_rows": 7,
+      "unit": "impressions"
+    },
+    {
+      "platform": "Pinterest",
+      "metric": "Outbound clicks",
+      "previous": 8,
+      "recent": 10,
+      "previous_rows": 7,
+      "recent_rows": 7,
+      "unit": "clicks"
+    },
+    {
+      "platform": "YouTube",
+      "metric": "Video views",
+      "previous": 252,
+      "recent": 227,
+      "previous_rows": 7,
+      "recent_rows": 5,
+      "unit": "views"
+    }
+  ],
+  "standouts": [
+    {
+      "platform": "Instagram",
+      "date": "2026-11-13",
+      "title": "Wrestling motivation: prove your best",
+      "url": "https://www.instagram.com/reel/DfsxIDajKiC/",
+      "views": 114,
+      "interactions": 3,
+      "takeaway": "Wrestling motivation is an on-season angle; test a more practical first-frame hook."
+    },
+    {
+      "platform": "Facebook",
+      "date": "2026-11-12",
+      "title": "Football practice jersey demonstration",
+      "url": "https://www.facebook.com/reel/1709740504079226/",
+      "views": 297,
+      "interactions": null,
+      "takeaway": "Real product content can attract attention; verify stock and try a concise comparison."
+    },
+    {
+      "platform": "TikTok",
+      "date": "2026-11-15",
+      "title": "Hockey pre-game preparation",
+      "url": "https://www.tiktok.com/@rsh_sports/video/7708452125533031693",
+      "views": 526,
+      "interactions": null,
+      "takeaway": "Game-day routines are worth testing, but one video does not establish a trend."
+    },
+    {
+      "platform": "TikTok",
+      "date": "2026-11-15",
+      "title": "Wrestling discipline story",
+      "url": "https://www.tiktok.com/@rsh_sports/video/7708537636561947917",
+      "views": 228,
+      "interactions": null,
+      "takeaway": "Compare a concise wrestling story against a product-first opening."
+    }
+  ],
+  "schedule": {
+    "start": "2026-11-19",
+    "end": "2026-11-25",
+    "pending_posts": 29,
+    "counts_by_date": {
+      "2026-11-19": 5,
+      "2026-11-20": 5,
+      "2026-11-21": 5,
+      "2026-11-22": 5,
+      "2026-11-23": 5,
+      "2026-11-24": 2,
+      "2026-11-25": 2
+    },
+    "includes_drafts": true,
+    "note": "Metricool planner checked 2026-11-18. Pending entries may include multi-platform duplicates and drafts. Does not establish publication or approval."
+  },
+  "limitations": [
+    "Some daily analytics records were not returned for the selected windows; comparisons are directional only.",
+    "Different social networks use different views, reach and interaction definitions. Do not sum them into unique audience reach.",
+    "No verified GA4 or storefront sales attribution in this evidence pack.",
+    "No competitor-post records were returned from the connected Metricool brand.",
+    "This report is a snapshot imported by ChatGPT, not a live API connection in the standalone app."
+  ]
+}

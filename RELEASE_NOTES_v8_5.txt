@@ -1,0 +1,11 @@
+RSH Sports Marketing OS v8.5 — Finished Image Review
+
+- Retains the beginner-friendly Smart Content Creator from v8.4.
+- Attach a completed JPEG, PNG or WebP to a saved still-image post.
+- Stores original uploaded images separately in the Mac app-support folder, not in browser localStorage.
+- Previews the actual image and caption. Optional overlaid text is preview-only.
+- Requires five human quality attestations before sending a still image to local manager review.
+- Keeps all existing advanced modules and historical Metricool data.
+
+Limitations: The app does not generate images, automatically inspect logos, verify rights, send approvals, or publish.
+JSON browser backups do not include the image binary, only its Mac-local reference. Use copies of the original assets when migrating to a new computer.

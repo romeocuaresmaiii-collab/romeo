@@ -1,0 +1,19 @@
+RSH SPORTS MARKETING OS v9.0 — SMART GROWTH LOOP
+
+Built on v8.8. Main navigation remains five tools: Home, Create, Calendar, Reviews, Insights.
+
+WHAT'S NEW
+- CREATE: Three selectable creative directions for an original social post: Real story, Choose one, Helpful tip. Each supplies a distinct scene, caption, hook, CTA, and a detailed premium photo/visual prompt. Single Photo, Carousel, Reel and Story options remain.
+- LOCKED IMAGE RULES: Sport-specific uniform, correct equipment, premium realism, and no third-party vendor marks on any jersey, socks, shoes, accessories or equipment. These rules are applied when saving/copying prompts, but generated images still require human inspection.
+- INSIGHTS: A source-dated post learning panel that groups per-platform published metrics by format and metric label, shows medians and source links, and distinguishes incompatible denominators (for example, views versus reach). Missing-month data is explicitly labeled as unavailable.
+- CONVERSATION RESEARCH: Optional manual tagging of parent-related, athlete-related and coach-related comment topics. These are discussion themes, NOT verified commenter identities. Tags are included in the CSV export.
+- REVIEWS: Per-campaign local creative revision history that records edited captions, attachment additions/removals and manager correction notes. Caption changes and media changes invalidate outdated quality checks and local approvals.
+
+NOT CHANGED
+- Local media gallery supports up to 10 attached images/videos per campaign.
+- Actual social publishing, Shopify access, team invitations, paid AI, and Video Autopilot remain paused.
+- Metricool data is imported in dated snapshots, not directly synchronized in this Mac app.
+- Manager and Anthony approvals are locally recorded, not remotely authenticated.
+
+IMPORTANT
+Before upgrading, export a JSON backup and retain copies of original photos/videos. The media folder is separate from JSON backups.

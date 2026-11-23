@@ -1,0 +1,14 @@
+RSH SPORTS MARKETING OS v8.1 — SIMPLIFIED EDITION
+
+Changes
+- 5 primary navigation options: Home, Create, Calendar, Reviews, Insights
+- Advanced features preserved in expandable More tools menu
+- More focused home screen: key metrics, priority tasks and 7-day pipeline
+- Extended dashboard hidden by default but available on demand
+- Same app storage key, local vault and all marketing modules preserved
+- No publishing, Shopify integration, team invitations or video autopilot
+
+Known limitations
+- Local first app, not production hosting
+- Metricool data is imported snapshots, not live synchronization
+- Approval history is local and does not authenticate Anthony

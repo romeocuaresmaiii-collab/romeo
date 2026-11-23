@@ -1,0 +1,11 @@
+RSH Sports Marketing OS v8.2 — Beginner-Friendly Edition
+
+• New optional Beginner Guide on Home with four learning steps.
+• One-click navigation to Create, Calendar, Reviews, Insights.
+• A practice campaign in Content Studio (parent gear checklist; never auto-saved).
+• Contextual plain-English instructions in the five daily tools.
+• Expandable SMM glossary: Hook, Caption, CTA, Draft, Reach, Engagement.
+• Beginner guide progress can be marked and is preserved in local backups.
+• Expert mode hides guidance without deleting features.
+
+No live Metricool sync, publishing, commerce connection, or team access added.

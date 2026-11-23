@@ -1,0 +1,14 @@
+RSH SPORTS MARKETING OS v8.8 — VISIBLE MEDIA REVIEWS
+
+Fixes
+- Review screen now displays all attached photos and video clips (up to ten per campaign), using the same Mac media storage as Create.
+- Click thumbnails to preview each attachment. MP4 and browser-supported video can play with controls; image attachments display at full size within the app.
+- Missing media is clearly labeled and reviewers can jump to Create to attach files.
+- The optional Verified product / destination URL field has been removed from Reviews, along with the Pinterest-only URL approval blocker.
+- Your corrections / notes remains and continues to be saved for review and Anthony handoff.
+- Existing two-stage approval rules remain unchanged, except that a manager cannot approve content with no finished attached media or the wrong file type.
+- Archived review URL values remain in old backups for compatibility, but no longer appear in new review packets or CSV exports.
+
+Limits
+- Photos and videos remain on the same Mac. JSON backups contain references, not media bytes.
+- This is still local approval tracking; it does not verify reviewer identities or publish posts.

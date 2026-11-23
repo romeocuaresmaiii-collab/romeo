@@ -1,0 +1,1 @@
+v8.7 — targeted reliability repair. Core buttons + Create + Gallery + Mac vault tested in automation. Read TEST_REPORT_v8_7.txt for detailed coverage.

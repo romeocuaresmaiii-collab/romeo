@@ -1,0 +1,15 @@
+RSH SPORTS MARKETING OS v8.0 — ULTRA-CLEAN EDITION
+
+DESIGN SYSTEM
+• Fresh Apple-inspired minimalist system styling (not affiliated with Apple)
+• White cards, neutral grays, restrained blue accents, typography based on system fonts
+• More spacious layout, subtle borders, accessible focus states and improved table clarity
+• Sidebar navigation is grouped into Home, Plan & Create, Research, Measure & Report, and Workspace
+• Button, filter, status, calendar, archive, report and QA modules have coordinated light styling
+• Fixed the Quick Actions overlay appearing on initial load in v7
+• Kept existing Growth OS and November Metricool historical snapshot features intact
+
+SAFE OPERATION
+• No publishing or external changes
+• Local-only app and local Data Vault; historical Metricool imports still need refreshing
+• Apple-like describes visual treatment; no Apple assets or logos used

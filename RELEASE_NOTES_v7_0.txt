@@ -1,0 +1,14 @@
+RSH SPORTS MARKETING OS v7.0 — PREMIUM WHITE EDITION
+
+Major improvements
+- Premium clean white UI theme across the app
+- Executive Readiness Board on the Daily Command Center
+- Workspace Health score based on local blockers, approvals, evidence freshness, and measured posts
+- Quick Actions command palette (Ctrl/Cmd + K)
+- Exportable executive review checklist for later app review
+
+Still intentionally paused
+- Shopify integration
+- Team invitations / cloud rollout
+- Video autopilot
+- Automatic publishing

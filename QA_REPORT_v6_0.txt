@@ -1,0 +1,44 @@
+RSH SPORTS MARKETING OS v6.0 — VALIDATION REPORT
+Built and tested on: November 18, 2026
+Source code: previous v5.1 release, not a rebuilt app
+
+PASS — New release functionality
+[PASS] Product register rejects non-RSH URLs and permits an explicit source-checked record
+[PASS] Product source-check date and verification required; recheck warnings enabled after 30 days
+[PASS] Historical study compares only published posts of the same network, format and metric
+[PASS] Two post URLs must be different; duplicate studies rejected
+[PASS] Historical research does not create or fake A/B experiment outcomes
+[PASS] Campaign QA detects missing media rights, consent, source evidence and approval confirmations
+[PASS] Local QA snapshot can be recorded without granting approval
+[PASS] Single-campaign HTML and full-workspace CSV quality reports export correctly
+[PASS] Daily quality summary shows blocker counts
+
+PASS — Existing workflow regressions
+[PASS] Monthly archive preserved: 177 published + 36 pending + 8 drafts, Nov 2026
+[PASS] Monthly archive filters, calendar and 24-record pagination retained
+[PASS] Sample December data import works; malformed cross-month import is rejected
+[PASS] Historical performance comparisons and existing growth experiment proposals preserved
+[PASS] Operations audit, owner follow-ups, exported reports and imported planner conflict detection retained
+[PASS] Content Studio and existing two-stage Approval Desk remain accessible
+[PASS] Local data remain separate from read-only Metricool archive
+
+PASS — Local backend and resilience
+[PASS] Python server starts and responds locally, 127.0.0.1:8765
+[PASS] SQLite vault saves and loads new product-study-QA arrays correctly
+[PASS] Stale vault writes are rejected with HTTP 409
+[PASS] Requests claiming an external browser origin cannot write vault records (HTTP 403)
+[PASS] Weekly Report Inbox remains read-only and does not claim live Metricool sync
+[PASS] Node JavaScript syntax check succeeded
+
+NOT TESTED / OUT OF SCOPE
+- Production Mac end-to-end run with user's own saved browser data
+- Actual Shopify conversions or attributed revenue
+- Automatic direct Metricool API synchronization into local app
+- Remote multi-user authentication, verified Anthony final approval, or true team collaboration
+- Real media licensing proof or product inventory availability
+- Full regression on every MacOS/Chrome build and every possible customer dataset
+- Security penetration test and data retention/privacy review
+- Live social publishing, customer/order changes or external service modifications
+
+RELEASE CLASSIFICATION
+Local offline research & operations prototype. Features tested above are functional, but full production readiness remains unproven. Do not advertise the app as 10/10 or enterprise-ready.

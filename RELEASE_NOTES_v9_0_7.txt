@@ -1,0 +1,11 @@
+RSH SPORTS MARKETING OS — v9.0.7
+
+Smart Content Production Pipeline (read-only derived status)
+- New production board on Home with stage totals, campaign search, and direct workflow links.
+- Derives Prepare Brief, Media / Visual QA, Manager Review, Anthony Decision, and Ready for Calendar from existing campaign records.
+- Identifies missing format-correct attachments and invalidated manual visual QA before showing manager-ready status.
+- Opens existing Calendar editor, Create media editor, or Reviews with the right campaign selected.
+- Does not create approval records, publish posts, send messages, or introduce new storage.
+- App and server version labels updated to 9.0.7.
+
+Limits: This local pipeline does not authenticate Anthony or prove publication in Metricool.

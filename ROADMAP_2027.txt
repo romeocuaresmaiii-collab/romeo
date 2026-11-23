@@ -1,0 +1,15 @@
+RSH SPORTS MARKETING OS — HONEST NEXT-PHASE ROADMAP
+
+This release addresses valuable offline improvements. It does not solve service-level integration requirements.
+
+For a real business-grade pilot after Anthony's approval:
+1. Identity & collaboration: authenticated multi-user workspace, real role-based access, and verified approvals through Supabase.
+2. Data freshness: authorized Metricool API connector or a secure server-side scheduled ingestion; compare source timestamps and audit errors.
+3. E-commerce outcomes: with permission, connect Shopify/GA4 for verified order, sessions, and attribution metrics. Compare the same attribution window.
+4. Reliability: hosted deployment, managed backups, monitoring, versioned migrations, and restore drills.
+5. Security: audit API/service credentials, retention policy, access logs, privacy/consent, dependency scanning and penetration testing.
+6. Operations: validate all user journeys on actual Mac/browser and with Maxine, Jasper, user and Anthony before any launch approval.
+7. AI: add real model-backed research and generation only with configured billing, quotas, provenance and human quality review.
+8. Commercial QA: connect actual RSH product catalog, inventory and current prices before any product-availability or discount claims.
+
+These require explicit approval, access or external dependencies; none was silently connected in v6.0.

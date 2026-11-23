@@ -1,0 +1,12 @@
+RSH SPORTS MARKETING OS — v9.0.4
+
+Incremental update to the existing v9.0.3 app.
+
+- Side-by-side A/B creative preview for the three existing rule-based variants, showing hook, caption angle and realistic visual concept.
+- Select A or B to load one editable draft; no unmeasured experiment is presented as a result.
+- Confirm before replacing unsaved edits while switching creative approaches.
+- Updated server and creator version markers to 9.0.4.
+- Existing media upload, QA, approval workflow, portable backups, data vault, and integrations unchanged.
+- Python 3 startup: cd into the extracted app folder, then python3 server.py.
+
+This update does not auto-generate an image or publish content. Always review final visuals and permissions.

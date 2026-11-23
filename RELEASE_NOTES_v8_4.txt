@@ -1,0 +1,5 @@
+RSH Sports Marketing OS v8.4
+Smart Content Creator replaces the wrestling-Reel-only beginner builder.
+Single Photo / Carousel / Reel / Story; 14 sport-specific uniforms; audience and goal controls; engagement questions; photorealistic premium no-vendor-logo visual prompts; caption, CTA, hashtags, optional image text.
+Saved fields: postType, visualConcept, visualPrompt, onImageText, captionBody, cta, hashtags, aspectRatio plus legacy calendar fields.
+Built-in QA, draft-only save and duplicate prevention. Edit visual prompt and on-image text in Calendar; old records preserved.

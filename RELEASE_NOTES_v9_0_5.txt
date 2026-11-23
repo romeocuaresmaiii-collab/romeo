@@ -1,0 +1,10 @@
+RSH SPORTS MARKETING OS — v9.0.5
+
+What changed
+- Replaced the placeholder RSH text mark with the provided official RSH Sports logo in the main app sidebar.
+- Added the same RSH Sports logo to the cloud team access page for consistent branding.
+- Updated app version markers and server build identity to 9.0.5.
+
+Notes
+- Existing campaigns, local data, media, approvals, and backups are preserved.
+- This update changes branding only; no workflow or storage behavior was intentionally changed.

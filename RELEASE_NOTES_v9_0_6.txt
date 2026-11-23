@@ -1,0 +1,11 @@
+RSH SPORTS MARKETING OS — v9.0.6
+
+What changed
+- Fixed the broken RSH Sports logo image in the main app and cloud team access page.
+- Added Python server support to serve /rsh_logo.png directly.
+- Updated the cloud-auth Content Security Policy to allow the logo image to load safely.
+- Updated app and server version markers to 9.0.6.
+
+Notes
+- Existing campaigns, local data, media, approvals, and backups are preserved.
+- No workflow or storage behavior was intentionally changed.

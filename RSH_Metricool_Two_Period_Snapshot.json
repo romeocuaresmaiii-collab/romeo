@@ -1,0 +1,104 @@
+{
+  "brand": "RSH Sports",
+  "schema": "rsh-metricool-history-v1",
+  "snapshots": [
+    {
+      "schema": "rsh-metricool-snapshot-v1",
+      "brandId": "5695688",
+      "source": "Metricool via ChatGPT",
+      "capturedAt": "2026-11-18",
+      "timezone": "America/New_York",
+      "start": "2026-09-18",
+      "end": "2026-10-17",
+      "metrics": {
+        "Instagram": {
+          "followers": 55,
+          "reels": 20,
+          "reelViews": 1854,
+          "reelInteractions": 82,
+          "feedPosts": 30,
+          "feedInteractions": 115
+        },
+        "Facebook": {
+          "followers": 56,
+          "reels": 21,
+          "reelViews": 5037,
+          "reelInteractions": 37,
+          "feedPosts": 32,
+          "feedInteractions": 58,
+          "followersGained": 7,
+          "followersLost": 2
+        },
+        "Pinterest": {
+          "followers": 11,
+          "pins": 59,
+          "impressions": 214635,
+          "interactions": 4807,
+          "outboundClicks": 64
+        },
+        "TikTok": {
+          "followers": 29,
+          "videos": 22,
+          "videoViews": 4402,
+          "interactions": 144
+        },
+        "YouTube": {
+          "subscribers": 36,
+          "videos": 24,
+          "videoViews": 915,
+          "subscribersGained": 1,
+          "subscribersLost": 1
+        }
+      }
+    },
+    {
+      "schema": "rsh-metricool-snapshot-v1",
+      "brandId": "5695688",
+      "source": "Metricool via ChatGPT",
+      "capturedAt": "2026-11-18",
+      "timezone": "America/New_York",
+      "start": "2026-10-18",
+      "end": "2026-11-16",
+      "metrics": {
+        "Instagram": {
+          "followers": 55,
+          "reels": 22,
+          "reelViews": 3377,
+          "reelInteractions": 83,
+          "feedPosts": 30,
+          "feedInteractions": 68
+        },
+        "Facebook": {
+          "followers": 67,
+          "reels": 30,
+          "reelViews": 7188,
+          "reelInteractions": 105,
+          "feedPosts": 30,
+          "feedInteractions": 27,
+          "followersGained": 13,
+          "followersLost": 2
+        },
+        "Pinterest": {
+          "followers": 13,
+          "pins": 38,
+          "impressions": 199562,
+          "interactions": 5025,
+          "outboundClicks": 44
+        },
+        "TikTok": {
+          "followers": 33,
+          "videos": 31,
+          "videoViews": 5707,
+          "interactions": 217
+        },
+        "YouTube": {
+          "subscribers": 36,
+          "videos": 25,
+          "videoViews": 2162,
+          "subscribersGained": 0,
+          "subscribersLost": 0
+        }
+      }
+    }
+  ]
+}

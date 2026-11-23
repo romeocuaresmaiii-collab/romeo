@@ -1,0 +1,30 @@
+RSH Sports Marketing OS v8.8 — REVIEW MEDIA VERIFICATION
+
+Tested on the updated v8.7 codebase:
+PASS — Render Reviews for existing saved campaigns with multi-file attachments.
+PASS — Render 3 images and 1 MP4, with thumbnails and selectable media.
+PASS — Browser video reached metadata-ready state and has native play/seek controls.
+PASS — Local media upload endpoint accepted JPG/PNG/media and returned private IDs.
+PASS — MP4 served by the local API with HTTP 206 byte-range responses.
+PASS — Editing the notes field survives clicking between attached media.
+PASS — Save manager notes and reload selected campaign.
+PASS — Manager review can pass for a Pinterest campaign with media and no URL field.
+PASS — Existing creativeAsset single-photo legacy attachment displays.
+PASS — No-media post shows clear guidance and cannot be manager-approved.
+PASS — Attach media in Create shortcut works.
+PASS — Home/Reviews navigation works.
+PASS — JavaScript syntax verification and Python compilation.
+PASS — No browser page errors during tested workflows.
+
+Important test environment limitation:
+The test-browser service prevents navigation to localhost, so UI interactions were tested
+with the exact application JavaScript plus isolated in-memory draft data and equivalent
+media data URLs. The real local HTTP upload/range API was tested independently.
+Final confirmation on your Mac is still required.
+
+Existing data:
+The app preserves localStorage key rsh_growth_command_v1 and media storage paths.
+Historical destination URL fields in old saved data are not erased, but are no longer
+presented or required inside Reviews.
+
+No external posts were changed or published.
