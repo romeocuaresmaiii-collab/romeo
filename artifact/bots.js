@@ -18,7 +18,7 @@
   const app = () => window.RSH_APP;
   const CHANNELS = [['instagram', 'Instagram', 2200], ['facebook', 'Facebook', 5000], ['tiktok', 'TikTok', 2200], ['youtube', 'YouTube', 5000], ['pinterest', 'Pinterest', 500], ['threads', 'Threads', 500], ['bluesky', 'Bluesky', 300]];
   const NAME = Object.fromEntries(CHANNELS.map(c => [c[0], c[1]])), LIMIT = Object.fromEntries(CHANNELS.map(c => [c[0], c[2]]));
-  const DEFAULTS = { autoEdit: true, autoSend: true, channels: ['instagram', 'facebook', 'tiktok'], times: ['12:00', '18:00'], labels: { '12:00': 'lunch break', '18:00': 'after practice' }, days: 14 };
+  const DEFAULTS = { autoEdit: true, autoSend: true, dykDay: 2, channels: ['instagram', 'facebook', 'tiktok'], times: ['12:00', '18:00'], labels: { '12:00': 'lunch break', '18:00': 'after practice' }, days: 14 };
   // RSH Sports' own accounts (from the brand's connected profiles, 23 Nov 2026). Today posts reach them through
   // Metricool or by hand; each has a slot for a direct connection from this app later.
   const ACCOUNTS = [
@@ -196,12 +196,14 @@
     const type = String(p.postType || '').toLowerCase(), secs = /story/.test(type) ? '10 to 15' : '15 to 20';
     return [`EDIT JOB — ${p.title}`,
       `Campaign for ${p.platform || 'social media'}, planned ${p.date || 'no date yet'}. Sport: ${p.sport || 'not set'}. Audience: ${p.audience || 'not set'}. Goal: ${p.goal || 'not set'}.`,
-      `Make one vertical 9:16 video, 1080×1920, ${secs} seconds, MP4 (H.264), under 30 MB.`,
+      `Make one vertical 9:16 video, 1080×1920, ${secs} seconds, MP4 (H.264), under 15 MB (the app sends files up to 16 MB to Metricool through Google Drive).`,
+      seoEditLine(p),
       `SCRIPT\nHook (first 2 seconds, on screen): ${sentence(p.hook)}\n${p.onImageText ? 'On-screen text: ' + sentence(p.onImageText) + '\n' : ''}Closing line: ${String(p.cta || '').trim() || 'Follow RSH Sports'}`,
       p.visualConcept ? `VISUAL DIRECTION\n${String(p.visualConcept).trim()}` : '',
       `RULES\n${RULES} RSH branding only in the corner watermark and the end card.`,
       `DELIVER\nThe finished MP4 named ${slug(p.title) || 'campaign'}.mp4, plus a one-line note of anything you could not do.`].filter(Boolean).join('\n\n');
   }
+  function seoEditLine(p) { const x = seo && seo[p.id]; return x && (x.onScreen || x.spoken) ? `SEARCH (TikTok, YouTube and Instagram read on-screen text and speech)\nShow on screen in the first 3 seconds: “${x.onScreen}”\nSay in the first 3 seconds: “${x.spoken}”\nBurn in captions for the spoken words.` : ''; }
   const RULES = 'Realistic, natural light. Sport-correct gear and setting. No third-party logos, brand marks or wordmarks on shoes, socks, apparel, bags or equipment. No real, identifiable people. Suitable for parents, coaches and athletes.';
   function imagePrompt(p) {
     const type = String(p.postType || '').toLowerCase(), base = String(p.visualPrompt || p.visualConcept || '').trim();
@@ -356,28 +358,48 @@
    * hashtags are added to a caption only when someone presses “Add hashtags”. */
   let seo = {}, seoNote = '';
   const seoSig = p => [p.title, p.hook, p.caption, p.captionBody, p.cta, p.hashtags, p.platform, p.postType].map(x => String(x || '')).join('|').length + ':' + String(p.title || '').slice(0, 40) + ':' + String(p.caption || '').slice(-40);
+  // Platform rules researched November 2026 (official help pages where available; see SEO_RULES.md):
+  // Instagram max 5 hashtags (Dec 2025) and captions indexed by Google since Jul 2025; TikTok max 5 hashtags, reads
+  // on-screen text and speech; YouTube: title, description and thumbnail matter most, tags minimal, up to 3 hashtags shown;
+  // Pinterest: keywords in title/description, no hashtags; Threads: one topic tag; Bluesky: 1–3 hashtags feed custom feeds.
+  const MAXTAGS = { instagram: 5, tiktok: 5, facebook: 3, youtube: 3, threads: 1, bluesky: 3, pinterest: 0 };
+  function seasonOf(d) { const m = new Date((d || iso(new Date())) + 'T12:00:00').getMonth() + 1; return [m >= 11 || m <= 2 ? 'wrestling season (Nov–Feb)' : '', m >= 11 || m <= 3 ? 'basketball season (Nov–Mar)' : '', m >= 10 || m <= 3 ? 'hockey season (Oct–Mar)' : '', m >= 2 && m <= 5 ? 'softball season (Feb–May)' : '', [3, 4, 5, 8, 9, 10, 11].includes(m) ? 'soccer season' : ''].filter(Boolean).join(', ') || 'off-season / preseason planning'; }
   function seoPrompt(p) {
-    return `You are the SEO writer for RSH Sports, a company that makes custom team uniforms and sports apparel (rshsports.com).
-Write a search and discovery pack for ONE social post. Use ONLY facts in the campaign below. Do not invent prices, discounts, stock, dates, product features, results or quotes. Do not name other brands or vendors. Plain words that teams, coaches, athletes and parents actually search for.
+    return `You are a senior social media SEO strategist (10+ years, search and recommendation systems on Instagram, Facebook, TikTok, YouTube, Pinterest, Threads, Bluesky). You work for RSH Sports (rshsports.com), a US maker of custom team uniforms and apparel: wrestling singlets, basketball, softball, soccer and hockey uniforms, and online team stores. Buyers: high school and club coaches, athletic directors, team parents, athletes.
+
+Write the search-and-discovery pack for ONE post. Hard rules:
+- Use ONLY facts in the campaign. No prices, discounts, stock, delivery times, product features, results, quotes or statistics that are not written there. No other brands or vendors.
+- Pick ONE primary keyword with real US search intent (what a coach or parent would type, e.g. "custom wrestling singlets", "high school wrestling", "softball team uniforms") plus 3–6 secondary long-tail keywords (add modifiers like high school, youth, club, varsity, team, and the season when relevant). Season right now: ${seasonOf(p.date)}.
+- Natural language. No keyword stuffing. No engagement bait ("comment YES", "like if", "tag 3 friends"). Hashtags must be relevant, specific, not banned or generic spam (#fyp, #viral, #explore are not allowed).
+- Hashtag mix per channel: about 1 broad + 2 niche + 1 branded. Branded tag is always #RSHSports${isDyk(p) ? ', and this is a Did You Know post so also use the series tag #RSHDidYouKnow' : ''}.
+- Exact limits (2025–2026 platform rules): Instagram max 5 hashtags; TikTok max 5; Facebook 2–3; YouTube 3 (shown above the title); Threads exactly 1 topic tag (may contain spaces is not needed, use one word); Bluesky 1–3 matching active community feeds; Pinterest NO hashtags (keywords instead).
+- Keyword placement: the primary keyword belongs in the first ~55 characters of the caption (Reels and Instagram Google previews cut early), at the start of YouTube and Pinterest titles, said aloud and shown on screen in the first 3 seconds of any video (TikTok and YouTube read speech and on-screen text).
+- Captions are already approved and will not be rewritten; you suggest an optional keyword-first opening line instead.
 
 CAMPAIGN
 Title: ${p.title || ''}
-Main channel: ${p.platform || ''} · Format: ${p.postType || ''}
+Sport: ${p.sport || ''} · Audience: ${p.audience || ''} · Goal: ${p.goal || ''}
+Main channel: ${p.platform || ''} · Format: ${p.postType || ''} · Date: ${p.date || ''}
 Hook: ${p.hook || ''}
 Caption: ${p.captionBody || p.caption || ''}
 Call to action: ${p.cta || ''}
 Existing hashtags: ${p.hashtags || ''}
+On-image text: ${p.onImageText || ''}
 
 Answer with JSON only, exactly these keys:
-{"keywords":[5 to 8 search phrases, lowercase],
- "altText":"one sentence describing what the photo or video shows, under 200 characters",
- "instagram":{"hashtags":[8 to 12 hashtags with #, mix of broad and niche, include #RSHSports]},
- "facebook":{"hashtags":[2 or 3 hashtags with #]},
- "tiktok":{"title":"under 90 characters, searchable","hashtags":[4 or 5 hashtags with #]},
- "youtube":{"title":"under 90 characters, starts with the main keyword","tags":[8 to 12 tags, no #]},
- "pinterest":{"title":"under 100 characters, keyword first","description":"2 sentences, under 450 characters, keywords used naturally"},
- "threads":{"hashtags":[1 hashtag with #]},
- "bluesky":{"hashtags":[1 or 2 hashtags with #]}}`;
+{"primaryKeyword":"...","keywords":[3 to 6 secondary long-tail phrases, lowercase],
+ "firstLine":"an optional keyword-first opening sentence under 90 characters, same meaning as the hook, no new facts",
+ "onScreenText":"text to show in the first 3 seconds of the video, under 45 characters, contains the primary keyword or its core words",
+ "spokenLine":"one short sentence to say in the first 3 seconds, contains the primary keyword",
+ "altText":"literal description of what the photo or video shows, under 200 characters, primary keyword used naturally once",
+ "instagram":{"hashtags":[3 to 5]},
+ "facebook":{"hashtags":[2 or 3]},
+ "tiktok":{"title":"under 90 characters, keyword first","hashtags":[3 to 5]},
+ "youtube":{"title":"under 70 characters, primary keyword first","descriptionLead":"first 2 lines of the description, under 150 characters, keyword in the first sentence","tags":[5 to 8 tags incl. the brand name and one common misspelling of the main product word, no #],"hashtags":[3]},
+ "pinterest":{"title":"under 100 characters, keyword within the first 40","description":"2 or 3 sentences, under 450 characters, keywords used naturally, no hashtags"},
+ "threads":{"hashtags":[1]},
+ "bluesky":{"hashtags":[1 to 3]},
+ "notes":"one sentence of senior advice for this post (e.g. what to show on screen, or a board name for Pinterest)"}`;
   }
   const clean = (v, n) => String(v || '').replace(/\s+/g, ' ').trim().slice(0, n);
   const tagList = (v, hash, n) => (Array.isArray(v) ? v : []).map(t => String(t || '').trim().replace(/^#+/, '').replace(/[^\p{L}\p{N}_ ]/gu, '')).map(t => hash ? t.replace(/\s+/g, '') : t).filter(Boolean).slice(0, n).map(t => hash ? '#' + t : t);
@@ -386,18 +408,20 @@ Answer with JSON only, exactly these keys:
     try {
       const r = await sample.json(seoPrompt(p), { modelTier: 'quick' }), x = r && r.value !== undefined ? r.value : r;
       if (!x || typeof x !== 'object') return false;
-      seo[p.id] = { sig: seoSig(p), at: new Date().toISOString(), keywords: tagList(x.keywords, false, 8), altText: clean(x.altText, 220),
-        instagram: { hashtags: tagList(x.instagram && x.instagram.hashtags, true, 12) }, facebook: { hashtags: tagList(x.facebook && x.facebook.hashtags, true, 3) },
-        tiktok: { title: clean(x.tiktok && x.tiktok.title, 90), hashtags: tagList(x.tiktok && x.tiktok.hashtags, true, 5) },
-        youtube: { title: clean(x.youtube && x.youtube.title, 90), tags: tagList(x.youtube && x.youtube.tags, false, 12) },
+      const brand = l => { const out = l.filter(t => !/^#(fyp|foryou|foryoupage|viral|explore|trending|like4like|follow4follow)$/i.test(t)); return out; };
+      const capTags = (ch, v) => { const l = brand(tagList(v, true, 10)), n = MAXTAGS[ch]; if (!n) return []; if (!l.some(t => /^#RSHSports$/i.test(t)) && n >= 3) { l.splice(Math.min(l.length, n - 1), 0, '#RSHSports'); } return l.slice(0, n); };
+      seo[p.id] = { sig: seoSig(p), at: new Date().toISOString(), v: 2, primary: clean(x.primaryKeyword, 60).toLowerCase(), keywords: tagList(x.keywords, false, 6), firstLine: clean(x.firstLine, 90), onScreen: clean(x.onScreenText, 45), spoken: clean(x.spokenLine, 140), altText: clean(x.altText, 220), notes: clean(x.notes, 240),
+        instagram: { hashtags: capTags('instagram', x.instagram && x.instagram.hashtags) }, facebook: { hashtags: capTags('facebook', x.facebook && x.facebook.hashtags) },
+        tiktok: { title: clean(x.tiktok && x.tiktok.title, 90), hashtags: capTags('tiktok', x.tiktok && x.tiktok.hashtags) },
+        youtube: { title: clean(x.youtube && x.youtube.title, 100), descriptionLead: clean(x.youtube && x.youtube.descriptionLead, 160), tags: tagList(x.youtube && x.youtube.tags, false, 8), hashtags: capTags('youtube', x.youtube && x.youtube.hashtags) },
         pinterest: { title: clean(x.pinterest && x.pinterest.title, 100), description: clean(x.pinterest && x.pinterest.description, 450) },
-        threads: { hashtags: tagList(x.threads && x.threads.hashtags, true, 1) }, bluesky: { hashtags: tagList(x.bluesky && x.bluesky.hashtags, true, 2) } };
+        threads: { hashtags: capTags('threads', x.threads && x.threads.hashtags) }, bluesky: { hashtags: capTags('bluesky', x.bluesky && x.bluesky.hashtags) } };
       return true;
     } catch (e) { seoNote = 'Quill could not reach Claude' + (e && e.code ? ` (${e.code})` : '') + '. SEO will be tried again on the next run.'; return false; }
   }
   async function seoRun(posts, step) {
     seoNote = ''; let wrote = 0;
-    const todo = posts.filter(p => !seo[p.id] || seo[p.id].sig !== seoSig(p)).slice(0, 10);
+    const todo = posts.filter(p => !seo[p.id] || seo[p.id].sig !== seoSig(p) || seo[p.id].v !== 2).slice(0, 12);
     for (const p of todo) { step && step(`Quill is writing SEO for “${cut(p.title, 40)}”…`); if (await writeSeo(p)) wrote++; else if (seoNote) break; }
     if (wrote && db) { try { await db.doc('bots/seo').set({ json: JSON.stringify(seo).slice(0, 240000), updatedAt: new Date().toISOString() }); } catch (_) {} }
     return { wrote, have: posts.filter(p => seo[p.id]).length, total: posts.length };
@@ -464,15 +488,31 @@ Answer with JSON only, exactly these keys:
       const video = /reel|video|story/i.test(p.postType || '');
       if ((it.channel === 'tiktok' || it.channel === 'youtube') && !video) out.push(['warn', `${NAME[it.channel]} needs a video; this campaign is a ${p.postType || 'photo'}`]);
       if (/rshsports\.com/i.test(it.caption) && !/[?&]utm_/i.test(it.caption)) out.push(['warn', 'Store link has no tracking']);
+      { const tags = (it.caption.match(/(^|\s)#[\p{L}\p{N}_]+/gu) || []).length, mx = MAXTAGS[it.channel];
+        if (mx != null && tags > mx) out.push([it.channel === 'instagram' || it.channel === 'tiktok' ? 'stop' : 'warn', mx === 0 ? `${NAME[it.channel]} works on keywords, not hashtags: remove the ${tags} hashtag${tags === 1 ? '' : 's'}` : `${tags} hashtags; ${NAME[it.channel]} allows ${mx}`]); }
+      if (/\b(comment (yes|below if)|like if|tag \d+ (friends|people)|share if you agree|type (yes|amen))\b/i.test(it.caption)) out.push(['warn', 'Engagement-bait wording: Meta cuts reach for it']);
       if (it.edited) out.push(['warn', 'Edited by hand']);
+      if (it.moved) out.push(['warn', it.moved]);
+      if (it.dykWarn) out.push(['warn', it.dykWarn]);
       it.checks = out; it.ready = !out.some(c => c[0] === 'stop');
     }
   }
 
   /* ---------- run ---------- */
+  // Weekly rule: every Tuesday is the “Did You Know” (DYK) video on every channel except Pinterest.
+  const isDyk = p => /\bDYK\b|did\s+you\s+know/i.test([p.title, p.hook, p.angle, p.postType].join(' '));
+  const dow = d => new Date(d + 'T12:00:00').getDay();
+  const shiftDay = (d, n) => { const x = new Date(d + 'T12:00:00'); x.setDate(x.getDate() + n); return iso(x); };
+  function dayFor(p, ch) {
+    const rule = settings.dykDay; if (rule == null || rule === '' || ch === 'pinterest') return { date: p.date };
+    const tue = dow(p.date) === Number(rule), dayName = new Date(2026, 0, 4 + Number(rule)).toLocaleDateString('en-US', { weekday: 'long' });
+    if (isDyk(p)) return tue ? { date: p.date } : { date: p.date, dykWarn: `DYK videos go out on ${dayName}; this campaign is planned for a ${new Date(p.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long' })}` };
+    return tue ? { date: shiftDay(p.date, 1), moved: `${dayName} is the DYK day, so this moved to the next day.` } : { date: p.date };
+  }
   function targets(p) {            // the campaign's own channel first, then the extra channels chosen in setup
     const own = String(p.platform || '').toLowerCase().replace(/[^a-z]/g, ''), list = NAME[own] ? [own] : [];
     for (const c of settings.channels) if (!list.includes(c)) list.push(c);
+    if (isDyk(p) && settings.dykDay != null && settings.dykDay !== '') for (const c of CHANNELS.map(x => x[0])) if (c !== 'pinterest' && !list.includes(c)) list.push(c);   // DYK goes everywhere but Pinterest
     return list;
   }
   function runAll() {
@@ -481,7 +521,10 @@ Answer with JSON only, exactly these keys:
     const old = new Map(((plan && plan.items) || []).map(i => [i.postId + '|' + i.channel, i])), items = [];
     for (const p of inRange) for (const ch of targets(p)) {
       const prev = old.get(p.id + '|' + ch);
-      items.push(prev && prev.edited ? { ...prev, date: prev.placed ? prev.date : p.date } : { postId: p.id, channel: ch, date: p.date, time: '', caption: captionFor(p, ch), edited: false, ...(prev && prev.posted ? { posted: prev.posted } : {}) });
+      const dd = dayFor(p, ch);
+      const it = prev && prev.edited ? { ...prev, date: prev.placed ? prev.date : dd.date } : { postId: p.id, channel: ch, date: dd.date, time: '', caption: captionFor(p, ch), edited: false, ...(prev && prev.posted ? { posted: prev.posted } : {}), ...(prev && prev.sent ? { sent: prev.sent, placed: prev.placed, mediaUrl: prev.mediaUrl } : {}) };
+      if (dd.moved) it.moved = dd.moved; else delete it.moved; if (dd.dykWarn) it.dykWarn = dd.dykWarn; else delete it.dykWarn;
+      items.push(it);
     }
     const learned = schedule(items); check(items, posts);
     const ready = items.filter(i => i.ready).length;
@@ -704,6 +747,7 @@ Answer with JSON only, exactly these keys:
         <div class="setup">
           <div><label class="h">Also post each campaign to</label><div class="chs">${CHANNELS.map(c => `<label><input type="checkbox" data-bot-ch="${c[0]}" ${settings.channels.includes(c[0]) ? 'checked' : ''}> ${esc(c[1])}</label>`).join('')}</div><div class="small" style="margin-top:4px">A campaign always goes to its own channel as well.</div></div>
           <div><label class="h" for="rshBotTimes">Posting times, US Eastern</label><input type="text" id="rshBotTimes" value="${esc(settings.times.map(t => t + (settings.labels && settings.labels[t] ? ' ' + settings.labels[t] : '')).join(', '))}" size="38" placeholder="12:00 lunch break, 18:00 after practice"><div class="small" style="margin-top:4px">24-hour time, then an optional name. Separate slots with commas.</div></div>
+          <div><label class="h" for="rshBotDyk">“Did You Know” video day</label><select id="rshBotDyk"><option value="" ${settings.dykDay == null || settings.dykDay === '' ? 'selected' : ''}>No weekly DYK day</option>${['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((d, i) => `<option value="${i}" ${String(settings.dykDay) === String(i) ? 'selected' : ''}>${d}</option>`).join('')}</select><div class="small" style="margin-top:4px">DYK campaigns go to every channel except Pinterest on this day; other posts move off it (Pinterest stays as planned).</div></div>
           <div><label class="h" for="rshBotDays">Look ahead</label><select id="rshBotDays">${[7, 14, 21, 30].map(n => `<option value="${n}" ${settings.days === n ? 'selected' : ''}>${n} days</option>`).join('')}</select></div>
         </div>
         <div style="margin-top:16px"><label style="display:inline-flex;gap:8px;align-items:flex-start;font-size:13px;cursor:pointer"><input type="checkbox" id="rshBotAutoSend" ${settings.autoSend ? 'checked' : ''} style="margin-top:2px"><span><strong>Tempo schedules ready posts in Metricool by itself</strong><br><span class="small">When you press Run everything, every post with both approvals and all checks passed is scheduled on its day, with its photo or video and Quill’s hashtags. Posts that are not approved are never sent.</span></span></label></div>
@@ -745,9 +789,14 @@ Answer with JSON only, exactly these keys:
   // kept within the channel's length limit.
   function sendText(it) {
     const cap = String(it.caption || '').replace(/\s+$/, ''), so = seoFor(it.postId, it.channel);
-    if (!so || /(^|\s)#[\p{L}\p{N}_]+/u.test(cap)) return cap;
-    let out = cap; const tags = (so.ch.hashtags || []).filter(t => !cap.toLowerCase().includes(t.toLowerCase()));
-    for (const t of tags) { const next = out + (out === cap ? '\n\n' : ' ') + t; if (next.length > (LIMIT[it.channel] || 2200)) break; out = next; }
+    if (!so) return cap;
+    const have = (cap.match(/(^|\s)#[\p{L}\p{N}_]+/gu) || []).length, room = Math.max(0, (MAXTAGS[it.channel] == null ? 5 : MAXTAGS[it.channel]) - have);
+    let base = cap;
+    if (it.channel === 'youtube' && so.ch.descriptionLead && !cap.toLowerCase().includes(so.ch.descriptionLead.toLowerCase().slice(0, 30))) base = so.ch.descriptionLead + '\n\n' + cap;
+    if (!room) return base;
+    let out = base; const tags = (so.ch.hashtags || []).filter(t => !cap.toLowerCase().includes(t.toLowerCase())).slice(0, room);
+    const capRef = base;
+    for (const t of tags) { const next = out + (out === capRef ? '\n\n' : ' ') + t; if (next.length > (LIMIT[it.channel] || 2200)) break; out = next; }
     return out;
   }
   function metricoolPost(it, mode, ai) {
@@ -844,13 +893,19 @@ Answer with JSON only, exactly these keys:
     const so = seoFor(it.postId, it.channel); if (!so) return '';
     const key = it.postId + '|' + it.channel, tags = (so.ch.hashtags || []).filter(t => !it.caption.toLowerCase().includes(t.toLowerCase()));
     const rows = [];
+    if (so.primary) rows.push(`<div><b>Main keyword:</b> ${esc(so.primary)}</div>`);
+    if (so.firstLine && !it.caption.toLowerCase().startsWith(so.firstLine.toLowerCase().slice(0, 25))) rows.push(`<div><b>Keyword-first opening (optional):</b> ${esc(so.firstLine)} <button type="button" class="btn ghost smallbtn" data-bot-firstline="${esc(key)}">Use as first line</button></div>`);
+    if (so.ch.descriptionLead) rows.push(`<div><b>Description opening:</b> ${esc(so.ch.descriptionLead)}</div>`);
+    if (so.onScreen) rows.push(`<div><b>On screen, first 3 seconds:</b> ${esc(so.onScreen)}</div>`);
+    if (so.spoken) rows.push(`<div><b>Say, first 3 seconds:</b> ${esc(so.spoken)}</div>`);
     if (so.ch.title) rows.push(`<div><b>${it.channel === 'youtube' ? 'YouTube title' : it.channel === 'pinterest' ? 'Pin title' : 'Title'}:</b> ${esc(so.ch.title)}</div>`);
     if (so.ch.description) rows.push(`<div><b>Pin description:</b> ${esc(so.ch.description)}</div>`);
     if (so.ch.tags && so.ch.tags.length) rows.push(`<div><b>Tags:</b> ${esc(so.ch.tags.join(', '))}</div>`);
     if (so.ch.hashtags && so.ch.hashtags.length) rows.push(`<div><b>Hashtags:</b> ${esc(so.ch.hashtags.join(' '))} ${tags.length ? `<button type="button" class="btn ghost smallbtn" data-bot-addtags="${esc(key)}">Add hashtags</button>` : '<span class="small">✓ in caption</span>'}</div>`);
     if (so.keywords.length) rows.push(`<div><b>Keywords:</b> ${esc(so.keywords.join(', '))}</div>`);
     if (so.altText) rows.push(`<div><b>Alt text:</b> ${esc(so.altText)}</div>`);
-    return `<details class="seo" style="margin-top:6px"><summary class="small"><strong>SEO by Quill</strong> · sent with the post where the channel supports it</summary><div class="small" style="display:grid;gap:4px;margin-top:6px">${rows.join('')}</div></details>`;
+    if (so.notes) rows.push(`<div><b>Senior note:</b> ${esc(so.notes)}</div>`);
+    return `<details class="seo" style="margin-top:6px"><summary class="small"><strong>SEO by Quill</strong> · hashtags, titles, tags and alt text go to Metricool with the post</summary><div class="small" style="display:grid;gap:4px;margin-top:6px">${rows.join('')}</div></details>`;
   }
   // Ref's advice for a held-back campaign: the one thing to do next, with a button that opens that step.
   function nextStep(p, c) {
@@ -868,6 +923,8 @@ Answer with JSON only, exactly these keys:
   async function onClick(e) {
     const at = e.target.closest('[data-bot-addtags]');
     if (at) { const it = find(at.dataset.botAddtags), so = it && seoFor(it.postId, it.channel); if (it && so) { const add = (so.ch.hashtags || []).filter(t => !it.caption.toLowerCase().includes(t.toLowerCase())); if (add.length) { it.caption = it.caption.replace(/\s+$/, '') + (/(#[\p{L}\p{N}_]+)\s*$/u.test(it.caption) ? ' ' : '\n\n') + add.join(' '); it.edited = true; await save(); render(); } } return; }
+    const fln = e.target.closest('[data-bot-firstline]');
+    if (fln) { const it = find(fln.dataset.botFirstline), so = it && seoFor(it.postId, it.channel); if (it && so && so.firstLine) { it.caption = so.firstLine + '\n\n' + it.caption; it.edited = true; await save(); render(); } return; }
     const oc = e.target.closest('[data-bot-opencamp]'); if (oc) { e.preventDefault(); if (app().openNext) app().openNext(oc.dataset.botOpencamp); return; }
     const tb = e.target.closest('[data-bot-tab]'); if (tb) { tab = tb.dataset.botTab; return render(); }
     const fl = e.target.closest('[data-bot-filter]'); if (fl) { filter = fl.dataset.botFilter; return render(); }
@@ -907,6 +964,7 @@ Answer with JSON only, exactly these keys:
     if (t.id === 'rshBotAutoEdit') { settings.autoEdit = t.checked; if (db) { try { await db.doc('bots/settings').set({ json: JSON.stringify(settings) }); } catch (_) {} } return render(); }
     if (t.dataset.botCh) { settings.channels = [...document.querySelectorAll('#rshBots [data-bot-ch]:checked')].map(x => x.dataset.botCh); note = 'Setup changed. Press “Run everything” to apply it.'; if (db) { try { await db.doc('bots/settings').set({ json: JSON.stringify(settings) }); } catch (_) {} } return render(); }
     if (t.id === 'rshBotTimes') { const labels = {}, ts = []; for (const part of t.value.split(',')) { const m = part.trim().match(/^([01]?\d|2[0-3]):([0-5]\d)\s*(.*)$/); if (!m) continue; const k = m[1].padStart(2, '0') + ':' + m[2]; if (!ts.includes(k)) ts.push(k); if (m[3].trim()) labels[k] = m[3].trim().slice(0, 30); } if (!ts.length) { note = 'Enter at least one time like 18:00.'; return render(); } settings.times = ts; settings.labels = labels; note = 'Setup changed. Press “Run everything” to apply it.'; if (db) { try { await db.doc('bots/settings').set({ json: JSON.stringify(settings) }); } catch (_) {} } return render(); }
+    if (t.id === 'rshBotDyk') { settings.dykDay = t.value === '' ? '' : Number(t.value); note = 'Setup changed. Press “Run everything” to apply it.'; if (db) { try { await db.doc('bots/settings').set({ json: JSON.stringify(settings) }); } catch (_) {} } return render(); }
     if (t.id === 'rshBotDays') { settings.days = Number(t.value) || 14; note = 'Setup changed. Press “Run everything” to apply it.'; if (db) { try { await db.doc('bots/settings').set({ json: JSON.stringify(settings) }); } catch (_) {} } return render(); }
     if (t.dataset.botTime) { const it = find(t.dataset.botTime); if (it && /^\d\d:\d\d$/.test(t.value)) { it.time = t.value; it.edited = true; await save(); render(); } }
   }
@@ -936,5 +994,5 @@ Answer with JSON only, exactly these keys:
     }
     render();
   }
-  window.RSH_BOTS = { sendText, autoSend, seoFor, seoRun, learnedTimes, schedule, attachForPost, driveUpload, fileFor, autoLink, needsFile, readyItems, placedOn, place, unplace, setMediaUrl, sendToMetricool, metricoolPost, NAME, freshVideos, watch, onChange: f => listeners.push(f), handoff, collect, start, captionFor, assetNeeds, imagePrompt, videoBrief, editJob };
+  window.RSH_BOTS = { dayFor, isDyk, targets, sendText, autoSend, seoFor, seoRun, learnedTimes, schedule, attachForPost, driveUpload, fileFor, autoLink, needsFile, readyItems, placedOn, place, unplace, setMediaUrl, sendToMetricool, metricoolPost, NAME, freshVideos, watch, onChange: f => listeners.push(f), handoff, collect, start, captionFor, assetNeeds, imagePrompt, videoBrief, editJob };
 })();
