@@ -133,7 +133,7 @@
   }
 
   /* ---------- details panel: the whole idea for one campaign, to read, copy from, or edit ---------- */
-  const FIELDS = [['hook', 'Hook', 'big', 2], ['caption', 'Caption and call to action', '', 9], ['onImageText', 'Text on the image', '', 2], ['visualConcept', 'Visual concept', '', 4], ['visualPrompt', 'Image prompt / storyboard', '', 10]];
+  const FIELDS = [['hook', 'Hook', 'big', 2], ['caption', 'Caption and call to action', '', 9], ['onImageText', 'Text on the image', '', 2], ['visualConcept', 'Visual concept', '', 4], ['visualPrompt', 'Image prompt / storyboard', '', 10], ['script', 'Script (scene by scene, with timings such as 0–2s:)', '', 12], ['voiceover', 'Voice-over', '', 6]];
   let detailId = null, editing = false, detailNote = '';
   function closeDetail() { detailId = null; editing = false; detailNote = ''; const d = document.getElementById('rshDetail'), b = document.getElementById('rshDetailBack'); if (d) d.remove(); if (b) b.remove(); }
   function openDetail(id) { detailId = id; editing = false; detailNote = ''; paintDetail(); }
