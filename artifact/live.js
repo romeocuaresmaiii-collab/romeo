@@ -11,40 +11,45 @@
   const BRAND_ID = '5695688';                      // RSH Sports brand in Metricool
   const FIELDS = ['BSPO01', 'BSPO02', 'BSPO03', 'BSPO05', 'BSPO06', 'BSPO07', 'BSPO09'];
   const DOC = 'live/metricool', DAYS = 14, STALE_MS = 3 * 3600 * 1000;
+  const SCHED_TOOL = 'getScheduledPosts', FOLLOW_FIELDS = ['IGEV01', 'FBEV17', 'TKEV07', 'YTEV01', 'PIEV09', 'THEV01', 'BKEV01'], FOLLOW_NETS = ['INSTAGRAM', 'FACEBOOK', 'TIKTOK', 'YOUTUBE', 'PINTEREST', 'THREADS', 'BLUESKY'];
   const NETS = { INSTAGRAM: 'Instagram', FACEBOOK: 'Facebook', TIKTOK: 'TikTok', YOUTUBE: 'YouTube', PINTEREST: 'Pinterest', THREADS: 'Threads', BLUESKY: 'Bluesky', TWITTER: 'X', LINKEDIN: 'LinkedIn' };
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const fmt = n => Math.round(n).toLocaleString('en-US');
   const use = name => (window.claude && typeof window.claude.use === 'function') ? window.claude.use(name).catch(() => null) : Promise.resolve(null);
-  let db = null, state = { rows: null, fetchedAt: null, busy: false, note: '' };
+  let db = null, canRefresh = false, state = { rows: null, fetchedAt: null, followers: null, scheduled: null, busy: false, note: '' };
 
   const css = document.createElement('style');
   css.textContent = `
-  #rshLive .live-head{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;align-items:flex-start}
-  #rshLive .live-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-top:16px}
-  #rshLive .live-tile{border:1px solid #e5e5ea;border-radius:14px;padding:14px 16px;background:#fff;min-width:0}
-  #rshLive .live-tile .n{font-size:28px;font-weight:800;letter-spacing:-.02em;color:#1d1d1f;font-variant-numeric:tabular-nums;margin-top:4px}
-  #rshLive .delta{font-size:12px;font-weight:700;font-variant-numeric:tabular-nums}
-  #rshLive .delta.up{color:#1a7f37}#rshLive .delta.down{color:#b42318}#rshLive .delta.flat{color:#6e6e73}
-  #rshLive .live-grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:16px;margin-top:16px}
-  @media (max-width:900px){#rshLive .live-grid{grid-template-columns:minmax(0,1fr)}}
-  #rshLive .live-box{border:1px solid #e5e5ea;border-radius:14px;padding:14px 16px;background:#fff;min-width:0}
-  #rshLive h3{margin:0 0 10px;font-size:14px}
-  #rshLive .scroll{overflow-x:auto}
-  #rshLive table{width:100%;border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums}
-  #rshLive th{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:#6e6e73;text-align:right;padding:6px 8px;font-weight:700;white-space:nowrap}
-  #rshLive th:first-child,#rshLive td:first-child{text-align:left}
-  #rshLive td{padding:8px;border-top:1px solid #f0f0f3;text-align:right;color:#1d1d1f;white-space:nowrap}
-  #rshLive .bar{height:6px;border-radius:3px;background:#0071e3;min-width:2px;margin-top:5px}
-  #rshLive .top{display:flex;gap:10px;align-items:baseline;padding:9px 0;border-top:1px solid #f0f0f3;font-size:12.5px}
-  #rshLive .top:first-of-type{border-top:0}
-  #rshLive .top .rank{font-weight:800;color:#6e6e73;width:14px;flex:none}
-  #rshLive .top .what{flex:1;min-width:0}
-  #rshLive .top .what a{color:#0066cc;font-weight:700;text-decoration:none;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  #rshLive .top .what a:hover{text-decoration:underline}
-  #rshLive .top .num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;color:#1d1d1f;font-weight:700}
-  #rshLive .insight{margin-top:14px;padding:12px 14px;border-radius:12px;background:#f5f8ff;border:1px solid #dbe7fb;font-size:13px;color:#1d1d1f;line-height:1.5}
-  #rshLive .live-empty{margin-top:14px;padding:22px;border:1px dashed #c7c7cc;border-radius:14px;text-align:center;color:#515154;font-size:13px;line-height:1.5}
-  #rshLive .live-foot{margin-top:12px;font-size:11.5px;color:#6e6e73;line-height:1.5}`;
+  .rsh-live .live-head{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;align-items:flex-start}
+  .rsh-live .live-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-top:16px}
+  .rsh-live .live-tile{border:1px solid #e5e5ea;border-radius:14px;padding:14px 16px;background:#fff;min-width:0}
+  .rsh-live .live-tile .n{font-size:28px;font-weight:800;letter-spacing:-.02em;color:#1d1d1f;font-variant-numeric:tabular-nums;margin-top:4px}
+  .rsh-live .delta{font-size:12px;font-weight:700;font-variant-numeric:tabular-nums}
+  .rsh-live .delta.up{color:#1a7f37}.rsh-live .delta.down{color:#b42318}.rsh-live .delta.flat{color:#6e6e73}
+  .rsh-live .live-grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:16px;margin-top:16px}
+  @media (max-width:900px){.rsh-live .live-grid{grid-template-columns:minmax(0,1fr)}}
+  .rsh-live .live-box{border:1px solid #e5e5ea;border-radius:14px;padding:14px 16px;background:#fff;min-width:0}
+  .rsh-live h3{margin:0 0 10px;font-size:14px}
+  .rsh-live .scroll{overflow-x:auto}
+  .rsh-live table{width:100%;border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums}
+  .rsh-live th{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:#6e6e73;text-align:right;padding:6px 8px;font-weight:700;white-space:nowrap}
+  .rsh-live th:first-child,.rsh-live td:first-child{text-align:left}
+  .rsh-live td{padding:8px;border-top:1px solid #f0f0f3;text-align:right;color:#1d1d1f;white-space:nowrap}
+  .rsh-live .bar{height:6px;border-radius:3px;background:#0071e3;min-width:2px;margin-top:5px}
+  .rsh-live .top{display:flex;gap:10px;align-items:baseline;padding:9px 0;border-top:1px solid #f0f0f3;font-size:12.5px}
+  .rsh-live .top:first-of-type{border-top:0}
+  .rsh-live .top .rank{font-weight:800;color:#6e6e73;width:14px;flex:none}
+  .rsh-live .top .what{flex:1;min-width:0}
+  .rsh-live .top .what a{color:#0066cc;font-weight:700;text-decoration:none;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rsh-live .top .what a:hover{text-decoration:underline}
+  .rsh-live .top .num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;color:#1d1d1f;font-weight:700}
+  .rsh-live .insight{margin-top:14px;padding:12px 14px;border-radius:12px;background:#f5f8ff;border:1px solid #dbe7fb;font-size:13px;color:#1d1d1f;line-height:1.5}
+  .rsh-live .live-empty{margin-top:14px;padding:22px;border:1px dashed #c7c7cc;border-radius:14px;text-align:center;color:#515154;font-size:13px;line-height:1.5}
+  .rsh-live .sched{display:flex;gap:10px;padding:8px 0;border-top:1px solid #f0f0f3;font-size:12.5px;align-items:baseline}
+  .rsh-live .sched:first-of-type{border-top:0}
+  .rsh-live .sched .when{flex:none;width:96px;font-weight:700;color:#1d1d1f;font-variant-numeric:tabular-nums}
+  .rsh-live .sched .what{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rsh-live .live-foot{margin-top:12px;font-size:11.5px;color:#6e6e73;line-height:1.5}`;
   document.head.appendChild(css);
 
   /* ---------- data ---------- */
@@ -96,12 +101,30 @@
   const shortDate = k => new Date(Math.floor(k / 10000), Math.floor(k / 100) % 100 - 1, k % 100).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   const formatName = f => ({ REEL: 'Reel', VIDEO: 'video', IMAGE: 'photo', CAROUSEL: 'carousel', ALBUM: 'album', PIN: 'Pin', STORY: 'Story' }[f] || f.toLowerCase());
 
-  function render() {
-    const host = document.getElementById('rshLive'); if (!host) return;
+  function followersBox() {
+    const f = state.followers; if (!f || !f.length) return '';
+    const total = f.reduce((a, r) => a + (r[4] || 0), 0), start = f.reduce((a, r) => a + (r[2] || 0), 0), gain = total - start;
+    const rows = f.slice().sort((a, b) => (b[4] || 0) - (a[4] || 0)).map(r => { const d = (r[4] || 0) - (r[2] || 0); return `<tr><td><strong>${esc(NETS[r[0]] || r[0])}</strong></td><td>${fmt(r[4] || 0)}</td><td><span class="delta ${d > 0 ? 'up' : d < 0 ? 'down' : 'flat'}">${d > 0 ? '+' : ''}${fmt(d)}</span></td></tr>`; }).join('');
+    const since = f.reduce((m, r) => Math.min(m, r[1]), 99999999);
+    return `<div class="live-box"><h3>Followers · ${fmt(total)} across ${f.length} channels</h3><div class="scroll"><table><thead><tr><th>Channel</th><th>Followers</th><th>Since ${esc(shortDate(since))}</th></tr></thead><tbody>${rows}<tr><td><strong>All channels</strong></td><td><strong>${fmt(total)}</strong></td><td><span class="delta ${gain > 0 ? 'up' : gain < 0 ? 'down' : 'flat'}">${gain > 0 ? '+' : ''}${fmt(gain)}</span></td></tr></tbody></table></div></div>`;
+  }
+  function scheduledBox() {
+    const all = state.scheduled; if (!all) return '';
+    const now = new Date(), stamp = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}T${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    const limit = new Date(now); limit.setDate(limit.getDate() + 7);
+    const next = all.filter(p => p[0] >= stamp(now).slice(0, 10) && p[0] <= stamp(limit)).sort((a, b) => a[0] < b[0] ? -1 : 1);
+    const drafts = next.filter(p => p[4]).length;
+    const label = t => { const d = new Date(t + ':00'); return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) + ' ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }); };
+    const list = next.slice(0, 7).map(p => `<div class="sched"><span class="when">${esc(label(p[0]))}</span><span class="what"><strong>${esc(p[2] || p[3])}</strong><br><span class="small">${esc(p[3])} · ${esc(p[1].split(',').map(n => NETS[n.toUpperCase()] || n).join(', '))}${p[4] ? ' · draft' : ''}</span></span></div>`).join('');
+    return `<div class="live-box"><h3>Scheduled in Metricool · next 7 days</h3>${next.length ? `<div class="small" style="margin-bottom:6px">${next.length} post${next.length === 1 ? '' : 's'} scheduled${drafts ? `, ${drafts} still draft` : ''}. Times are US Eastern.</div>${list}${next.length > 7 ? `<div class="small" style="margin-top:6px">…and ${next.length - 7} more.</div>` : ''}` : '<div class="small">Nothing is scheduled in Metricool for the next 7 days.</div>'}</div>`;
+  }
+
+  function render() { document.querySelectorAll('.rsh-live').forEach(renderInto); }
+  function renderInto(host) {
     const when = state.fetchedAt ? new Date(state.fetchedAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
     let body;
     if (!state.rows) {
-      body = `<div class="live-empty"><strong>No live results loaded yet.</strong><br>Press “Refresh from Metricool” to pull the last ${DAYS * 2} days of published posts for RSH Sports. The first time, Claude asks you to allow the Metricool connector for this page.</div>`;
+      body = `<div class="live-empty"><strong>No live results loaded yet.</strong><br>${canRefresh ? `Press “Refresh from Metricool” to pull the last ${DAYS * 2} days of published posts for RSH Sports. The first time, Claude asks you to allow the Metricool connector for this page.` : 'Results from Metricool appear here as soon as they are loaded into this workspace.'}</div>`;
     } else {
       const s = summarise(state.rows, state.fetchedAt);
       const er = rate(s.cur), erPrev = rate(s.prev);
@@ -125,16 +148,40 @@
         </table></div></div>
         <div class="live-box"><h3>Top posts · last ${DAYS} days</h3>${s.tops.length ? s.tops.map((r, i) => `<div class="top"><span class="rank">${i + 1}</span><div class="what"><a href="${esc(/^https:\/\//.test(r[2]) ? r[2] : '#')}" target="_blank" rel="noopener noreferrer">${esc(r[3] || ((NETS[r[0]] || r[0]) + ' ' + formatName(r[6])))}</a><span class="small">${esc(NETS[r[0]] || r[0])} · ${esc(formatName(r[6]))} · ${esc(shortDate(r[1]))}</span></div><div class="num">${fmt(r[5] || 0)} <span class="small">interactions</span><br><span class="small">${fmt(r[4])} impressions</span></div></div>`).join('') : '<div class="small">No measured posts in this period.</div>'}</div>
       </div>
-      <div class="live-foot">Period: ${esc(shortDate(dayKey(s.w.curFrom)))} – ${esc(shortDate(dayKey(s.w.curTo)))}, compared with ${esc(shortDate(dayKey(s.w.prevFrom)))} – ${esc(shortDate(dayKey(s.w.prevTo)))}. Impressions and interactions are per-post figures exactly as Metricool reports them${unmeasured ? `; ${unmeasured} post${unmeasured === 1 ? '' : 's'} (mostly Stories and very recent posts) have no figures yet and are counted as published only` : ''}. Follower counts and website sales are not included here.</div>`;
+      ${(state.followers && state.followers.length) || state.scheduled ? `<div class="live-grid">${followersBox()}${scheduledBox()}</div>` : ''}
+      <div class="live-foot">Period: ${esc(shortDate(dayKey(s.w.curFrom)))} – ${esc(shortDate(dayKey(s.w.curTo)))}, compared with ${esc(shortDate(dayKey(s.w.prevFrom)))} – ${esc(shortDate(dayKey(s.w.prevTo)))}. Impressions and interactions are per-post figures exactly as Metricool reports them${unmeasured ? `; ${unmeasured} post${unmeasured === 1 ? '' : 's'} (mostly Stories and very recent posts) have no figures yet and are counted as published only` : ''}. Website sales are not included here.</div>`;
     }
     host.innerHTML = `
       <div class="live-head">
         <div><div class="eyebrow">LIVE RESULTS · METRICOOL</div><h2 style="margin-top:6px">How RSH Sports is performing right now</h2>
         <p style="margin-top:6px">Every published post across your channels, pulled straight from Metricool.</p></div>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="tag ${state.rows ? 'good' : 'warn'}" id="rshLiveStamp">${state.busy ? 'Refreshing…' : when ? 'Updated ' + esc(when) : 'Not loaded'}</span><button class="btn smallbtn" id="rshLiveRefresh" type="button" ${state.busy ? 'disabled' : ''}>↻ Refresh from Metricool</button></div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="tag ${state.rows ? 'good' : 'warn'}" data-live-stamp>${state.busy ? 'Refreshing…' : when ? 'Updated ' + esc(when) : 'Not loaded'}</span>${canRefresh ? `<button class="btn smallbtn" data-live-refresh type="button" ${state.busy ? 'disabled' : ''}>↻ Refresh from Metricool</button>` : ''}</div>
       </div>
       ${state.note ? `<div class="hint" role="status" style="margin-top:12px">${esc(state.note)}</div>` : ''}${body}`;
-    document.getElementById('rshLiveRefresh').addEventListener('click', () => refresh(true));
+    const btn = host.querySelector('[data-live-refresh]'); if (btn) btn.addEventListener('click', () => refresh(true));
+  }
+
+  function findFollowerRows(result) {
+    const rows = findRows(result && (result.payload !== undefined ? result.payload : result), 0); if (!rows) return null;
+    const sorted = rows.filter(r => Array.isArray(r) && r.length >= FOLLOW_FIELDS.length + 1).map(r => ({ day: Number(String(r[r.length - 1]).slice(0, 8)), v: r })).sort((a, b) => a.day - b.day);
+    const out = [];
+    FOLLOW_NETS.forEach((net, i) => { const have = sorted.filter(x => num(x.v[i]) !== null); if (have.length) out.push([net, have[0].day, num(have[0].v[i]), have[have.length - 1].day, num(have[have.length - 1].v[i])]); });
+    return out.length ? out : null;
+  }
+  function compactScheduled(result) {
+    let x = result && (result.payload !== undefined ? result.payload : result);
+    if (typeof x === 'string') { try { x = JSON.parse(x); } catch (_) { return null; } }
+    if (x && Array.isArray(x.content) && x.content[0] && typeof x.content[0].text === 'string') { try { x = JSON.parse(x.content[0].text); } catch (_) { return null; } }
+    const data = x && Array.isArray(x.data) ? x.data : null; if (!data) return null;
+    return data.map(p => {
+      const nets = (p.providers || []).map(v => String(v.network || '').toLowerCase()).filter(Boolean);
+      const only = n => nets.length === 1 && nets[0] === n, has = n => nets.indexOf(n) >= 0;
+      const text = String(p.text || '').replace(/\s+/g, ' ').trim().slice(0, 70);
+      const title = only('youtube') && p.youtubeData && p.youtubeData.title ? p.youtubeData.title : (p.facebookData && p.facebookData.title) || text;
+      const reel = (has('instagram') && p.instagramData && p.instagramData.type === 'REEL') || (has('facebook') && p.facebookData && p.facebookData.type === 'REEL');
+      const kind = reel ? 'Reel' : only('youtube') && p.youtubeData && p.youtubeData.type === 'short' ? 'Short' : p.videoThumbnailUrl ? 'Video' : only('pinterest') ? 'Pin' : 'Post';
+      return [String((p.publicationDate && p.publicationDate.dateTime) || '').slice(0, 16), nets.join(','), String(title).slice(0, 90), kind, p.draft ? 1 : 0];
+    }).filter(p => p[0]).sort((a, b) => a[0] < b[0] ? -1 : 1);
   }
 
   /* ---------- loading ---------- */
@@ -148,10 +195,19 @@
       const raw = findRows(result && (result.payload !== undefined ? result.payload : result), 0) || findRows(result, 0);
       if (!raw) throw { code: 'unreadable_answer' };
       state.rows = compact(raw); state.fetchedAt = new Date().toISOString();
+      try {
+        const fr = findFollowerRows(await mcp.callTool(SERVER, TOOL, { brandId: BRAND_ID, from: iso(w.prevFrom, '00:00:00'), to: iso(w.curTo, '23:59:59'), metrics: FOLLOW_FIELDS }));
+        if (fr) { state.followers = fr; if (db) await db.doc('live/followers').set({ fetchedAt: state.fetchedAt, followers: JSON.stringify(fr) }); }
+      } catch (_) {}
+      try {
+        const until = new Date(w.curTo); until.setDate(until.getDate() + 14);
+        const sp = compactScheduled(await mcp.callTool(SERVER, SCHED_TOOL, { brandId: BRAND_ID, fromDate: iso(w.curTo, '00:00:00'), toDate: iso(until, '23:59:59'), timezone: 'America/New_York' }));
+        if (sp) { state.scheduled = sp; if (db) await db.doc('live/scheduled').set({ fetchedAt: state.fetchedAt, posts: JSON.stringify(sp).slice(0, 230000) }); }
+      } catch (_) {}
       if (db) { try { await db.doc(DOC).set({ fetchedAt: state.fetchedAt, days: DAYS, rows: JSON.stringify(state.rows).slice(0, 230000) }); } catch (_) { state.note = 'Loaded, but the results could not be saved for other viewers.'; } }
     } catch (e) {
       const code = (e && e.code) || 'unknown';
-      const why = code === 'no_connector' ? 'Live refresh needs the Metricool connector in your own Claude account, and is not available in this view.'
+      const why = code === 'no_connector' ? 'Live refresh is not available in this view.'
         : (code === 'consent_denied' || code === 'not_granted' || code === 'denied') ? 'Metricool access was not allowed for this page, so nothing was refreshed.'
         : code === 'server_not_connected' ? 'The Metricool connector is not connected in your Claude account.'
         : code === 'unreadable_answer' ? 'Metricool answered, but not in a form this page can read.'
@@ -163,17 +219,22 @@
 
   async function start() {
     const home = document.getElementById('view-overview'); if (!home || document.getElementById('rshLive')) return;
-    const card = document.createElement('div'); card.className = 'card'; card.id = 'rshLive'; card.style.marginBottom = '16px';
-    home.insertBefore(card, home.firstChild); render();
-    db = await use('db');
+    const card = document.createElement('div'); card.className = 'card rsh-live'; card.id = 'rshLive'; card.style.marginBottom = '16px';
+    home.insertBefore(card, home.firstChild);
+    const exec = document.getElementById('view-executive');
+    if (exec) { const c2 = document.createElement('div'); c2.className = 'card rsh-live'; c2.id = 'rshLiveExecutive'; c2.style.marginBottom = '16px'; exec.insertBefore(c2, exec.firstChild); }
+    render();
+    const [d, mcp] = await Promise.all([use('db'), use('mcp')]); db = d; canRefresh = !!mcp;
     if (db) {
-      try {
-        const snap = await Promise.race([db.doc(DOC).get(), new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 10000))]);
-        if (snap.exists) { const d = snap.data(); state.rows = JSON.parse(d.rows); state.fetchedAt = d.fetchedAt; render(); }
-      } catch (_) {}
+      const read = async (path) => { try { const snap = await Promise.race([db.doc(path).get(), new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 10000))]); return snap.exists ? snap.data() : null; } catch (_) { return null; } };
+      const [posts, fol, sch] = await Promise.all([read(DOC), read('live/followers'), read('live/scheduled')]);
+      try { if (posts) { state.rows = JSON.parse(posts.rows); state.fetchedAt = posts.fetchedAt; } } catch (_) {}
+      try { if (fol) state.followers = JSON.parse(fol.followers); } catch (_) {}
+      try { if (sch) state.scheduled = JSON.parse(sch.posts); } catch (_) {}
     }
-    // Refresh on open only when results are missing or older than three hours.
-    if (!state.fetchedAt || Date.now() - new Date(state.fetchedAt).getTime() > STALE_MS) refresh(false);
+    render();
+    // With the connector available, refresh on open when results are missing or older than three hours.
+    if (canRefresh && (!state.fetchedAt || Date.now() - new Date(state.fetchedAt).getTime() > STALE_MS)) refresh(false);
   }
   window.RSH_LIVE = { start, summarise, compact, findRows };
 })();

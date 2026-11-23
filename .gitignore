@@ -4,3 +4,4 @@ node_modules/
 .DS_Store
 RSH_Sports_Marketing_OS_v9_0_8.zip
 artifact/dist/
+artifact/seed/
