@@ -18,7 +18,7 @@
   const app = () => window.RSH_APP;
   const CHANNELS = [['instagram', 'Instagram', 2200], ['facebook', 'Facebook', 5000], ['tiktok', 'TikTok', 2200], ['youtube', 'YouTube', 5000], ['pinterest', 'Pinterest', 500], ['threads', 'Threads', 500], ['bluesky', 'Bluesky', 300]];
   const NAME = Object.fromEntries(CHANNELS.map(c => [c[0], c[1]])), LIMIT = Object.fromEntries(CHANNELS.map(c => [c[0], c[2]]));
-  const DEFAULTS = { autoEdit: true, channels: ['instagram', 'facebook', 'tiktok'], times: ['12:00', '18:00'], labels: { '12:00': 'lunch break', '18:00': 'after practice' }, days: 14 };
+  const DEFAULTS = { autoEdit: true, autoSend: true, channels: ['instagram', 'facebook', 'tiktok'], times: ['12:00', '18:00'], labels: { '12:00': 'lunch break', '18:00': 'after practice' }, days: 14 };
   // RSH Sports' own accounts (from the brand's connected profiles, 23 Nov 2026). Today posts reach them through
   // Metricool or by hand; each has a slot for a direct connection from this app later.
   const ACCOUNTS = [
@@ -495,7 +495,7 @@ Answer with JSON only, exactly these keys:
     log = [['reel', !settings.autoEdit ? 'Automatic editing is off.' : jq ? `${jq} edit job${jq === 1 ? '' : 's'} with the RSH SPORTS editor${jl.filter(j => j.status === 'attached').length ? `, ${jl.filter(j => j.status === 'attached').length} finished and attached` : ''}.` : 'No video is waiting to be edited.'], ['pixel', !inRange.length ? 'No campaigns in the window.' : needing.length ? `${needing.length} of ${inRange.length} campaigns need files. Next up: “${cut(needing[0].title, 40)}” needs ${assetNeeds(needing[0]).needs.filter(n => n.state === 'miss').map(n => n.label).join(' and ')}. Briefs and prompts are in the plan.` : `All ${inRange.length} campaigns have their files.`], ['quill', items.length ? `${items.length} captions for ${inRange.length} campaign${inRange.length === 1 ? '' : 's'}. First one: ${sample}` : 'No campaigns in the window, so nothing to write.'],
       ['tempo', items.length ? `${items.length} posts timed across ${new Set(items.map(i => i.date)).size} day${new Set(items.map(i => i.date)).size === 1 ? '' : 's'}. ${Object.keys(learned).length ? 'From your own results: ' + Object.entries(learned).map(([c, L]) => `${NAME[c]} ${clockTxt(L.time)}`).join(', ') + '.' : 'Your past posts have no posting times yet; refresh the live numbers on Home so I can learn your best hours.'} Other channels use your Setup times. No clashes.` : 'Nothing to schedule.'],
       ['ref', !items.length ? 'Nothing to check.' : ready === items.length ? `All ${items.length} checks passed. Ready for Courier.` : `${ready} ready, ${items.length - ready} held back.${top ? ` Most common reason: ${top.charAt(0).toLowerCase() + top.slice(1)} (${stops[top]}).` : ''}`],
-      ['courier', ready ? `Not switched on, so nothing was sent. ${ready} post${ready === 1 ? ' is' : 's are'} ready: use Copy to paste into Metricool.` : 'Not switched on, and nothing is ready yet, so nothing was sent to Metricool.']];
+      ['courier', 'Direct posting without Metricool is not built yet. Until then Tempo schedules ready posts through Metricool.']];
     plan = { generatedAt: new Date().toISOString(), from, to, items };
     return save();
   }
@@ -534,7 +534,7 @@ Answer with JSON only, exactly these keys:
       : !items.length ? ['plain', 'Watching', 'neutral', 'Nothing to check yet.']
       : !held ? ['good', 'Satisfied', 'happy', `All ${items.length} posts passed. Good work, team.`]
       : ['bad', ready ? 'Strict' : 'Frustrated', 'strict', `I’m holding back ${held} of ${items.length} posts.` + (noMedia ? ` ${noMedia} campaign${noMedia === 1 ? ' has' : 's have'} no media.` : '') + (waiting ? ` ${waiting} still need${waiting === 1 ? 's' : ''} a review or approval.` : '')];
-    out.courier = ['off', 'Asleep', 'asleep', `Direct posting isn’t connected yet. ${ready ? `${ready} post${ready === 1 ? ' is' : 's are'} ready: post them from the Plan (Save file, Open channel, Mark as posted).` : 'Nothing is ready to post yet.'}`];
+    out.courier = ['off', 'Asleep', 'asleep', `Direct posting without Metricool isn’t built yet. ${settings.autoSend ? 'Tempo schedules ready posts through Metricool for now.' : 'Ready posts go to Metricool from the Calendar.'}`];
     const all = (app().data().posts || []).filter(q => q.date && (!plan || (q.date >= plan.from && q.date <= plan.to))), missing = all.filter(q => assetNeeds(q).missing).length;
     const js = Object.values(jobs), active = js.filter(j => j.status === 'sent').length, jWait = js.filter(j => j.status === 'queued').length, done = js.filter(j => j.status === 'attached').length, failed = js.filter(j => j.status === 'failed').length;
     out.reel = !settings.autoEdit ? ['off', 'Paused', 'asleep', 'Automatic editing is turned off in Setup.']
@@ -606,8 +606,26 @@ Answer with JSON only, exactly these keys:
     const inRange = [...new Set(((plan && plan.items) || []).map(i => i.postId))].map(id => (app().data().posts || []).find(x => x.id === id)).filter(Boolean);
     const sr = await seoRun(inRange, t => { wake = t; render(); });
     log.splice(2, 0, ['quill', seoNote ? seoNote : `SEO ready for ${sr.have} of ${sr.total} campaign${sr.total === 1 ? '' : 's'}${sr.wrote ? ` (${sr.wrote} written now)` : ''}: keywords, hashtags, YouTube titles and tags, Pinterest titles and alt text. Approved captions are not changed; press “Add hashtags” on a post to use them.`]);
+    if (settings.autoSend) { const r = await autoSend(t => { wake = t; render(); }); log.splice(log.findIndex(l => l[0] === 'tempo') + 1, 0, ['tempo', r]); }
     const lines = log; log = []; await showWork(); log = lines; busy = false; render();
     if (queued) { const next = queued; queued = ''; await work(next); }
+  }
+
+  // Tempo sends every ready post that is not in Metricool yet: on its campaign's day at the time Tempo chose,
+  // with the attached file (via Google Drive) and Quill's hashtags. Only posts the Manager Bot marked ready
+  // (both approvals, all checks) are sent; nothing is published early or without approval.
+  async function autoSend(step) {
+    const items = ((plan && plan.items) || []).filter(i => i.ready && !i.posted && !(i.sent && /scheduled|draft|queued/.test(i.sent.status)));
+    if (!items.length) return 'Nothing new to send to Metricool: every ready post is already there.';
+    let ok = 0, queued = 0; const fails = [];
+    for (const it of items) {
+      const key = it.postId + '|' + it.channel;
+      if (!it.placed) { if (!(await place(key, it.date, it.time))) { fails.push(`${NAME[it.channel]} ${it.date}: the day has passed`); continue; } }
+      step && step(`Tempo is sending ${NAME[it.channel]} · ${cut(((app().data().posts || []).find(x => x.id === it.postId) || {}).title || '', 30)} to Metricool…`);
+      const r = await sendToMetricool(key, 'schedule', false, step);
+      if (r.ok) { if (r.queued) queued++; else ok++; } else fails.push(`${NAME[it.channel]} ${it.date}: ${r.reason}`);
+    }
+    return `Sent to Metricool: ${ok} scheduled${queued ? `, ${queued} waiting for a Claude session` : ''}${fails.length ? `. Not sent (${fails.length}): ${fails.slice(0, 3).join(' · ')}${fails.length > 3 ? ' …' : ''}` : '.'}`;
   }
 
   /* ---------- rendering ---------- */
@@ -688,6 +706,7 @@ Answer with JSON only, exactly these keys:
           <div><label class="h" for="rshBotTimes">Posting times, US Eastern</label><input type="text" id="rshBotTimes" value="${esc(settings.times.map(t => t + (settings.labels && settings.labels[t] ? ' ' + settings.labels[t] : '')).join(', '))}" size="38" placeholder="12:00 lunch break, 18:00 after practice"><div class="small" style="margin-top:4px">24-hour time, then an optional name. Separate slots with commas.</div></div>
           <div><label class="h" for="rshBotDays">Look ahead</label><select id="rshBotDays">${[7, 14, 21, 30].map(n => `<option value="${n}" ${settings.days === n ? 'selected' : ''}>${n} days</option>`).join('')}</select></div>
         </div>
+        <div style="margin-top:16px"><label style="display:inline-flex;gap:8px;align-items:flex-start;font-size:13px;cursor:pointer"><input type="checkbox" id="rshBotAutoSend" ${settings.autoSend ? 'checked' : ''} style="margin-top:2px"><span><strong>Tempo schedules ready posts in Metricool by itself</strong><br><span class="small">When you press Run everything, every post with both approvals and all checks passed is scheduled on its day, with its photo or video and Quill’s hashtags. Posts that are not approved are never sent.</span></span></label></div>
         <div style="margin-top:16px"><label style="display:inline-flex;gap:8px;align-items:flex-start;font-size:13px;cursor:pointer"><input type="checkbox" id="rshBotAutoEdit" ${settings.autoEdit ? 'checked' : ''} style="margin-top:2px"><span><strong>Send video jobs to the RSH SPORTS editor automatically</strong><br><span class="small">When a Reel or video campaign has no video, Reel sends the edit job to your RSH SPORTS session and attaches the finished MP4. At most three new jobs per run. This uses your Claude usage in that session.</span></span></label></div>
         <div class="offnote"><strong>Not switched on yet</strong><div class="small" style="margin-top:4px">Courier (sending ready posts to Metricool as drafts for review) and Night Owl (running the team every day by itself). Each needs your explicit go-ahead.</div></div>
         </div>
@@ -722,10 +741,19 @@ Answer with JSON only, exactly these keys:
   function nyOffset(date, time) {
     try { const part = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', timeZoneName: 'shortOffset' }).formatToParts(new Date(`${date}T${time}:00Z`)).find(x => x.type === 'timeZoneName').value; const m = part.match(/GMT([+-]\d+)(?::(\d+))?/); const h = m ? Number(m[1]) : -5; return (h < 0 ? '-' : '+') + String(Math.abs(h)).padStart(2, '0') + ':' + ((m && m[2]) || '00'); } catch (_) { return '-05:00'; }
   }
+  // The text that goes to Metricool: the caption plus Quill's hashtags for that channel when the caption has none of its own,
+  // kept within the channel's length limit.
+  function sendText(it) {
+    const cap = String(it.caption || '').replace(/\s+$/, ''), so = seoFor(it.postId, it.channel);
+    if (!so || /(^|\s)#[\p{L}\p{N}_]+/u.test(cap)) return cap;
+    let out = cap; const tags = (so.ch.hashtags || []).filter(t => !cap.toLowerCase().includes(t.toLowerCase()));
+    for (const t of tags) { const next = out + (out === cap ? '\n\n' : ' ') + t; if (next.length > (LIMIT[it.channel] || 2200)) break; out = next; }
+    return out;
+  }
   function metricoolPost(it, mode, ai) {
     const p = (app().data().posts || []).find(x => x.id === it.postId) || {}, files = [p.creativeAsset].concat(p.creativeAssets || []).filter(Boolean);
     const vid = files.some(a => /^video\//.test(a.mime || '')), title = String(p.title || '').slice(0, 90), ch = it.channel;
-    const info = { autoPublish: true, draft: mode === 'draft', providers: [{ network: ch }], text: it.caption, firstCommentText: '', publicationDate: { dateTime: `${it.date}T${it.time}:00`, timezone: 'America/New_York' }, media: it.mediaUrl ? [it.mediaUrl] : [], mediaAltText: [], descendants: [], shortener: false, smartLinkData: { ids: [] }, hasNotReadNotes: false };
+    const info = { autoPublish: true, draft: mode === 'draft', providers: [{ network: ch }], text: sendText(it), firstCommentText: '', publicationDate: { dateTime: `${it.date}T${it.time}:00`, timezone: 'America/New_York' }, media: it.mediaUrl ? [it.mediaUrl] : [], mediaAltText: [], descendants: [], shortener: false, smartLinkData: { ids: [] }, hasNotReadNotes: false };
     const so = seoFor(it.postId, ch); if (so && so.altText && info.media.length) info.mediaAltText = [so.altText];
     if (ch === 'instagram') info.instagramData = { type: vid ? 'REEL' : 'POST', showReelOnFeed: true, isAiGenerated: !!ai };
     if (ch === 'facebook') info.facebookData = { type: vid ? 'REEL' : 'POST', title: vid ? title : '' };
@@ -792,6 +820,7 @@ Answer with JSON only, exactly these keys:
   async function sendToMetricool(key, mode, ai, step) {
     const it = find(key); if (!it || !it.ready || !it.placed) return { ok: false, reason: 'Only a ready post placed on a day can be sent.' };
     if (`${it.date}T${it.time}` <= new Date(Date.now() + 10 * 60000).toISOString().slice(0, 16) && it.date <= todayIso()) return { ok: false, reason: 'That time has passed or is less than 10 minutes away. Pick a later time.' };
+    if (!seo[it.postId]) { const q = (app().data().posts || []).find(x => x.id === it.postId); if (q) { step && step('Writing hashtags…'); if (await writeSeo(q) && db) { try { await db.doc('bots/seo').set({ json: JSON.stringify(seo).slice(0, 240000), updatedAt: new Date().toISOString() }); } catch (_) {} } } }
     if (!it.mediaUrl && fileFor(it)) { const l = await autoLink(it, step); if (!l.ok && needsFile(it)) return l; }
     const args = metricoolPost(it, mode, ai);
     if (needsFile(it) && !it.mediaUrl) return { ok: false, reason: `${NAME[it.channel]}${it.channel === 'facebook' ? ' (a Reel)' : ''} needs the ${it.channel === 'facebook' || it.channel === 'youtube' ? 'video' : 'photo or video'}, even as a draft. Paste a public link to the file (Google Drive or Dropbox) in the box above, then send again.` };
@@ -874,6 +903,7 @@ Answer with JSON only, exactly these keys:
     const t = e.target;
     if (t.matches('[data-bot-file]')) { const files = [...t.files], camp = document.querySelector('#rshBots [data-bot-dropcamp]'); t.value = ''; return attach(files, camp && camp.value); }
     if (t.matches('[data-bot-dropcamp]')) return;
+    if (t.id === 'rshBotAutoSend') { settings.autoSend = t.checked; if (db) { try { await db.doc('bots/settings').set({ json: JSON.stringify(settings) }); } catch (_) {} } return render(); }
     if (t.id === 'rshBotAutoEdit') { settings.autoEdit = t.checked; if (db) { try { await db.doc('bots/settings').set({ json: JSON.stringify(settings) }); } catch (_) {} } return render(); }
     if (t.dataset.botCh) { settings.channels = [...document.querySelectorAll('#rshBots [data-bot-ch]:checked')].map(x => x.dataset.botCh); note = 'Setup changed. Press “Run everything” to apply it.'; if (db) { try { await db.doc('bots/settings').set({ json: JSON.stringify(settings) }); } catch (_) {} } return render(); }
     if (t.id === 'rshBotTimes') { const labels = {}, ts = []; for (const part of t.value.split(',')) { const m = part.trim().match(/^([01]?\d|2[0-3]):([0-5]\d)\s*(.*)$/); if (!m) continue; const k = m[1].padStart(2, '0') + ':' + m[2]; if (!ts.includes(k)) ts.push(k); if (m[3].trim()) labels[k] = m[3].trim().slice(0, 30); } if (!ts.length) { note = 'Enter at least one time like 18:00.'; return render(); } settings.times = ts; settings.labels = labels; note = 'Setup changed. Press “Run everything” to apply it.'; if (db) { try { await db.doc('bots/settings').set({ json: JSON.stringify(settings) }); } catch (_) {} } return render(); }
@@ -906,5 +936,5 @@ Answer with JSON only, exactly these keys:
     }
     render();
   }
-  window.RSH_BOTS = { seoFor, seoRun, learnedTimes, schedule, attachForPost, driveUpload, fileFor, autoLink, needsFile, readyItems, placedOn, place, unplace, setMediaUrl, sendToMetricool, metricoolPost, NAME, freshVideos, watch, onChange: f => listeners.push(f), handoff, collect, start, captionFor, assetNeeds, imagePrompt, videoBrief, editJob };
+  window.RSH_BOTS = { sendText, autoSend, seoFor, seoRun, learnedTimes, schedule, attachForPost, driveUpload, fileFor, autoLink, needsFile, readyItems, placedOn, place, unplace, setMediaUrl, sendToMetricool, metricoolPost, NAME, freshVideos, watch, onChange: f => listeners.push(f), handoff, collect, start, captionFor, assetNeeds, imagePrompt, videoBrief, editJob };
 })();
