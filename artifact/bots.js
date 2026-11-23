@@ -123,6 +123,18 @@
   const KIT_ANIMATOR = 'https://claude.ai/artifact/XKoQC7BojgggvQ538NrgSt';
   const KIT_SPORTS = ['soccer', 'basketball', 'volleyball', 'baseball', 'softball', 'football', 'flag football', 'lacrosse', 'ice hockey', 'field hockey', 'wrestling', 'mma', 'esports'];
   const kitSport = p => { const sp = String(p.sport || '').toLowerCase(); return KIT_SPORTS.find(k => sp.includes(k.split(' ')[0])) || ''; };
+  // The team's video editor: a Claude Code session named "RSH SPORTS" that edits videos from a pasted script and prompt.
+  const EDITOR_URL = 'https://claude.ai/code/session_01EomsW2MJWVwshJ5YMhGGBP';
+  function editJob(p) {
+    const type = String(p.postType || '').toLowerCase(), secs = /story/.test(type) ? '10 to 15' : '15 to 20';
+    return [`EDIT JOB — ${p.title}`,
+      `Campaign for ${p.platform || 'social media'}, planned ${p.date || 'no date yet'}. Sport: ${p.sport || 'not set'}. Audience: ${p.audience || 'not set'}. Goal: ${p.goal || 'not set'}.`,
+      `Make one vertical 9:16 video, 1080×1920, ${secs} seconds, MP4 (H.264), under 30 MB.`,
+      `SCRIPT\nHook (first 2 seconds, on screen): ${sentence(p.hook)}\n${p.onImageText ? 'On-screen text: ' + sentence(p.onImageText) + '\n' : ''}Closing line: ${String(p.cta || '').trim() || 'Follow RSH Sports'}`,
+      p.visualConcept ? `VISUAL DIRECTION\n${String(p.visualConcept).trim()}` : '',
+      `RULES\n${RULES} RSH branding only in the corner watermark and the end card.`,
+      `DELIVER\nThe finished MP4 named ${slug(p.title) || 'campaign'}.mp4, plus a one-line note of anything you could not do.`].filter(Boolean).join('\n\n');
+  }
   const RULES = 'Realistic, natural light. Sport-correct gear and setting. No third-party logos, brand marks or wordmarks on shoes, socks, apparel, bags or equipment. No real, identifiable people. Suitable for parents, coaches and athletes.';
   function imagePrompt(p) {
     const type = String(p.postType || '').toLowerCase(), base = String(p.visualPrompt || p.visualConcept || '').trim();
@@ -333,7 +345,7 @@
       for (const it of items) {
         const p = posts.find(x => x.id === it.postId); if (!p) continue;
         if (it.date !== lastDay) { if (lastPost) list += '</div>'; lastPost = ''; lastDay = it.date; list += `<div class="day">${esc(new Date(it.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }))}</div>`; }
-        if (it.postId !== lastPost) { if (lastPost) list += '</div>'; lastPost = it.postId; const mine = items.filter(x => x.postId === it.postId); const an = assetNeeds(p); list += `<div class="camp"><header><strong>${esc(p.title)}</strong><span class="small">${mine.filter(x => x.ready).length} of ${mine.length} channel posts ready</span></header><div class="assetrow"><div><strong>Files needed</strong> <span class="small">· ${an.files} attached</span><div>${an.needs.map(n => `<span class="need ${n.state}">${n.state === 'have' ? '✓ ' : ''}${esc(n.label)}${n.detail ? ' (' + esc(n.detail) + ')' : ''}</span>`).join('')}</div></div><div style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="btn ghost smallbtn" data-bot-prompt="image" data-bot-post="${esc(p.id)}">Copy image prompt</button><button type="button" class="btn ghost smallbtn" data-bot-prompt="video" data-bot-post="${esc(p.id)}">Copy video brief</button><a class="btn ghost smallbtn" href="${KIT_ANIMATOR}" target="_blank" rel="noopener noreferrer" data-bot-kit title="Opens the RSH Kit Animator in a new tab">Make kit clip ↗</a></div>${kitSport(p) ? `<div class="small" style="flex-basis:100%">Kit clip: in the Kit Animator choose <strong>${esc(kitSport(p).replace(/^./, c => c.toUpperCase()))}</strong>, set the team and colours, record the 4-second clip, then drop the saved MP4 into the office above with this campaign selected.</div>` : ''}</div>`; }
+        if (it.postId !== lastPost) { if (lastPost) list += '</div>'; lastPost = it.postId; const mine = items.filter(x => x.postId === it.postId); const an = assetNeeds(p); list += `<div class="camp"><header><strong>${esc(p.title)}</strong><span class="small">${mine.filter(x => x.ready).length} of ${mine.length} channel posts ready</span></header><div class="assetrow"><div><strong>Files needed</strong> <span class="small">· ${an.files} attached</span><div>${an.needs.map(n => `<span class="need ${n.state}">${n.state === 'have' ? '✓ ' : ''}${esc(n.label)}${n.detail ? ' (' + esc(n.detail) + ')' : ''}</span>`).join('')}</div></div><div style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="btn ghost smallbtn" data-bot-prompt="image" data-bot-post="${esc(p.id)}">Copy image prompt</button><button type="button" class="btn ghost smallbtn" data-bot-prompt="video" data-bot-post="${esc(p.id)}">Copy video brief</button><a class="btn ghost smallbtn" href="${KIT_ANIMATOR}" target="_blank" rel="noopener noreferrer" data-bot-kit title="Opens the RSH Kit Animator in a new tab">Make kit clip ↗</a><a class="btn smallbtn" href="${EDITOR_URL}" target="_blank" rel="noopener noreferrer" data-bot-editor="${esc(p.id)}" title="Copies the edit job, then opens your RSH SPORTS editor session">Send to video editor ↗</a></div><div class="small" style="flex-basis:100%">Video editor: the button copies this campaign’s edit job and opens your RSH SPORTS session. Paste it there, and when the MP4 is ready, drop it into the office above with this campaign selected.</div>${kitSport(p) ? `<div class="small" style="flex-basis:100%">Kit clip: in the Kit Animator choose <strong>${esc(kitSport(p).replace(/^./, c => c.toUpperCase()))}</strong>, set the team and colours, record the 4-second clip, then drop the saved MP4 into the office above with this campaign selected.</div>` : ''}</div>`; }
         const key = it.postId + '|' + it.channel, open = openItem === key;
         list += `<div class="item" data-bot-item="${esc(key)}"><div><strong>${esc(NAME[it.channel])}</strong><div class="small">${it.caption.length} characters</div></div>
           <div><input type="time" value="${esc(it.time)}" aria-label="Time for ${esc(NAME[it.channel])} post of ${esc(p.title)}" data-bot-time="${esc(key)}">${settings.labels && settings.labels[it.time] ? `<div class="small" style="margin-top:3px">${esc(settings.labels[it.time])}</div>` : ''}</div>
@@ -373,6 +385,8 @@
     if (e.target.closest('[data-bot-close]')) { openItem = null; return render(); }
     const sv = e.target.closest('[data-bot-savecap]');
     if (sv) { const it = find(sv.dataset.botSavecap), ta = document.querySelector(`#rshBots [data-bot-cap="${CSS.escape(sv.dataset.botSavecap)}"]`); if (it && ta) { it.caption = ta.value; it.edited = true; } openItem = null; await save(); return render(); }
+    const edl = e.target.closest('[data-bot-editor]');
+    if (edl) { const q = (app().data().posts || []).find(x => x.id === edl.dataset.botEditor); if (q) { try { navigator.clipboard.writeText(editJob(q)).then(() => { wake = `Edit job for “${cut(q.title, 40)}” copied. Paste it into your RSH SPORTS editor.`; const w = document.querySelector('#rshBots [data-bot-wake]'); if (w) w.textContent = wake; }, () => {}); } catch (_) {} } return; }   // the link itself opens the editor
     const pr = e.target.closest('[data-bot-prompt]');
     if (pr) { const q = (app().data().posts || []).find(x => x.id === pr.dataset.botPost); if (!q) return; const text = pr.dataset.botPrompt === 'video' ? videoBrief(q) : imagePrompt(q), old = pr.textContent, done = ok => { pr.textContent = ok ? 'Copied' : 'Copy failed'; setTimeout(() => { pr.textContent = old; }, 1600); }; try { navigator.clipboard.writeText(text).then(() => done(true), () => done(false)); } catch (_) { done(false); } return; }
     const cp = e.target.closest('[data-bot-copy]');
@@ -408,5 +422,5 @@
     }
     render();
   }
-  window.RSH_BOTS = { start, captionFor, assetNeeds, imagePrompt, videoBrief };
+  window.RSH_BOTS = { start, captionFor, assetNeeds, imagePrompt, videoBrief, editJob };
 })();
