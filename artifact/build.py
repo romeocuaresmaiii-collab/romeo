@@ -1,0 +1,76 @@
+#!/usr/bin/env python3
+"""Builds the Claude-artifact edition of the app from index.html (the local app stays the source of truth).
+
+  python3 artifact/build.py [path/to/complete_backup.zip]
+
+Output: artifact/dist/RSH Sports Marketing OS.html plus the files it needs (logo, bundled media).
+With a backup ZIP, its media are copied beside the page and artifact/dist/seed.json holds the
+workspace to load into the artifact database after publishing. Campaign data never enters the page itself.
+"""
+import json, re, shutil, sys, zipfile
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+OUT = ROOT / 'artifact' / 'dist'
+src = (ROOT / 'index.html').read_text(encoding='utf-8')
+version = re.search(r"APP_VERSION = '([^']+)'", (ROOT / 'server.py').read_text()).group(1)
+
+def once(text, old, new, count=1):
+    assert text.count(old) == count, f'expected {count} of {old[:70]!r}, found {text.count(old)}'
+    return text.replace(old, new)
+
+OUT.mkdir(parents=True, exist_ok=True)
+for stale in OUT.glob('media/*'): stale.unlink()
+(OUT / 'media').mkdir(exist_ok=True)
+shutil.copy(ROOT / 'rsh_logo.png', OUT / 'rsh_logo.png')
+
+bundled = {}
+if len(sys.argv) > 1:
+    with zipfile.ZipFile(sys.argv[1]) as z:
+        manifest = json.loads(z.read('manifest.json'))
+        for item in manifest['attachments']:
+            assert re.fullmatch(r'[0-9a-f]{32}', item['id']) and re.fullmatch(r'(media|assets)/[0-9a-f]{32}\.(png|jpg|webp|mp4|webm|mov)', item['path'])
+            name = 'media/' + item['path'].split('/')[1]
+            (OUT / name).write_bytes(z.read(item['path']))
+            bundled[item['id']] = name
+        workspace = z.read('workspace.json').decode('utf-8')
+        json.loads(workspace)
+        (OUT / 'seed.json').write_text(json.dumps({'json': workspace, 'updatedAt': manifest['created'], 'appVersion': version, 'seededFrom': Path(sys.argv[1]).name}), encoding='utf-8')
+
+packs = []
+for p in sorted((ROOT / 'reports_inbox').glob('RSH_Weekly_Evidence_*.json'), reverse=True):
+    packs.append({'filename': p.name, 'location': 'Shipped with this artifact', 'pack': json.loads(p.read_text(encoding='utf-8'))})
+
+shim = (ROOT / 'artifact' / 'shim.js').read_text(encoding='utf-8')
+shim = once(shim, '__APP_VERSION__', version)
+shim = once(shim, '__BUNDLED_MEDIA__', json.dumps(bundled))
+shim = once(shim, '__WEEKLY_PACKS__', json.dumps(packs, ensure_ascii=False).replace('</', '<\\/'))
+
+s = src
+# 1. The publish step supplies the document skeleton: keep only title, styles and body content.
+s = once(s, '<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width,initial-scale=1">\n<meta name="theme-color" content="#f5f5f7">\n', '')
+s = once(s, f'<title>RSH Sports Marketing OS v{version}</title>', '<title>RSH Sports Marketing OS</title>')
+s = once(s, '\n</head>\n<body>\n', '\n')
+assert s.rstrip().endswith('</script>\n</body>\n</html>')
+s = s.rstrip()[:-len('</body>\n</html>')]
+
+# 2. The app starts only after the host layer has loaded the saved workspace.
+s = once(s, "<script>\n(()=>{'use strict';\nconst KEY='rsh_growth_command_v1';", "<script>\nwindow.__rshBoot=(()=>{'use strict';\nconst KEY='rsh_growth_command_v1';")
+tail = "vaultStatus().catch(()=>{});\n\n\n})();\n\n</script>"
+assert s.rstrip().endswith(tail)
+s = s.rstrip()[:-len(tail)] + "vaultStatus().catch(()=>{});\n\n\n});\n\n</script>\n<script>\n" + shim + "\n</script>\n"
+
+# 3. Storage, media, exports and prompts go through the host layer.
+s = once(s, 'localStorage.getItem(KEY)', 'RSH_HOST.read(KEY)')
+s = once(s, 'localStorage.setItem(KEY,JSON.stringify(d))', 'RSH_HOST.persist(KEY,JSON.stringify(d))', 3)
+s = once(s, "const visualAssetUrl=a=>(a?.storage==='media'?'/api/media/':'/api/assets/')+encodeURIComponent(a.id);", 'const visualAssetUrl=a=>RSH_HOST.mediaUrl(a);')
+s = once(s, "const exportFile=(name,text,mime)=>{const b=new Blob([text],{type:mime}),url=URL.createObjectURL(b),a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),3000)};", 'const exportFile=(name,text,mime)=>{RSH_HOST.exportFile(name,text)};')
+s = once(s, "const t=prompt('Record a dated competitor observation:',c.notes||'');if(t!==null){c.notes=t;c.added=new Date().toISOString().slice(0,10);save();notice('Notes updated')}", "RSH_HOST.ask('Record a dated competitor observation:',c.notes||'').then(t=>{if(t!==null){c.notes=t;c.added=new Date().toISOString().slice(0,10);save();notice('Notes updated')}})")
+
+# 4. Wording that would be untrue here.
+s = once(s, f'<strong>LOCAL APP · V{version}</strong><div class="small">Activate the local Data Vault in Setup & Backup to preserve browser work. Export a backup before upgrading. Metricool is connected in ChatGPT only, not this local app.</div>',
+         f'<strong>ARTIFACT EDITION · V{version}</strong><div class="small">Your workspace and uploaded media are saved automatically to this artifact’s private storage. Approvals are local records, not authenticated. No Metricool sync or publishing.</div>')
+s = once(s, "'Use python3 server.py in the extracted v%s folder, then open http://127.0.0.1:8765. Buttons and media uploads require the local server.'" % version, "'Open this page from your Claude artifacts.'")
+
+(OUT / 'RSH Sports Marketing OS.html').write_text(s, encoding='utf-8')
+print('built', len(s), 'bytes; bundled media:', len(bundled), '; weekly packs:', len(packs))
