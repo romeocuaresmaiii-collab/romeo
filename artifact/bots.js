@@ -613,6 +613,13 @@
    * YouTube and Pinterest; posts without one can still go as a draft to finish in Metricool.
    */
   const BRAND = '5695688', MC = 'Metricool Social Media Management';
+  // Which channels cannot take the post without its photo or video (Metricool checks this even for drafts).
+  function needsFile(it) {
+    if (['instagram', 'tiktok', 'youtube', 'pinterest'].includes(it.channel)) return true;
+    if (it.channel !== 'facebook') return false;
+    const p = (app().data().posts || []).find(x => x.id === it.postId) || {};
+    return [p.creativeAsset].concat(p.creativeAssets || []).filter(Boolean).some(a => /^video\//.test(a.mime || ''));   // a Facebook Reel
+  }
   const readyItems = () => ((plan && plan.items) || []).filter(i => i.ready && !i.posted);
   const placedOn = date => ((plan && plan.items) || []).filter(i => i.placed && i.date === date);
   const todayIso = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
@@ -642,8 +649,8 @@
   async function sendToMetricool(key, mode, ai) {
     const it = find(key); if (!it || !it.ready || !it.placed) return { ok: false, reason: 'Only a ready post placed on a day can be sent.' };
     if (`${it.date}T${it.time}` <= new Date(Date.now() + 10 * 60000).toISOString().slice(0, 16) && it.date <= todayIso()) return { ok: false, reason: 'That time has passed or is less than 10 minutes away. Pick a later time.' };
-    const args = metricoolPost(it, mode, ai), needsMedia = ['instagram', 'tiktok', 'youtube', 'pinterest'].includes(it.channel);
-    if (needsMedia && !it.mediaUrl && mode !== 'draft') return { ok: false, reason: `${NAME[it.channel]} needs the photo or video. Paste a public link to the file (Google Drive or Dropbox), or send it as a draft and add the file in Metricool.` };
+    const args = metricoolPost(it, mode, ai);
+    if (needsFile(it) && !it.mediaUrl) return { ok: false, reason: `${NAME[it.channel]}${it.channel === 'facebook' ? ' (a Reel)' : ''} needs the ${it.channel === 'facebook' || it.channel === 'youtube' ? 'video' : 'photo or video'}, even as a draft. Paste a public link to the file (Google Drive or Dropbox) in the box above, then send again.` };
     const mcp = await use('mcp'); let res = null, err = null;
     if (mcp) { try { res = await mcp.callTool(MC, 'createScheduledPost', args); } catch (e) { err = e; } }
     if (res) {
@@ -727,5 +734,5 @@
     }
     render();
   }
-  window.RSH_BOTS = { readyItems, placedOn, place, unplace, setMediaUrl, sendToMetricool, metricoolPost, NAME, freshVideos, watch, onChange: f => listeners.push(f), handoff, collect, start, captionFor, assetNeeds, imagePrompt, videoBrief, editJob };
+  window.RSH_BOTS = { needsFile, readyItems, placedOn, place, unplace, setMediaUrl, sendToMetricool, metricoolPost, NAME, freshVideos, watch, onChange: f => listeners.push(f), handoff, collect, start, captionFor, assetNeeds, imagePrompt, videoBrief, editJob };
 })();

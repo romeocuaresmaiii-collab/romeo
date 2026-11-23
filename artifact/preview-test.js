@@ -290,6 +290,8 @@ const out = []; const ok = (n, c, d) => { out.push(c); console.log((c ? 'PASS  '
   await p.fill(`#rshDay [data-day-newtime="${igKey}"]`, '18:30'); await p.click(`#rshDay [data-day-add="${igKey}"]`); await p.waitForTimeout(300);
   await p.click(`#rshDay [data-day-send="${igKey}"]`); await p.waitForTimeout(300);
   const noMedia = await p.evaluate(() => ({ msg: (document.querySelector('#rshDay .hint') || {}).textContent || '', calls: (window.__sched || []).length }));
+  const fbNeeds = await p.evaluate(() => { const B = window.RSH_BOTS, ws = JSON.parse(localStorage.getItem('rsh_growth_command_v1')).posts, vid = ws.find(x => (x.creativeAssets || []).some(a => /^video/.test(a.mime || ''))), pic = ws.find(x => (x.creativeAssets || []).length && !(x.creativeAssets || []).some(a => /^video/.test(a.mime || ''))); return { vid: vid ? B.needsFile({ channel: 'facebook', postId: vid.id }) : null, pic: pic ? B.needsFile({ channel: 'facebook', postId: pic.id }) : null, th: B.needsFile({ channel: 'threads', postId: 'x' }) }; });
+  ok('A Facebook post needs its video link only when the campaign is a video (a Reel)', fbNeeds.vid === true && fbNeeds.pic === false && fbNeeds.th === false, JSON.stringify(fbNeeds));
   ok('A post that needs its photo or video is not scheduled without one, and the reason is given', noMedia.calls === 0 && /needs the photo or video/.test(noMedia.msg), noMedia.msg.slice(0, 100));
   await p.fill(`#rshDay [data-day-media="${igKey}"]`, 'https://drive.google.com/file/d/test/view'); await p.dispatchEvent(`#rshDay [data-day-media="${igKey}"]`, 'change'); await p.waitForTimeout(200);
   await p.click(`#rshDay [data-day-send="${igKey}"]`); await p.waitForTimeout(500);
