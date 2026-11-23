@@ -78,6 +78,7 @@ s = once(s, "if(f.size<256||f.size>(f.type.startsWith('image/')?12_000_000:120_0
 s = once(s, "uploadedAt:new Date().toISOString(),storage:'media'});", "uploadedAt:new Date().toISOString(),storage:'media',...(result.parts?{parts:result.parts}:{})});")
 s = once(s, "const f=files[i];el('visualUploadMsg').textContent=`Uploading ${i+1}/${files.length}: ${f.name} (${(f.size/1_000_000).toFixed(1)} MB)...`;", "const f=files[i];const upLabel=`Uploading ${i+1}/${files.length}: ${f.name} (${(f.size/1_000_000).toFixed(1)} MB)`;el('visualUploadMsg').textContent=upLabel+'...';RSH_HOST.onUploadProgress=(done,total)=>{el('visualUploadMsg').textContent=upLabel+' · '+Math.round(done/total*100)+'%'};")
 
+s = once(s, "notice('Some uploads could not finish. Saved files were retained.');", "notice('Upload stopped: '+failed.message);")
 # 4. Wording that would be untrue here.
 s = once(s, f'<strong>LOCAL APP · V{version}</strong><div class="small">Activate the local Data Vault in Setup & Backup to preserve browser work. Export a backup before upgrading. Metricool is connected in ChatGPT only, not this local app.</div>',
          f'<strong>ARTIFACT EDITION · V{version}</strong><div class="small">Your workspace and uploaded media are saved automatically to this artifact’s private storage. Approvals are local records, not authenticated. No Metricool sync or publishing.</div>')

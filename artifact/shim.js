@@ -248,6 +248,7 @@
       if (file.size < 256 || file.size > MEDIA_TYPES[mime]) return json(413, { error: 'File is over the limit: 12 MB per image, 120 MB per video' });
       // The file store may not have been ready when the page started: ask again now.
       if (!assets && window.claude && typeof window.claude.use === 'function') { try { assets = await window.claude.use('assets'); } catch (_) {} }
+      if (!assets) diag({ stage: 'no file store', code: 'assets_null', mime, bytes: file.size });
       if (!assets) return json(400, { error: 'This view cannot store files (no file store). Open the artifact in a browser at claude.ai, signed in as its owner' });
       const WHY = {
         not_granted: 'file storage was not allowed for this page. Reload, and allow it if Claude asks',
@@ -287,6 +288,7 @@
         for (const x of stored) { try { await assets.delete(x.id); } catch (_) {} }
       }
       const code = (lastErr && lastErr.code) || 'unknown';
+      diag({ stage: stored.length ? 'part ' + (stored.length + 1) : 'first file or part', code, message: lastErr && String(lastErr.message || '').slice(0, 300), mime, bytes: file.size, partsStoredBeforeFailure: stored.length });
       console.warn('[RSH host] upload failed', code, lastErr && lastErr.message);
       return json(400, { error: 'Upload failed: ' + (WHY[code] || 'the file store did not accept it') + ' [' + code + (lastErr && lastErr.message ? ': ' + String(lastErr.message).slice(0, 90) : '') + ']' });
     }
@@ -301,6 +303,13 @@
     return json(404, { error: 'Not found' });
   }
 
+  async function diag(info) {
+    try {
+      let who = {};
+      try { const user = await window.claude.use('user'); if (user) who = { isOwner: await user.isOwner(), canEdit: await user.canEdit() }; } catch (_) {}
+      if (db) await db.doc('diagnostics/upload').set({ ...info, ...who, hasAssets: !!assets, hasDownloads: !!downloads, at: new Date().toISOString(), agent: navigator.userAgent.slice(0, 160) });
+    } catch (_) {}
+  }
   const realFetch = window.fetch.bind(window);
   const hostFetch = function (input, init) {
     const raw = typeof input === 'string' ? input : (input && input.url) || '';
