@@ -74,7 +74,9 @@ head = re.sub(r'(?<![\w.])fetch\(', 'RSH_HOST.fetch(', head)
 s = head + shim + tail_
 assert n_fetch >= 8, n_fetch
 s = once(s, "function visualFileDimensions(file){return new Promise(", "function visualFileDimensions(file){return RSH_HOST.imageSize(file)}function visualFileDimensionsLocal(file){return new Promise(")
-s = once(s, "if(f.size<256||f.size>(f.type.startsWith('image/')?12_000_000:120_000_000)){el('visualUploadMsg').textContent='File too large: '+f.name+'. Images max 12 MB; videos max 120 MB.';return}", "if(f.size<256||f.size>(f.type.startsWith('image/')?12_000_000:20_000_000)){el('visualUploadMsg').textContent='File too large: '+f.name+'. Here images max 12 MB; videos max 20 MB.';return}")
+s = once(s, "if(f.size<256||f.size>(f.type.startsWith('image/')?12_000_000:120_000_000)){el('visualUploadMsg').textContent='File too large: '+f.name+'. Images max 12 MB; videos max 120 MB.';return}", "if(f.size<256||f.size>(f.type.startsWith('image/')?12_000_000:120_000_000)){el('visualUploadMsg').textContent='File too large: '+f.name+'. Images max 12 MB; videos max 120 MB.';return}")
+s = once(s, "uploadedAt:new Date().toISOString(),storage:'media'});", "uploadedAt:new Date().toISOString(),storage:'media',...(result.parts?{parts:result.parts}:{})});")
+s = once(s, "const f=files[i];el('visualUploadMsg').textContent=`Uploading ${i+1}/${files.length}: ${f.name} (${(f.size/1_000_000).toFixed(1)} MB)...`;", "const f=files[i];const upLabel=`Uploading ${i+1}/${files.length}: ${f.name} (${(f.size/1_000_000).toFixed(1)} MB)`;el('visualUploadMsg').textContent=upLabel+'...';RSH_HOST.onUploadProgress=(done,total)=>{el('visualUploadMsg').textContent=upLabel+' · '+Math.round(done/total*100)+'%'};")
 
 # 4. Wording that would be untrue here.
 s = once(s, f'<strong>LOCAL APP · V{version}</strong><div class="small">Activate the local Data Vault in Setup & Backup to preserve browser work. Export a backup before upgrading. Metricool is connected in ChatGPT only, not this local app.</div>',
