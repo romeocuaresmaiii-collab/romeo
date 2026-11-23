@@ -111,14 +111,14 @@
         <div class="opts"><div><strong>When you send to Metricool</strong></div>
           <label><input type="radio" name="rshDayMode" value="schedule" ${sendMode === 'schedule' ? 'checked' : ''}> Schedule it: Metricool publishes it at the time shown</label>
           <label><input type="radio" name="rshDayMode" value="draft" ${sendMode === 'draft' ? 'checked' : ''}> Send as a draft: finish and schedule it in Metricool</label>
-          <div class="small">Metricool needs the photo or video as a public link for Instagram, TikTok, YouTube, Pinterest and Facebook Reels, even for drafts.</div>
+          <div class="small">The app sends the campaign's attached photo or video with the post: it puts the file in your Google Drive as a share link (Google Drive must be connected inside Metricool too).</div>
           <label><input type="checkbox" data-day-ai ${aiFlag ? 'checked' : ''}> The photo or video was made with AI (adds the AI label on Instagram, TikTok, YouTube and Pinterest)</label></div>
         <h3>On this day</h3>
         ${here.length ? here.map(i => { const [c, l] = statusOf(i); return `<div class="row"><div class="t"><strong>${esc(N[i.channel] || i.channel)} · ${esc(title(i.postId))}</strong><span class="st ${c}">${esc(l)}</span></div>
           <div class="cap">${esc(i.caption)}</div>
           ${i.sent && i.sent.reason ? `<div class="small" style="color:#b42318">${esc(i.sent.reason)}</div>` : ''}
           ${i.sent && i.sent.plannerUrl ? `<a class="small" href="${esc(i.sent.plannerUrl)}" target="_blank" rel="noopener noreferrer">Open it in Metricool ↗</a>` : ''}
-          ${!(i.sent && /scheduled|draft/.test(i.sent.status)) ? `<label class="small">Public link to the photo or video (Google Drive or Dropbox)${B.needsFile(i) ? `; ${esc(N[i.channel])} needs it` : '; optional for ' + esc(N[i.channel])}<input type="url" data-day-media="${esc(key(i))}" value="${esc(i.mediaUrl || '')}" placeholder="https://drive.google.com/…"></label>` : ''}
+          ${!(i.sent && /scheduled|draft/.test(i.sent.status)) ? `<label class="small">${i.mediaUrl ? 'Link to the file Metricool will use' : (B.fileFor(i) ? 'Leave empty: the app uploads the attached file to your Google Drive and makes the link when you send' : (B.needsFile(i) ? `No file attached yet; ${esc(N[i.channel])} needs one. Attach it in the campaign, or paste a public link` : 'Optional: a public link to a photo or video'))}<input type="url" data-day-media="${esc(key(i))}" value="${esc(i.mediaUrl || '')}" placeholder="https://drive.google.com/…"></label>` : ''}
           <div class="acts"><input type="time" data-day-time="${esc(key(i))}" value="${esc(i.time)}" aria-label="Time" ${i.sent && /scheduled|draft/.test(i.sent.status) ? 'disabled' : ''}><span class="small">US Eastern</span>
           ${i.sent && /scheduled|draft/.test(i.sent.status) ? '' : `<button type="button" class="btn smallbtn" data-day-send="${esc(key(i))}">Send to Metricool</button><button type="button" class="btn ghost smallbtn" data-day-remove="${esc(key(i))}">Remove from day</button>`}</div></div>`; }).join('') : '<div class="small">Nothing placed on this day yet.</div>'}
         <h3>Ready to place</h3>
@@ -135,7 +135,7 @@
     const rm = e.target.closest('[data-day-remove]'); if (rm) { await B.unplace(rm.dataset.dayRemove); dayMsg = 'Removed from this day. The post is still ready.'; return paintDay(); }
     const sd = e.target.closest('[data-day-send]');
     if (sd) { const k = sd.dataset.daySend, t = (document.querySelector(`#rshDay [data-day-time="${CSS.escape(k)}"]`) || {}).value; if (t) await B.place(k, dayOpen, t);
-      sd.disabled = true; sd.textContent = 'Sending…'; const r = await B.sendToMetricool(k, sendMode, aiFlag);
+      sd.disabled = true; sd.textContent = 'Sending…'; const r = await B.sendToMetricool(k, sendMode, aiFlag, t => { sd.textContent = t; });
       dayMsg = r.ok ? (r.queued ? 'This view can’t reach Metricool, so the post is waiting to be sent by a Claude session. Ask Claude to “send the waiting posts to Metricool”.' : sendMode === 'draft' ? 'Sent to Metricool as a draft.' : 'Scheduled in Metricool.') : r.reason; return paintDay(); }
   }
   async function onDayChange(e) {

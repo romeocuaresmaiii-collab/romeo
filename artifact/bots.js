@@ -646,16 +646,57 @@
     if (ch === 'bluesky') info.blueskyData = {};
     return { blogId: BRAND, date: `${it.date}T${it.time}:00${nyOffset(it.date, it.time)}`, info: JSON.stringify(info) };
   }
-  async function sendToMetricool(key, mode, ai) {
+  // Make the public link for the post's attached file by itself: upload it to the viewer's Google Drive,
+  // share it as "anyone with the link" and keep the link, so nobody has to paste one.
+  const GD = 'Google Drive', DRIVE_MAX = 16 * 1024 * 1024;
+  function fileFor(it) {
+    const p = (app().data().posts || []).find(x => x.id === it.postId) || {};
+    const all = [p.creativeAsset].concat(p.creativeAssets || []).filter(Boolean);
+    const vid = all.filter(a => /^video\//.test(a.mime || '')), pic = all.filter(a => /^image\//.test(a.mime || ''));
+    const pool = (it.channel === 'facebook' || it.channel === 'youtube') ? vid : (vid.length ? vid : pic);
+    return pool.length ? pool[pool.length - 1] : null;   // the latest one attached (a revision replaces the older cut)
+  }
+  async function autoLink(it, step) {
+    const a = fileFor(it); if (!a) return { ok: false, reason: `No ${needsFile(it) && (it.channel === 'facebook' || it.channel === 'youtube') ? 'video' : 'photo or video'} is attached to this campaign yet. Attach it in the campaign, then send again.` };
+    plan.links = plan.links || {};
+    if (plan.links[a.id]) { it.mediaUrl = plan.links[a.id]; return { ok: true }; }
+    const mcp = await use('mcp'); if (!mcp) return { ok: false, reason: 'This view cannot reach Google Drive. Paste a public link to the file in the box above, then send again.' };
+    let fileArgs = false; try { const lt = await mcp.listTools(); fileArgs = !!lt.fileArgs && (lt.servers || []).some(x => x.server === GD); } catch (_) {}
+    if (!fileArgs) return { ok: false, reason: 'Google Drive is not allowed for this page yet (or this browser cannot send files to it). Allow Google Drive when asked, or paste a public link in the box above.' };
+    step && step('Getting the file ready…');
+    let blob; try { blob = await window.RSH_HOST.fileBlob(a); } catch (_) { return { ok: false, reason: 'The attached file could not be read. Attach it again in the campaign, then send again.' }; }
+    if (blob.size > DRIVE_MAX) return { ok: false, reason: `The file is ${(blob.size / 1048576).toFixed(1)} MB; the app can upload files up to 16 MB to Google Drive. Upload it to Drive or Dropbox yourself and paste the link in the box above.` };
+    const type = a.mime || blob.type || 'video/mp4', ext = (type.split('/')[1] || 'mp4').replace('quicktime', 'mov').replace('jpeg', 'jpg');
+    const name = (String(a.name || 'rsh-post').replace(/\.[A-Za-z0-9]+$/, '').replace(/[^A-Za-z0-9 _()-]/g, '').trim() || 'rsh-post') + '.' + ext;
+    step && step('Uploading to Google Drive…');
+    let id = '';
+    try {
+      const r = await mcp.callTool(GD, 'create_file', { title: 'RSH Sports · ' + name, contentMimeType: type, disableConversionToGoogleType: true, base64Content: { $file: { data: blob, name, type } } });
+      const pl = r && r.payload !== undefined ? r.payload : r; id = (pl && (pl.id || (pl.file && pl.file.id))) || ((JSON.stringify(pl).match(/"id"\s*:\s*"([A-Za-z0-9_-]{10,})"/) || [])[1]) || '';
+    } catch (e) { return { ok: false, reason: 'Google Drive did not take the file: ' + String((e && e.message) || e).slice(0, 160) }; }
+    if (!id) return { ok: false, reason: 'Google Drive did not return the file. Paste a public link in the box above instead.' };
+    step && step('Making the share link…');
+    let link = '';
+    try {
+      const r = await mcp.callTool(GD, 'share_file', { fileId: id, role: 'reader', permissionId: 'anyoneWithLink' });
+      const pl = r && r.payload !== undefined ? r.payload : r; link = (pl && pl.shareableLink) || ((JSON.stringify(pl).match(/https:\/\/drive\.google\.com[^"\\\s]*/) || [])[0]) || '';
+    } catch (e) { return { ok: false, reason: 'The file is in your Google Drive but could not be shared: ' + String((e && e.message) || e).slice(0, 160) }; }
+    link = link || `https://drive.google.com/file/d/${id}/view?usp=sharing`;
+    plan.links[a.id] = link; it.mediaUrl = link; await save();
+    return { ok: true };
+  }
+
+  async function sendToMetricool(key, mode, ai, step) {
     const it = find(key); if (!it || !it.ready || !it.placed) return { ok: false, reason: 'Only a ready post placed on a day can be sent.' };
     if (`${it.date}T${it.time}` <= new Date(Date.now() + 10 * 60000).toISOString().slice(0, 16) && it.date <= todayIso()) return { ok: false, reason: 'That time has passed or is less than 10 minutes away. Pick a later time.' };
+    if (!it.mediaUrl && fileFor(it)) { const l = await autoLink(it, step); if (!l.ok && needsFile(it)) return l; }
     const args = metricoolPost(it, mode, ai);
     if (needsFile(it) && !it.mediaUrl) return { ok: false, reason: `${NAME[it.channel]}${it.channel === 'facebook' ? ' (a Reel)' : ''} needs the ${it.channel === 'facebook' || it.channel === 'youtube' ? 'video' : 'photo or video'}, even as a draft. Paste a public link to the file (Google Drive or Dropbox) in the box above, then send again.` };
     const mcp = await use('mcp'); let res = null, err = null;
     if (mcp) { try { res = await mcp.callTool(MC, 'createScheduledPost', args); } catch (e) { err = e; } }
     if (res) {
       const txt = JSON.stringify(res.payload !== undefined ? res.payload : res), url = (txt.match(/https:\/\/[^"\\\s]*metricool[^"\\\s]*/) || [''])[0];
-      if (/"isError"\s*:\s*true|error/i.test(txt) && !url) { it.sent = { status: 'error', at: new Date().toISOString(), reason: txt.slice(0, 240) }; await save(); render(); notify(); return { ok: false, reason: 'Metricool did not accept it: ' + txt.slice(0, 200) }; }
+      if (/"isError"\s*:\s*true|error/i.test(txt) && !url) { it.sent = { status: 'error', at: new Date().toISOString(), reason: txt.slice(0, 240) }; await save(); render(); notify(); return { ok: false, reason: 'Metricool did not accept it: ' + txt.slice(0, 200) + (/drive/i.test(txt) ? ' (Metricool can read Google Drive links only after Google Drive is connected inside Metricool: Settings → Connections.)' : '') }; }
       it.sent = { status: mode === 'draft' ? 'draft' : 'scheduled', at: new Date().toISOString(), plannerUrl: url }; await save(); render(); notify(); return { ok: true };
     }
     const code = (err && err.code) || 'no_connection';
@@ -734,5 +775,5 @@
     }
     render();
   }
-  window.RSH_BOTS = { needsFile, readyItems, placedOn, place, unplace, setMediaUrl, sendToMetricool, metricoolPost, NAME, freshVideos, watch, onChange: f => listeners.push(f), handoff, collect, start, captionFor, assetNeeds, imagePrompt, videoBrief, editJob };
+  window.RSH_BOTS = { fileFor, autoLink, needsFile, readyItems, placedOn, place, unplace, setMediaUrl, sendToMetricool, metricoolPost, NAME, freshVideos, watch, onChange: f => listeners.push(f), handoff, collect, start, captionFor, assetNeeds, imagePrompt, videoBrief, editJob };
 })();
