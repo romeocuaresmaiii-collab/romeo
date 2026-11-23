@@ -188,13 +188,13 @@
     const type = String(p.postType || '').toLowerCase(), base = String(p.visualPrompt || p.visualConcept || '').trim();
     return [base || `A premium, photorealistic ${p.sport || 'sports'} photo for ${p.platform || 'social media'}: ${sentence(p.hook)}`,
       /carousel/.test(type) ? 'Make this a matching set of 3 to 5 images with the same athlete, setting and light: 1) a cover with clear space for the headline, 2 to 4) supporting moments, last) a calm closing frame.' : '',
-      `Aspect ratio ${p.aspectRatio || '4:5'}. Leave clean space for text; do not put any text in the image.`, base ? '' : RULES].filter(Boolean).join('\n\n');
+      `Aspect ratio ${p.aspectRatio || '4:5'}. Leave clean space for text; do not put any text in the image.`, base ? '' : RULES, app().logoRule ? 'RSH logo rule: ' + app().logoRule() : '', app().negativePrompt ? 'Negative prompt: ' + app().negativePrompt() : ''].filter(Boolean).join('\n\n');
   }
   function videoBrief(p) {
     return [`Create a 10 to 15 second vertical 9:16 video for ${p.platform || 'social media'} about ${p.sport || 'the sport'}.`,
       p.visualConcept ? `Scene: ${String(p.visualConcept).trim()}` : '',
       `Shots: 1) Opening, first 2 seconds: the moment that matches the hook “${sentence(p.hook)}”. 2) Middle: the main action, one clear movement, steady framing. 3) Ending, last 2 seconds: hold on a clean frame with room for the call to action.`,
-      'No text or captions in the footage; text is added in editing. No music with lyrics.', RULES].filter(Boolean).join('\n\n');
+      'No text or captions in the footage; text is added in editing. No music with lyrics.', RULES, app().logoRule ? 'RSH logo rule: ' + app().logoRule() : '', app().negativePrompt ? 'Avoid: ' + app().negativePrompt() : ''].filter(Boolean).join('\n\n');
   }
 
   /* ---------- Reel: automatic hand-off to the video editor ----------
