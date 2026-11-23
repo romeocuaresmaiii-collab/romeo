@@ -27,7 +27,7 @@ from urllib.request import Request, urlopen
 BASE = Path(__file__).resolve().parent
 HOST = '127.0.0.1'
 PORT = int(os.environ.get('RSH_PORT', '8765'))
-APP_VERSION = '9.14.0'
+APP_VERSION = '9.15.0'
 MODEL = os.environ.get('OPENAI_MODEL', 'gpt-6-luna')
 API_KEY = ''
 MAX_PROMPT = 24000
