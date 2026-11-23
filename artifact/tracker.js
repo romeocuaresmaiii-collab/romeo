@@ -105,7 +105,7 @@
       const steps = STEPS.map(([k, label]) => { const done = r.done[k]; const cls = done ? 'done' : (!seenNow ? 'now' : 'todo'); if (!done) seenNow = true; return `<span class="step ${cls}">${done ? '✓ ' : ''}${esc(label)}</span>`; }).join('');
       html += `<div class="row" data-track-row="${esc(r.p.id)}"><div><div class="title">${esc(r.p.title)}</div><div class="small">${esc(r.p.platform || '')} · ${esc(r.p.owner || 'No owner')}${late ? ' · <span class="late">past its date</span>' : ''}</div><div class="steps">${steps}</div></div>
         <div class="next"><strong>Next</strong>${esc(r.next)}</div>
-        <div class="acts"><button type="button" class="btn ${r.group === 'ready' || r.group === 'anthony' ? 'ghost ' : ''}smallbtn" data-track-open="${esc(r.p.id)}">${esc(r.button)} →</button><button type="button" class="btn ghost smallbtn" data-track-details="${esc(r.p.id)}">Details</button></div></div>`;
+        <div class="acts"><button type="button" class="btn ${r.group === 'ready' || r.group === 'anthony' ? 'ghost ' : ''}smallbtn" data-track-open="${esc(r.p.id)}">${esc(r.button)} →</button><button type="button" class="btn ghost smallbtn" data-track-details="${esc(r.p.id)}">Details</button><button type="button" class="btn ghost smallbtn" data-track-assets="${esc(r.p.id)}">📁 Assets${window.RSH_BOTS && window.RSH_BOTS.rawCount ? ' (' + window.RSH_BOTS.rawCount(r.p.id) + ')' : ''}</button></div></div>`;
     }
     const rangeLabel = `${at(range.from).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${at(range.to).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
     host.innerHTML = `
@@ -188,6 +188,7 @@
     const card = document.createElement('div'); card.className = 'card'; card.id = 'rshTracker';
     view.appendChild(card);
     card.addEventListener('click', e => {
+      const ra = e.target.closest('[data-track-assets]'); if (ra) { if (window.RSH_BOTS && window.RSH_BOTS.openRaw) window.RSH_BOTS.openRaw(ra.dataset.trackAssets); return; }
       const o = e.target.closest('[data-track-open]'); if (o) return app().openNext(o.dataset.trackOpen);
       const dt = e.target.closest('[data-track-details]'); if (dt) return openDetail(dt.dataset.trackDetails);
       const f = e.target.closest('[data-track-only]'); if (f) { only = f.dataset.trackOnly; return render(); }

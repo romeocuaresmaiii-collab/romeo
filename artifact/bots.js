@@ -229,10 +229,10 @@
   const needsVideo = p => { const n = assetNeeds(p).needs[0]; return /reel|video/i.test(p.postType || '') && n && n.state === 'miss'; };
   const RETURN_STEPS = id => `WHEN THE VIDEO IS FINISHED, return it to the app so nobody has to move it by hand:\n1. If the MP4 is 19 MB or smaller, upload it to the artifact ${APP_URL} as one asset (Artifact tool: action publish, url set to that artifact, asset true, file_path the MP4) and note the 32-character asset id. If it is larger, split it into 16 MB pieces (split -b 16m), upload each piece the same way with content type video/mp4, and note each piece's asset id with its start and end byte offsets.\n2. Record it with the ArtifactData tool on the same artifact: read collection "editJobs", document "${id}" (action get) to learn its version, then action update with if_version and data {"status":"done","assetId":"<the asset id, or the first piece's id>","parts":[{"id":"<piece id>","start":0,"end":16777216}, ...] (only when split),"mime":"video/mp4","bytes":<file size>,"name":"<file name>.mp4","finishedAt":"<current time, ISO 8601>"}.\nIf you cannot finish, update that document with {"status":"failed","reason":"<one sentence>"} instead.\nDo not change anything else in that artifact, and do not publish or schedule anything.`;
   function handoff(p, j) {
-    if (j && j.source === 'zip') {
+    if (j && (j.source === 'zip' || j.source === 'campaign')) {
       let files = []; try { files = JSON.parse(j.manifest || '[]'); } catch (_) {}
       const list = files.map((f, n) => `${n + 1}. ${f.name} (${f.mime}, ${Math.round(f.bytes / 1024)} KB${f.encoding === 'base64' ? ', stored base64-encoded: decode after joining' : ''}) asset${f.parts.length > 1 ? 's in order' : ''}: ${f.parts.map(x => x.id).join(' + ')}`).join('\n');
-      return `[RSH Sports Marketing OS: automatic edit job from a zip. Sent by the app on behalf of the team.]\n\nEDIT JOB — ${p.title}\nCampaign for ${p.platform || 'social media'}, planned ${p.date || 'no date yet'}. Sport: ${p.sport || 'not set'}.\n\nThe team uploaded a zip, "${j.zipName}", with every file for this video. Edit the full video exactly as the script says, using these files.\n\nGET THE FILES: for each asset id below, use the Artifact tool with action read, url ${APP_URL}, and path set to the asset id; it saves the file locally. Where a file has several asset ids, fetch them in order and join them (cat). Where it says base64, decode after joining (base64 -d).\n${list}\n\nSCRIPT${j.scriptName ? ' (' + j.scriptName + ')' : ''}:\n${j.script || 'No script file was found in the zip. Follow the campaign: hook "' + sentence(p.hook) + '".'}${j.scriptCut ? '\n[The script is longer than shown; the full file is in the list above.]' : ''}\n\nOUTPUT unless the script says otherwise: one vertical 9:16 video, 1080×1920, MP4 (H.264). RULES: ${RULES} RSH branding only in the corner watermark and the end card.\n\n${RETURN_STEPS(p.id)}`;
+      return `[RSH Sports Marketing OS: automatic edit job${j.source === 'zip' ? ' from a zip' : ' from the campaign’s asset box'}. Sent by the app on behalf of the team.]\n\nEDIT JOB — ${p.title}\nCampaign for ${p.platform || 'social media'}, planned ${p.date || 'no date yet'}. Sport: ${p.sport || 'not set'}.\n\n${j.source === 'zip' ? `The team uploaded a zip, "${j.zipName}", with every file for this video.` : `The manager gathered ${j.files} file${j.files === 1 ? '' : 's'} in the campaign’s asset box and marked them ready.`} Edit the full video exactly as the script says, using these files. Keep the finished MP4 1080×1920 and under 15 MB.${seoEditLine(p) ? '\n\n' + seoEditLine(p) : ''}\n\nGET THE FILES: for each asset id below, use the Artifact tool with action read, url ${APP_URL}, and path set to the asset id; it saves the file locally. Where a file has several asset ids, fetch them in order and join them (cat). Where it says base64, decode after joining (base64 -d).\n${list}\n\nSCRIPT${j.scriptName ? ' (' + j.scriptName + ')' : ''}:\n${j.script || 'No script file was found in the zip. Follow the campaign: hook "' + sentence(p.hook) + '".'}${j.scriptCut ? '\n[The script is longer than shown; the full file is in the list above.]' : ''}\n\nOUTPUT unless the script says otherwise: one vertical 9:16 video, 1080×1920, MP4 (H.264). RULES: ${RULES} RSH branding only in the corner watermark and the end card.\n\n${RETURN_STEPS(p.id)}`;
     }
     return `[RSH Sports Marketing OS: automatic edit job. Sent by the app on behalf of the team.]\n\n${editJob(p).replace('under 30 MB', 'under 19 MB if possible')}\n\n${RETURN_STEPS(p.id)}`;
   }
@@ -671,6 +671,95 @@ Answer with JSON only, exactly these keys:
     return `Sent to Metricool: ${ok} scheduled${queued ? `, ${queued} waiting for a Claude session` : ''}${fails.length ? `. Not sent (${fails.length}): ${fails.slice(0, 3).join(' · ')}${fails.length > 3 ? ' …' : ''}` : '.'}`;
   }
 
+  /* ---------- Campaign asset box ----------
+   * Every campaign has a box for its raw files (clips, photos, music, logo, script). The manager adds files over time;
+   * “Assets ready: start editing” hands them all to Reel, who sends the edit job to the RSH SPORTS editor
+   * (the same route as a .zip). The finished video comes back and is attached to the campaign for review. */
+  let raw = {}, rawOpen = null, rawMsg = '', rawBusy = false;
+  const RAW_MAX = 400e6;
+  async function loadRaw(id) { if (!db) return raw[id] || { files: [] }; try { const s = await db.doc('rawAssets/' + id).get(); raw[id] = s.exists ? JSON.parse(s.data().json) : (raw[id] || { files: [] }); } catch (_) {} return raw[id] || { files: [] }; }
+  async function saveRaw(id) { if (!db) throw new Error('Storage is not available in this view.'); raw[id].updatedAt = new Date().toISOString(); await db.doc('rawAssets/' + id).set({ json: JSON.stringify(raw[id]), postId: id, count: raw[id].files.length, updatedAt: raw[id].updatedAt }); }
+  async function addRaw(id, fileList) {
+    const assets = await use('assets'); if (!assets) throw new Error('Storing files is not available in this view. Open the app from the owner or an editor account.');
+    const box = await loadRaw(id); box.files = box.files || [];
+    let total = box.files.reduce((a, f) => a + (f.bytes || 0), 0), added = 0;
+    for (const file of fileList) {
+      if (/\.zip$/i.test(file.name)) {
+        const JSZip = await loadZipLib(), zip = await JSZip.loadAsync(file);
+        for (const e of Object.values(zip.files).filter(e => !e.dir && !/(^|\/)(__MACOSX|\.)/.test(e.name))) {
+          const bytes = await e.async('uint8array'); total += bytes.length; if (total > RAW_MAX) throw new Error('The files for one campaign can total 400 MB.');
+          rawMsg = `Storing ${e.name.split('/').pop()}…`; paintRaw();
+          box.files.push({ ...(await storeFile(assets, e.name.split('/').pop(), bytes)), addedAt: new Date().toISOString() }); added++; await saveRaw(id);
+        }
+        continue;
+      }
+      total += file.size; if (total > RAW_MAX) throw new Error('The files for one campaign can total 400 MB.');
+      rawMsg = `Storing ${file.name}…`; paintRaw();
+      box.files.push({ ...(await storeFile(assets, file.name, new Uint8Array(await file.arrayBuffer()))), addedAt: new Date().toISOString() }); added++; await saveRaw(id);
+    }
+    return added;
+  }
+  async function removeRaw(id, n) { const box = await loadRaw(id); box.files.splice(n, 1); await saveRaw(id); }
+  async function sendRaw(id) {
+    const p = (app().data().posts || []).find(x => x.id === id); if (!p) throw new Error('Campaign not found.');
+    const box = await loadRaw(id); if (!box.files || !box.files.length) throw new Error('Add the files first.');
+    const cur = jobs[id]; if (cur && (cur.status === 'queued' || cur.status === 'sent')) throw new Error('Reel already has an edit job for this campaign. Wait for the video, or ask for a revision when it comes back.');
+    const assets = await use('assets'); let script = '', scriptName = '';
+    const sf = box.files.find(f => /^text\//.test(f.mime) && /script/i.test(f.name)) || box.files.find(f => /^text\//.test(f.mime));
+    if (sf) { try { const blob = new Blob(await Promise.all(sf.parts.map(async x => (await fetch('/_blob/' + x.id)).blob()))); let t = await blob.text(); if (sf.encoding === 'base64') { try { t = new TextDecoder().decode(Uint8Array.from(atob(t), c => c.charCodeAt(0))); } catch (_) {} } script = t.replace(/\r\n/g, '\n').trim().slice(0, 30000); scriptName = sf.name; } catch (_) {} }
+    if (!script) script = [p.script, p.voiceover ? 'VOICEOVER:\n' + p.voiceover : ''].filter(Boolean).join('\n\n');
+    const job = { postId: id, title: String(p.title || '').slice(0, 120), status: 'queued', queuedAt: new Date().toISOString(), source: 'campaign', files: box.files.length, manifest: JSON.stringify(box.files.map(({ addedAt, ...f }) => f)), script, scriptName, ...(cur && cur.status ? { revisionOf: cur.assetId || '' } : {}) };
+    jobs[id] = job; if (db) await db.doc('editJobs/' + id).set(job);
+    box.sentAt = job.queuedAt; await saveRaw(id);
+    dispatch(); return job;
+  }
+  const kb = n => n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB';
+  async function openRaw(id) {
+    rawOpen = id; rawMsg = ''; let host = document.getElementById('rshRaw');
+    if (!host) {
+      host = document.createElement('div'); host.id = 'rshRaw'; host.setAttribute('role', 'dialog'); host.setAttribute('aria-modal', 'true');
+      host.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.35);display:flex;align-items:flex-start;justify-content:center;padding:40px 16px;overflow:auto';
+      document.body.appendChild(host);
+      host.addEventListener('click', onRawClick); host.addEventListener('change', onRawChange);
+      host.addEventListener('dragover', e => { if (e.target.closest('[data-raw-drop]')) e.preventDefault(); });
+      host.addEventListener('drop', async e => { if (!e.target.closest('[data-raw-drop]')) return; e.preventDefault(); await rawAdd([...(e.dataTransfer.files || [])]); });
+      document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.getElementById('rshRaw') && document.getElementById('rshRaw').style.display !== 'none') closeRaw(); });
+    }
+    host.style.display = 'flex'; paintRaw(); await loadRaw(id); paintRaw();
+  }
+  function closeRaw() { const h = document.getElementById('rshRaw'); if (h) h.style.display = 'none'; rawOpen = null; render(); if (window.RSH_TRACKER && window.RSH_TRACKER.render) try { window.RSH_TRACKER.render(); } catch (_) {} }
+  function paintRaw() {
+    const host = document.getElementById('rshRaw'); if (!host || !rawOpen) return;
+    const p = (app().data().posts || []).find(x => x.id === rawOpen) || {}, box = raw[rawOpen] || { files: [] }, j = jobs[rawOpen];
+    const icon = m => /^video/.test(m) ? '🎬' : /^image/.test(m) ? '🖼️' : /^audio/.test(m) ? '🎵' : /^text|pdf/.test(m) ? '📄' : '📦';
+    const hasScript = (box.files || []).some(f => /^text\//.test(f.mime)) || !!(p.script || p.voiceover);
+    const jobTxt = !j ? '' : j.status === 'queued' ? 'Waiting to be picked up by the editor.' : j.status === 'sent' ? 'With the RSH SPORTS editor now.' : j.status === 'attached' ? 'The edited video came back and is attached to the campaign for review.' : j.status === 'done' ? 'The video is ready; attaching it to the campaign…' : j.status === 'failed' ? 'The editor could not finish: ' + (j.note || 'see the 24/7 Bots tab.') : '';
+    host.innerHTML = `<div class="card" style="max-width:720px;width:100%;background:var(--card,#fff);border-radius:18px;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.25)">
+      <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start"><div><div class="eyebrow">CAMPAIGN ASSETS</div><h2 style="margin-top:6px;font-size:20px">${esc(p.title || '')}</h2><div class="small">${esc(p.platform || '')} · ${esc(p.date || 'no date')} · raw files for the edit: clips, photos, music, logo and the script (.txt or .md)</div></div><button type="button" class="btn ghost smallbtn" data-raw-close aria-label="Close">Close</button></div>
+      <div data-raw-drop style="margin-top:14px;border:2px dashed #c7c7cc;border-radius:14px;padding:18px;text-align:center"><strong>Drop files here</strong> or <button type="button" class="btn smallbtn" data-raw-choose ${rawBusy ? 'disabled' : ''}>Upload assets</button><input type="file" multiple hidden data-raw-file><div class="small" style="margin-top:6px">Any number of files, up to 400 MB in total. A .zip is unpacked. Files are kept with this campaign for the whole team.</div></div>
+      ${rawMsg ? `<div class="hint" role="status" style="margin-top:10px">${esc(rawMsg)}</div>` : ''}
+      <h3 style="margin-top:16px;font-size:15px">${(box.files || []).length} file${(box.files || []).length === 1 ? '' : 's'} gathered</h3>
+      <div style="display:grid;gap:6px;margin-top:8px">${(box.files || []).map((f, n) => `<div style="display:flex;gap:10px;align-items:center;justify-content:space-between;border:1px solid #e5e5ea;border-radius:10px;padding:8px 10px"><span>${icon(f.mime)} <strong>${esc(f.name)}</strong> <span class="small">${esc(f.mime)} · ${kb(f.bytes || 0)}</span></span><button type="button" class="btn ghost smallbtn" data-raw-remove="${n}" ${rawBusy ? 'disabled' : ''}>Remove</button></div>`).join('') || '<div class="small">No files yet.</div>'}</div>
+      <div class="small" style="margin-top:10px">${hasScript ? '✓ Script found' : '⚠ No script yet: add a .txt or .md file, or write the script in the campaign’s details. Without one Reel follows the campaign brief.'}</div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:16px;border-top:1px solid #e5e5ea;padding-top:14px">
+        <button type="button" class="btn" data-raw-send ${rawBusy || !(box.files || []).length || (j && (j.status === 'queued' || j.status === 'sent')) ? 'disabled' : ''}>${j && j.status === 'attached' ? 'Send again for a new edit' : 'Assets ready: start editing'}</button>
+        <span class="small">${esc(jobTxt || 'Reel sends every file and the script to the RSH SPORTS editor; the finished video is attached to this campaign for manager and Anthony review.')}</span></div></div>`;
+  }
+  async function rawAdd(files) {
+    if (!files.length || rawBusy || !rawOpen) return; rawBusy = true; rawMsg = 'Storing…'; paintRaw();
+    try { const n = await addRaw(rawOpen, files); rawMsg = `${n} file${n === 1 ? '' : 's'} added.`; } catch (e) { rawMsg = 'Could not add: ' + ((e && e.message) || e); }
+    rawBusy = false; paintRaw();
+  }
+  async function onRawClick(e) {
+    if (e.target.id === 'rshRaw' || e.target.closest('[data-raw-close]')) return closeRaw();
+    if (e.target.closest('[data-raw-choose]')) { const f = document.querySelector('#rshRaw [data-raw-file]'); if (f) f.click(); return; }
+    const rm = e.target.closest('[data-raw-remove]'); if (rm && !rawBusy) { rawBusy = true; try { await removeRaw(rawOpen, Number(rm.dataset.rawRemove)); rawMsg = 'Removed.'; } catch (err) { rawMsg = 'Could not remove: ' + err.message; } rawBusy = false; return paintRaw(); }
+    if (e.target.closest('[data-raw-send]') && !rawBusy) { rawBusy = true; paintRaw(); try { await sendRaw(rawOpen); rawMsg = 'Sent to Reel. The edit job is on its way to the RSH SPORTS editor.'; } catch (err) { rawMsg = (err && err.message) || String(err); } rawBusy = false; paintRaw(); }
+  }
+  async function onRawChange(e) { if (e.target.matches('[data-raw-file]')) { const fs = [...e.target.files]; e.target.value = ''; await rawAdd(fs); } }
+  async function rawCounts() { if (!db) return; try { const q = await db.collection('rawAssets').get(); for (const d of q.docs) { try { raw[d.id] = JSON.parse(d.data().json); } catch (_) {} } } catch (_) {} }
+  const rawCount = id => ((raw[id] && raw[id].files) || []).length;
+
   /* ---------- rendering ---------- */
   function render() {
     const host = document.getElementById('rshBots'); if (!host || !app()) return;
@@ -693,7 +782,7 @@ Answer with JSON only, exactly these keys:
         const p = c.p, an = c.an;
         if (p.date !== lastDay) { lastDay = p.date; list += `<div class="day">${esc(new Date(p.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }))}</div>`; }
         const badge = c.state === 'files' ? '<span class="chk stop">Needs files</span>' : c.state === 'ready' ? '<span class="chk ok">✓ Ready</span>' : '<span class="chk warn">Held back</span>';
-        list += `<details class="camp" data-bot-camp="${esc(p.id)}" ${openCamps.has(p.id) ? 'open' : ''}><summary><span><strong>${esc(p.title)}</strong><span class="small"> · ${esc(p.platform || '')} · ${c.mine.length} channel post${c.mine.length === 1 ? '' : 's'}</span></span><span class="sumr">${badge}<span class="small">${c.ok} of ${c.mine.length} ready</span><span class="nav-caret">⌄</span></span></summary>` + nextStep(p, c) + `<div class="assetrow"><div><strong>Files needed</strong> <span class="small">· ${an.files} attached</span><div>${an.needs.map(n => `<span class="need ${n.state}">${n.state === 'have' ? '✓ ' : ''}${esc(n.label)}${n.detail ? ' (' + esc(n.detail) + ')' : ''}</span>`).join('')}</div></div><div style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="btn ghost smallbtn" data-bot-brief="${esc(p.id)}">Copy full brief for AI</button><button type="button" class="btn ghost smallbtn" data-bot-prompt="image" data-bot-post="${esc(p.id)}">Copy image prompt</button><button type="button" class="btn ghost smallbtn" data-bot-prompt="video" data-bot-post="${esc(p.id)}">Copy video brief</button>${jobs[p.id] ? '' : `<button type="button" class="btn smallbtn" data-bot-askvideo="${esc(p.id)}">Have Reel make a video</button>`}<button type="button" class="btn ghost smallbtn" data-bot-editor="${esc(p.id)}">Copy edit job</button></div>${(() => { const j = jobs[p.id]; return j ? `<div class="small" style="flex-basis:100%"><strong>Video editor${j.source === 'zip' ? ` (from “${esc(j.zipName)}”, ${j.files} files)` : ''}:</strong> ${j.status === 'queued' ? 'job waiting to be sent to RSH SPORTS.' : j.status === 'sent' ? 'job sent to RSH SPORTS ' + esc(new Date(j.sentAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })) + '. The video is attached here when it comes back.' : j.status === 'attached' ? `edited video${j.revision > 1 ? ' (revision ' + j.revision + ')' : ''} came back and is attached. <button type="button" class="btn smallbtn" data-bot-watch="${esc(p.id)}" style="padding:3px 10px;margin-left:4px">Watch and review</button>` : j.status === 'failed' ? 'the edit did not finish. ' + esc(j.reason || '') : 'video received, attaching…'}</div>` : needsVideo(p) && settings.autoEdit ? '<div class="small" style="flex-basis:100%"><strong>Video editor:</strong> this campaign needs a video; Reel sends the job on the next run.</div>' : ''; })()}${kitSport(p) ? `<div class="small" style="flex-basis:100%">Kit clip: open your RSH Kit Animator artifact, choose <strong>${esc(kitSport(p).replace(/^./, c => c.toUpperCase()))}</strong>, set the team and colours, record the 4-second clip, then drop the saved MP4 on the Office tab with this campaign selected.</div>` : ''}</div>`;
+        list += `<details class="camp" data-bot-camp="${esc(p.id)}" ${openCamps.has(p.id) ? 'open' : ''}><summary><span><strong>${esc(p.title)}</strong><span class="small"> · ${esc(p.platform || '')} · ${c.mine.length} channel post${c.mine.length === 1 ? '' : 's'}</span></span><span class="sumr">${badge}<span class="small">${c.ok} of ${c.mine.length} ready</span><span class="nav-caret">⌄</span></span></summary>` + `<div style="margin:8px 0"><button type="button" class="btn ghost smallbtn" data-bot-raw="${esc(p.id)}">📁 Campaign assets (${rawCount(p.id)})</button></div>` + nextStep(p, c) + `<div class="assetrow"><div><strong>Files needed</strong> <span class="small">· ${an.files} attached</span><div>${an.needs.map(n => `<span class="need ${n.state}">${n.state === 'have' ? '✓ ' : ''}${esc(n.label)}${n.detail ? ' (' + esc(n.detail) + ')' : ''}</span>`).join('')}</div></div><div style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="btn ghost smallbtn" data-bot-brief="${esc(p.id)}">Copy full brief for AI</button><button type="button" class="btn ghost smallbtn" data-bot-prompt="image" data-bot-post="${esc(p.id)}">Copy image prompt</button><button type="button" class="btn ghost smallbtn" data-bot-prompt="video" data-bot-post="${esc(p.id)}">Copy video brief</button>${jobs[p.id] ? '' : `<button type="button" class="btn smallbtn" data-bot-askvideo="${esc(p.id)}">Have Reel make a video</button>`}<button type="button" class="btn ghost smallbtn" data-bot-editor="${esc(p.id)}">Copy edit job</button></div>${(() => { const j = jobs[p.id]; return j ? `<div class="small" style="flex-basis:100%"><strong>Video editor${j.source === 'zip' ? ` (from “${esc(j.zipName)}”, ${j.files} files)` : ''}:</strong> ${j.status === 'queued' ? 'job waiting to be sent to RSH SPORTS.' : j.status === 'sent' ? 'job sent to RSH SPORTS ' + esc(new Date(j.sentAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })) + '. The video is attached here when it comes back.' : j.status === 'attached' ? `edited video${j.revision > 1 ? ' (revision ' + j.revision + ')' : ''} came back and is attached. <button type="button" class="btn smallbtn" data-bot-watch="${esc(p.id)}" style="padding:3px 10px;margin-left:4px">Watch and review</button>` : j.status === 'failed' ? 'the edit did not finish. ' + esc(j.reason || '') : 'video received, attaching…'}</div>` : needsVideo(p) && settings.autoEdit ? '<div class="small" style="flex-basis:100%"><strong>Video editor:</strong> this campaign needs a video; Reel sends the job on the next run.</div>' : ''; })()}${kitSport(p) ? `<div class="small" style="flex-basis:100%">Kit clip: open your RSH Kit Animator artifact, choose <strong>${esc(kitSport(p).replace(/^./, c => c.toUpperCase()))}</strong>, set the team and colours, record the 4-second clip, then drop the saved MP4 on the Office tab with this campaign selected.</div>` : ''}</div>`;
         for (const it of c.mine) {
           const key = it.postId + '|' + it.channel, open = openItem === key;
           list += `<div class="item" data-bot-item="${esc(key)}"><div style="display:flex;gap:8px;align-items:flex-start">${chBadge(it.channel)}<div><strong>${esc(NAME[it.channel])}</strong><div class="small">${it.caption.length} characters</div>${it.posted ? `<div class="posted">✓ Posted ${esc(new Date(it.posted.at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }))}</div>` : ''}</div></div>
@@ -924,6 +1013,7 @@ Answer with JSON only, exactly these keys:
   async function onClick(e) {
     const at = e.target.closest('[data-bot-addtags]');
     if (at) { const it = find(at.dataset.botAddtags), so = it && seoFor(it.postId, it.channel); if (it && so) { const add = (so.ch.hashtags || []).filter(t => !it.caption.toLowerCase().includes(t.toLowerCase())); if (add.length) { it.caption = it.caption.replace(/\s+$/, '') + (/(#[\p{L}\p{N}_]+)\s*$/u.test(it.caption) ? ' ' : '\n\n') + add.join(' '); it.edited = true; await save(); render(); } } return; }
+    const rb = e.target.closest('[data-bot-raw]'); if (rb) { e.preventDefault(); return openRaw(rb.dataset.botRaw); }
     const fln = e.target.closest('[data-bot-firstline]');
     if (fln) { const it = find(fln.dataset.botFirstline), so = it && seoFor(it.postId, it.channel); if (it && so && so.firstLine) { it.caption = so.firstLine + '\n\n' + it.caption; it.edited = true; await save(); render(); } return; }
     const oc = e.target.closest('[data-bot-opencamp]'); if (oc) { e.preventDefault(); if (app().openNext) app().openNext(oc.dataset.botOpencamp); return; }
@@ -988,6 +1078,7 @@ Answer with JSON only, exactly these keys:
     setInterval(() => { if (document.visibilityState === 'visible' && Object.values(jobs).some(j => j.status === 'sent' || j.status === 'queued' || j.status === 'done')) collect(); }, 60000);   // check for finished videos while the screen is open
     document.querySelectorAll('[data-view="bots"]').forEach(b => b.addEventListener('click', () => collect()));   // fires after every saved change to the campaigns
     db = await use('db');
+    rawCounts().then(() => { render(); if (window.RSH_TRACKER && window.RSH_TRACKER.render) try { window.RSH_TRACKER.render(); } catch (_) {} });
     if (db) {
       try { const s = await db.doc('bots/settings').get(); if (s.exists) settings = { ...DEFAULTS, ...JSON.parse(s.data().json) }; } catch (_) {}
       try { const s = await db.doc('bots/seo').get(); if (s.exists) seo = JSON.parse(s.data().json) || {}; } catch (_) {}
@@ -996,5 +1087,5 @@ Answer with JSON only, exactly these keys:
     }
     render();
   }
-  window.RSH_BOTS = { dayFor, isDyk, targets, sendText, autoSend, seoFor, seoRun, learnedTimes, schedule, attachForPost, driveUpload, fileFor, autoLink, needsFile, readyItems, placedOn, place, unplace, setMediaUrl, sendToMetricool, metricoolPost, NAME, freshVideos, watch, onChange: f => listeners.push(f), handoff, collect, start, captionFor, assetNeeds, imagePrompt, videoBrief, editJob };
+  window.RSH_BOTS = { openRaw, addRaw, sendRaw, rawCount, loadRaw, dayFor, isDyk, targets, sendText, autoSend, seoFor, seoRun, learnedTimes, schedule, attachForPost, driveUpload, fileFor, autoLink, needsFile, readyItems, placedOn, place, unplace, setMediaUrl, sendToMetricool, metricoolPost, NAME, freshVideos, watch, onChange: f => listeners.push(f), handoff, collect, start, captionFor, assetNeeds, imagePrompt, videoBrief, editJob };
 })();

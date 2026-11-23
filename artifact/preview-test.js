@@ -412,6 +412,16 @@ const out = []; const ok = (n, c, d) => { out.push(c); console.log((c ? 'PASS  '
   const e = await open(1200, 800, '?empty');
   ok('Empty storage starts a blank workspace without errors', (await e.evaluate(() => !!document.getElementById('rshSyncPill'))) );
   ok('No page errors overall', errs.length === 0, errs.join(' | '));
+  const rawT = await p.evaluate(async () => { const B = window.RSH_BOTS, ws = JSON.parse(localStorage.getItem('rsh_growth_command_v1')).posts, q = ws.find(x => !window.__store['editJobs/' + x.id]); await B.openRaw(q.id); const shown = !!document.querySelector('#rshRaw [data-raw-choose]');
+    const n = await B.addRaw(q.id, [new File([new Uint8Array(5000)], 'clip1.mp4', { type: 'video/mp4' }), new File(['SCRIPT: Open on the mat. Say: every wrestler has a ritual.'], 'script.txt', { type: 'text/plain' }), new File([new Uint8Array(800)], 'logo.png', { type: 'image/png' })]);
+    const before = (window.__sent || []).length; const job = await B.sendRaw(q.id); await new Promise(r => setTimeout(r, 600)); const msg = ((window.__sent || [])[before] || {}).input || {};
+    let again = ''; try { await B.sendRaw(q.id); } catch (e) { again = e.message; }
+    document.querySelector('#rshRaw [data-raw-close]').click(); window.__sent = (window.__sent || []).slice(0, before);
+    return { shown, n, count: B.rawCount(q.id), stored: !!window.__store['rawAssets/' + q.id], src: job.source, files: job.files, script: /every wrestler has a ritual/.test(job.script), sent: /asset box/.test(msg.message || '') && /clip1\.mp4/.test(msg.message || '') && /under 15 MB/.test(msg.message || ''), again }; });
+  ok('Each campaign has an asset box: files are uploaded and kept, and “Assets ready” sends them with the script to the editor', rawT.shown && rawT.n === 3 && rawT.count === 3 && rawT.stored && rawT.src === 'campaign' && rawT.files === 3 && rawT.script && rawT.sent && /already has an edit job/.test(rawT.again), JSON.stringify(rawT));
+  const trackBtn = await p.evaluate(() => { document.querySelector('.nav button[data-view="tracker"]') && document.querySelector('.nav button[data-view="tracker"]').click(); return document.querySelectorAll('[data-track-assets]').length; });
+  ok('The Checklist shows an Assets button on every campaign', trackBtn > 0, String(trackBtn));
+  await p.click('.nav button[data-view="bots"]');
   await b.close(); srv.close();
   process.exit(out.every(Boolean) ? 0 : 1);
 })().catch(e => { console.error(e); process.exit(1); });
