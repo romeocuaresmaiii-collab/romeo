@@ -964,18 +964,20 @@ Answer with JSON only, exactly these keys:
   function scene(now) {
     const c = ISO.ctx, P = isoPt; c.clearRect(0, 0, ISO.w, ISO.h);
     // floors: grey office carpet, wooden break room
-    poly([P(0, 0, 0), P(15, 0, 0), P(15, GH, 0), P(0, GH, 0)], '#b8bec6');
-    for (let x = 0; x < 15; x++) for (let y = 0; y < GH; y++) if ((x + y) % 2) poly([P(x, y, 0), P(x + 1, y, 0), P(x + 1, y + 1, 0), P(x, y + 1, 0)], 'rgba(0,0,0,.035)');
-    poly([P(15, 0, 0), P(GW, 0, 0), P(GW, GH, 0), P(15, GH, 0)], '#c8996a');
-    for (let x = 15; x < GW; x += 0.5) poly([P(x, 0, 0), P(x + 0.02, 0, 0), P(x + 0.02, GH, 0), P(x, GH, 0)], 'rgba(90,55,25,.18)');
+    const EX = GW + 14, EY = GH + 14;                                                     // the office continues past the frame
+    poly([P(0, 0, 0), P(15, 0, 0), P(15, EY, 0), P(0, EY, 0)], '#b8bec6');
+    for (let x = 0; x < 15; x++) for (let y = 0; y < EY; y++) if ((x + y) % 2) poly([P(x, y, 0), P(x + 1, y, 0), P(x + 1, y + 1, 0), P(x, y + 1, 0)], 'rgba(0,0,0,.035)');
+    poly([P(15, 0, 0), P(EX, 0, 0), P(EX, EY, 0), P(15, EY, 0)], '#c8996a');
+    for (let x = 15; x < EX; x += 0.5) poly([P(x, 0, 0), P(x + 0.02, 0, 0), P(x + 0.02, EY, 0), P(x, EY, 0)], 'rgba(90,55,25,.18)');
     poly([P(2.2, 3, 0), P(10, 3, 0), P(10, 10, 0), P(2.2, 10, 0)], 'rgba(40,60,90,.08)');   // rug under the desks
     // walls
-    poly([P(0, 0, 0), P(GW, 0, 0), P(GW, 0, 2.6), P(0, 0, 2.6)], '#eef0f2'); poly([P(0, 0, 0), P(0, GH, 0), P(0, GH, 2.6), P(0, 0, 2.6)], '#dde1e5');
-    poly([P(0, 0, 0), P(GW, 0, 0), P(GW, 0, 0.12), P(0, 0, 0.12)], '#9aa1a9'); poly([P(0, 0, 0), P(0, GH, 0), P(0, GH, 0.12), P(0, 0, 0.12)], '#8c939b');
-    poly([P(0, 0, 2.6), P(GW, 0, 2.6), P(GW, -0.2, 2.6), P(0, -0.2, 2.6)], '#cfd4d9'); poly([P(0, 0, 2.6), P(0, GH, 2.6), P(-0.2, GH, 2.6), P(-0.2, 0, 2.6)], '#c3c9cf');
+    poly([P(0, 0, 0), P(EX, 0, 0), P(EX, 0, 12), P(0, 0, 12)], '#eef0f2'); poly([P(0, 0, 0), P(0, EY, 0), P(0, EY, 12), P(0, 0, 12)], '#dde1e5');
+    poly([P(0, 0, 0), P(EX, 0, 0), P(EX, 0, 0.12), P(0, 0, 0.12)], '#9aa1a9'); poly([P(0, 0, 0), P(0, EY, 0), P(0, EY, 0.12), P(0, 0, 0.12)], '#8c939b');
+    poly([P(0, 0, 2.95), P(EX, 0, 2.95), P(EX, 0, 3.05), P(0, 0, 3.05)], '#d1d5db'); poly([P(0, 0, 2.95), P(0, EY, 2.95), P(0, EY, 3.05), P(0, 0, 3.05)], '#c7ccd2');   // ceiling trim
+    poly([P(0, 0, 3.05), P(EX, 0, 3.05), P(EX, 0, 12), P(0, 0, 12)], '#f4f5f7'); poly([P(0, 0, 3.05), P(0, EY, 3.05), P(0, EY, 12), P(0, 0, 12)], '#e9ecef');
     // windows (daylight)
-    for (const [a, b] of [[1.0, 3.6], [4.4, 7.0], [16.0, 18.4], [21.6, 23.6]]) { onBack(a, b, 0.9, 2.3, '#bfe0f5', '#94a3b8'); onBack((a + b) / 2 - 0.02, (a + b) / 2 + 0.02, 0.9, 2.3, '#94a3b8'); }
-    for (const [a, b] of [[2, 4.6], [6.6, 9.2], [11, 13.4]]) { onLeft(a, b, 0.9, 2.3, '#b5d8ef', '#94a3b8'); onLeft((a + b) / 2 - 0.02, (a + b) / 2 + 0.02, 0.9, 2.3, '#94a3b8'); }
+    for (const [a, b] of [[1.0, 3.6], [4.4, 7.0], [16.0, 18.4], [21.6, 23.6], [25.4, 28.0], [29.4, 32.0]]) { onBack(a, b, 0.9, 2.3, '#bfe0f5', '#94a3b8'); onBack((a + b) / 2 - 0.02, (a + b) / 2 + 0.02, 0.9, 2.3, '#94a3b8'); }
+    for (const [a, b] of [[2, 4.6], [6.6, 9.2], [11, 13.4], [15.6, 18.2], [19.8, 22.4]]) { onLeft(a, b, 0.9, 2.3, '#b5d8ef', '#94a3b8'); onLeft((a + b) / 2 - 0.02, (a + b) / 2 + 0.02, 0.9, 2.3, '#94a3b8'); }
     // RSH sign and the wall clock
     onBack(7.2, 11.4, 1.3, 2.1, '#111827'); { const [sx, sy] = P(9.3, 0.02, 1.7); c.fillStyle = '#fff'; c.font = '800 11px system-ui, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.save(); c.translate(sx, sy); c.transform(1, 0.5, 0, 1, 0, 0); c.fillText('RSH SPORTS', 0, 0); c.restore(); }
     { const [kx, ky] = P(14.6, 0.02, 2.0), d = new Date(), hr = (d.getHours() % 12 + d.getMinutes() / 60) / 12 * Math.PI * 2, mn = d.getMinutes() / 60 * Math.PI * 2; c.save(); c.translate(kx, ky); c.transform(1, 0.5, 0, 1, 0, 0); c.beginPath(); c.arc(0, 0, 11, 0, Math.PI * 2); c.fillStyle = '#fff'; c.fill(); c.strokeStyle = '#334155'; c.lineWidth = 2; c.stroke(); c.lineWidth = 1.6; c.beginPath(); c.moveTo(0, 0); c.lineTo(Math.sin(hr) * 6, -Math.cos(hr) * 6); c.moveTo(0, 0); c.lineTo(Math.sin(mn) * 9, -Math.cos(mn) * 9); c.stroke(); c.restore(); }
@@ -1121,7 +1123,7 @@ Answer with JSON only, exactly these keys:
     const slot = document.querySelector('#rshBots [data-bot-iso]'); if (!slot) return;
     if (!ISO.wrap) {
       ISO.wrap = document.createElement('div'); ISO.wrap.style.cssText = 'margin-bottom:14px';
-      ISO.canvas = document.createElement('canvas'); ISO.canvas.setAttribute('role', 'img'); ISO.canvas.style.cssText = 'width:100%;display:block;border-radius:16px;background:#20242b;cursor:pointer';
+      ISO.canvas = document.createElement('canvas'); ISO.canvas.setAttribute('role', 'img'); ISO.canvas.style.cssText = 'width:100%;display:block;border-radius:16px;background:#eef0f2;cursor:pointer';
       ISO.log = document.createElement('div'); ISO.log.className = 'small'; ISO.log.setAttribute('aria-live', 'polite'); ISO.log.style.cssText = 'margin-top:8px;padding:8px 12px;border-radius:12px;background:var(--soft,#f5f5f7);display:grid;gap:2px';
       ISO.wrap.appendChild(ISO.canvas); ISO.wrap.appendChild(ISO.log); paintLog();
       ISO.canvas.addEventListener('click', e => { const r = ISO.canvas.getBoundingClientRect(), mx = (e.clientX - r.left) * (ISO.w / r.width), my = (e.clientY - r.top) * (ISO.h / r.height); let best = null, bd = 36;
@@ -1130,10 +1132,11 @@ Answer with JSON only, exactly these keys:
       document.addEventListener('visibilitychange', () => { if (!document.hidden && ISO.canvas && ISO.canvas.isConnected && !ISO.raf) ISO.raf = requestAnimationFrame(isoTick); });
     }
     if (ISO.wrap.parentNode !== slot) slot.appendChild(ISO.wrap);
-    const W = Math.max(320, slot.clientWidth || 900), H = Math.round(W * 0.6), dpr = Math.min(2, window.devicePixelRatio || 1);
-    const scale = Math.min(W / ((GW + GH) * TW / 2 + 24), H / ((GW + GH) * TH / 2 + 2.6 * ZH + 80));
+    const W = Math.max(320, slot.clientWidth || 900), H = Math.round(W * 9 / 16), dpr = Math.min(2, window.devicePixelRatio || 1);
+    const roomW = (GW + GH) * TW / 2, roomH = (GW + GH) * TH / 2 + 2.6 * ZH;
+    const scale = Math.min(W / roomW, H / (roomH + 46)) * 1.14;
     if (ISO.w0 !== W || ISO.dpr !== dpr) { ISO.canvas.width = Math.round(W * dpr); ISO.canvas.height = Math.round(H * dpr); ISO.dpr = dpr; ISO.w0 = W; }
-    ISO.ctx = ISO.canvas.getContext('2d'); ISO.ctx.setTransform(dpr * scale, 0, 0, dpr * scale, 0, 0); ISO.w = W / scale; ISO.h = H / scale; ISO.ox = GH * TW / 2 + 12; ISO.oy = 2.6 * ZH + 66;
+    ISO.ctx = ISO.canvas.getContext('2d'); ISO.ctx.setTransform(dpr * scale, 0, 0, dpr * scale, 0, 0); ISO.w = W / scale; ISO.h = H / scale; ISO.ox = ISO.w / 2 - (GW - GH) * TW / 4 - 60; ISO.oy = (ISO.h - roomH) / 2 + 2.6 * ZH + 2;
     const t = team(), summary = [];
     TEAM.forEach(([id, name], n) => { const face = t[id][2], state = face === 'asleep' ? 'asleep' : face === 'working' ? 'working' : 'idle';
       let p = ISO.people[id]; if (!p) { const s0 = SPOTS[n % SPOTS.length]; p = ISO.people[id] = { id, x: s0[0], y: s0[1], state, moving: false }; }
