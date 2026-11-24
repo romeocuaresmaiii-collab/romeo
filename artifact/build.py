@@ -51,6 +51,7 @@ cal = (ROOT / 'artifact' / 'calendar.js').read_text(encoding='utf-8')
 homejs = (ROOT / 'artifact' / 'home.js').read_text(encoding='utf-8')
 tracker = (ROOT / 'artifact' / 'tracker.js').read_text(encoding='utf-8')
 bots = (ROOT / 'artifact' / 'bots.js').read_text(encoding='utf-8')
+bots = once(bots, '__RSH_FLOOR_JSON__', json.dumps((ROOT / 'devlabs' / 'rsh-sports-24-7-bots.floor.json').read_text(encoding='utf-8')).replace('</', '<\\/'))
 shim = once(shim, '__APP_VERSION__', version)
 shim = once(shim, '__BUNDLED_MEDIA__', json.dumps(bundled))
 shim = once(shim, '__WEEKLY_PACKS__', json.dumps(packs, ensure_ascii=False).replace('</', '<\\/'))
@@ -100,7 +101,7 @@ s = once(s, "tracker:['Campaign Checklist',", "bots:['24/7 Bots','Captions, timi
 
 # 4. Wording that would be untrue here.
 s = once(s, f'<strong>LOCAL APP · V{version}</strong><div class="small">Activate the local Data Vault in Setup & Backup to preserve browser work. Export a backup before upgrading. Metricool is connected in ChatGPT only, not this local app.</div>',
-         f'<strong>ARTIFACT EDITION · V{version} · BUILD 54</strong><div class="small">Your workspace and uploaded media are saved automatically to this artifact’s private storage. Approvals are local records, not authenticated. No Metricool sync or publishing.</div>')
+         f'<strong>ARTIFACT EDITION · V{version} · BUILD 55</strong><div class="small">Your workspace and uploaded media are saved automatically to this artifact’s private storage. Approvals are local records, not authenticated. No Metricool sync or publishing.</div>')
 s = once(s, "'Use python3 server.py in the extracted v%s folder, then open http://127.0.0.1:8765. Buttons and media uploads require the local server.'" % version, "'Open this page from your Claude artifacts.'")
 
 for old, new in (('Local editorial plans are separate from the read-only Metricool monthly archive.', 'Team plans, with what is scheduled and published in Metricool.'), ('Metricool connected to ChatGPT only', 'Live results from Metricool'), ('Local workspace · demo/pilot', 'RSH Sports workspace')):
