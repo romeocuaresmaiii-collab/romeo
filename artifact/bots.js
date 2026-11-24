@@ -934,8 +934,122 @@ Answer with JSON only, exactly these keys:
   async function rawCounts() { if (!db) return; try { const q = await db.collection('rawAssets').get(); for (const d of q.docs) { try { raw[d.id] = JSON.parse(d.data().json); } catch (_) {} } } catch (_) {} }
   const rawCount = id => ((raw[id] && raw[id].files) || []).length;
 
+
+  /* ---------- The live office (isometric, drawn on a canvas; no images or SVG) ----------
+   * Every bot is a little character. Working: walks to its desk and its screen lights up. Idle: goes to the Kapihan
+   * for coffee and chats. Asleep (switched off): naps at its desk. Speech bubbles use the bots' real status lines.
+   * Click a bot to hear what it is doing. Pauses when the Office tab is hidden; no walking with reduced motion. */
+  const ISO = { canvas: null, ctx: null, raf: 0, people: {}, last: 0, w: 0, h: 0, sel: null, said: {}, chatAt: 0 };
+  const GW = 22, GH = 13, TW = 44, TH = 22, ZH = 22;
+  const DESKS = { pixel: [3, 3], reel: [6, 3], quill: [9, 3], tempo: [3, 7], ref: [6, 7], courier: [9, 7], owl: [12, 5] };
+  const CAFE = [[15.4, 3.6], [17.4, 2.6], [19.8, 5.0], [17.3, 6.3], [15.6, 9.2], [18.2, 9.4], [20.4, 10.6]];
+  const CHAT = ['Kape muna tayo ☕', 'Sino may approved na post?', 'Ang ganda ng 6 PM slot natin ah', 'Tuesday is DYK day!', 'Charot lang, boss!', 'Ready na ba ang files?', 'Tara, check natin ang Metricool', 'Puyat ka na naman, Night Owl?'];
+  const shade = (hex, f) => { const n = parseInt(hex.slice(1), 16); let r = n >> 16, g = (n >> 8) & 255, b = n & 255; const m = c => Math.max(0, Math.min(255, Math.round(f < 0 ? c * (1 + f) : c + (255 - c) * f))); return `rgb(${m(r)},${m(g)},${m(b)})`; };
+  function isoPt(x, y, z) { return [ISO.ox + (x - y) * TW / 2, ISO.oy + (x + y) * TH / 2 - (z || 0) * ZH]; }
+  function poly(pts, fill, stroke) { const c = ISO.ctx; c.beginPath(); pts.forEach((p, i) => i ? c.lineTo(p[0], p[1]) : c.moveTo(p[0], p[1])); c.closePath(); c.fillStyle = fill; c.fill(); if (stroke) { c.strokeStyle = stroke; c.lineWidth = 1; c.stroke(); } }
+  function box(x, y, z, w, d, h, color) {
+    const P = (a, b, c) => isoPt(a, b, c);
+    poly([P(x, y + d, z), P(x + w, y + d, z), P(x + w, y + d, z + h), P(x, y + d, z + h)], shade(color, -0.28));   // front-left
+    poly([P(x + w, y, z), P(x + w, y + d, z), P(x + w, y + d, z + h), P(x + w, y, z + h)], shade(color, -0.12));   // front-right
+    poly([P(x, y, z + h), P(x + w, y, z + h), P(x + w, y + d, z + h), P(x, y + d, z + h)], color);                 // top
+  }
+  function disc(x, y, z, r, color) { const [cx, cy] = isoPt(x, y, z), c = ISO.ctx; c.beginPath(); c.ellipse(cx, cy, r * TW / 2 * 1.41, r * TH / 2 * 1.41, 0, 0, Math.PI * 2); c.fillStyle = color; c.fill(); }
+  function label(x, y, z, text, bg, fg, font) {
+    const [cx, cy] = isoPt(x, y, z), c = ISO.ctx; c.font = font || '600 11px system-ui, sans-serif'; const w = c.measureText(text).width + 12;
+    c.fillStyle = bg; c.beginPath(); c.roundRect ? c.roundRect(cx - w / 2, cy - 9, w, 18, 6) : c.rect(cx - w / 2, cy - 9, w, 18); c.fill(); c.fillStyle = fg; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(text, cx, cy + 0.5);
+  }
+  function bubble(x, y, z, text) {
+    const c = ISO.ctx, [cx, cy] = isoPt(x, y, z); c.font = '600 12px system-ui, sans-serif'; const words = String(text).split(' '), lines = []; let cur = '';
+    for (const w of words) { if (c.measureText(cur + ' ' + w).width > 190 && cur) { lines.push(cur); cur = w; } else cur = cur ? cur + ' ' + w : w; } if (cur) lines.push(cur);
+    const L = lines.slice(0, 3), bw = Math.min(214, Math.max(...L.map(l => c.measureText(l).width)) + 18), bh = L.length * 15 + 12, bx = Math.max(4, Math.min(ISO.w - bw - 4, cx - bw / 2)), by = cy - bh - 10;
+    c.fillStyle = 'rgba(17,24,39,.92)'; c.beginPath(); c.roundRect ? c.roundRect(bx, by, bw, bh, 9) : c.rect(bx, by, bw, bh); c.fill();
+    c.beginPath(); c.moveTo(cx - 6, by + bh); c.lineTo(cx + 6, by + bh); c.lineTo(cx, by + bh + 7); c.fill();
+    c.fillStyle = '#fff'; c.textAlign = 'left'; c.textBaseline = 'top'; L.forEach((l, i) => c.fillText(l + (i === 2 && lines.length > 3 ? '…' : ''), bx + 9, by + 6 + i * 15));
+  }
+  function person(p, now) {
+    const [id, name, , color] = TEAM.find(t => t[0] === p.id), sit = p.state !== 'idle' && p.atDesk, bob = p.moving ? Math.abs(Math.sin(now / 120)) * 0.08 : 0, z0 = sit ? 0.35 : bob;
+    disc(p.x, p.y, 0.01, 0.32, 'rgba(0,0,0,.18)');
+    if (!sit) { box(p.x - 0.14, p.y - 0.06, 0, 0.12, 0.12, 0.5, '#1f2937'); box(p.x + 0.02, p.y - 0.06, 0, 0.12, 0.12, 0.5, '#1f2937'); }
+    box(p.x - 0.18, p.y - 0.12, z0 + (sit ? 0 : 0.5), 0.36, 0.24, 0.62, color);                   // body
+    const hz = z0 + (sit ? 0.62 : 1.12) - (p.state === 'asleep' ? 0.12 : 0);
+    box(p.x - 0.15, p.y - 0.15, hz, 0.3, 0.3, 0.34, '#f1c27d');                                       // head
+    box(p.x - 0.16, p.y - 0.16, hz + 0.3, 0.32, 0.32, 0.08, '#2b2118');                              // hair
+    if (id === 'owl') { box(p.x - 0.05, p.y - 0.05, hz + 0.38, 0.1, 0.1, 0.12, '#64748b'); }
+    const tagZ = hz + 0.75; label(p.x, p.y, tagZ, name.toUpperCase(), color, '#fff', '700 10px system-ui, sans-serif');
+    const st = p.state === 'working' ? ['WORKING', '#16a34a'] : p.state === 'asleep' ? ['ASLEEP', '#64748b'] : ['IDLE', '#111827'];
+    label(p.x, p.y, tagZ + 0.85, '● ' + st[0], 'rgba(255,255,255,.95)', st[1], '700 10px system-ui, sans-serif');
+    if (p.state === 'asleep') { const [cx, cy] = isoPt(p.x + 0.3, p.y - 0.2, hz + 0.5); ISO.ctx.fillStyle = '#94a3b8'; ISO.ctx.font = '700 12px system-ui'; ISO.ctx.fillText('z', cx, cy - (now / 300 % 8)); ISO.ctx.fillText('z', cx + 8, cy - 8 - (now / 300 % 8)); }
+    p.hit = (() => { const [cx, cy] = isoPt(p.x, p.y, 0.8); return [cx, cy]; })();
+    if (p.say && now < p.sayUntil) bubble(p.x, p.y, tagZ + 1.6, p.say);
+  }
+  function scene(now) {
+    const c = ISO.ctx; c.clearRect(0, 0, ISO.w, ISO.h);
+    const P = isoPt;
+    poly([P(0, 0, 0), P(GW, 0, 0), P(GW, GH, 0), P(0, GH, 0)], '#d9b98b');                          // carpet
+    for (let x = 0; x < GW; x++) for (let y = 0; y < GH; y++) if ((x + y) % 2 === 0) poly([P(x, y, 0), P(x + 1, y, 0), P(x + 1, y + 1, 0), P(x, y + 1, 0)], 'rgba(120,80,40,.07)');
+    poly([P(14, 0, 0), P(GW, 0, 0), P(GW, GH, 0), P(14, GH, 0)], 'rgba(255,248,235,.55)');           // Kapihan floor
+    poly([P(0, 0, 0), P(GW, 0, 0), P(GW, 0, 2.4), P(0, 0, 2.4)], '#e7dccb'); poly([P(0, 0, 0), P(0, GH, 0), P(0, GH, 2.4), P(0, 0, 2.4)], '#d8ccb9');   // walls
+    poly([P(0, 0, 2.4), P(GW, 0, 2.4), P(GW, -0.25, 2.4), P(0, -0.25, 2.4)], '#8b5e34'); poly([P(0, 0, 2.4), P(0, GH, 2.4), P(-0.25, GH, 2.4), P(-0.25, 0, 2.4)], '#7a5230');
+    box(1, -0.05, 1.2, 3.2, 0.05, 0.9, '#111827'); label(2.6, 0, 1.65, 'RSH SPORTS · 24/7', '#111827', '#fff', '800 12px system-ui, sans-serif');
+    box(16, -0.05, 1.3, 3.4, 0.05, 0.7, '#7c2d12'); label(17.7, 0, 1.65, '☕ KAPIHAN', '#7c2d12', '#fde68a', '800 12px system-ui, sans-serif');
+    box(15.5, 0.4, 0, 4.5, 0.9, 0.9, '#6b4226'); box(16, 0.5, 0.9, 0.5, 0.5, 0.45, '#374151'); box(17.2, 0.5, 0.9, 0.4, 0.4, 0.3, '#b91c1c');
+    const items = [];
+    for (const [id, [dx, dy]] of Object.entries(DESKS)) items.push({ k: dx + dy, draw: () => {
+      const p = ISO.people[id], on = p && p.state === 'working', col = TEAM.find(t => t[0] === id)[3];
+      box(dx - 0.9, dy - 0.75, 0, 1.8, 0.9, 0.75, '#a0703f');                                        // desk
+      box(dx - 0.35, dy - 0.7, 0.75, 0.7, 0.12, 0.5, '#111827'); box(dx - 0.3, dy - 0.58, 0.8, 0.6, 0.01, 0.4, on ? col : '#334155');   // monitor
+      box(dx - 0.3, dy + 0.45, 0, 0.6, 0.55, 0.35, '#475569');                                       // chair
+    } });
+    [[16.4, 3.9], [18.8, 6.0], [16.9, 8.7], [19.6, 10.0]].forEach(([tx, ty]) => items.push({ k: tx + ty, draw: () => { box(tx - 0.08, ty - 0.08, 0, 0.16, 0.16, 0.6, '#5b3a1e'); disc(tx, ty, 0.62, 0.75, '#a46a3a'); } }));
+    [[1, 11.5], [13.3, 0.8], [21, 12]].forEach(([px, py]) => items.push({ k: px + py, draw: () => { box(px - 0.2, py - 0.2, 0, 0.4, 0.4, 0.35, '#7c4a2d'); box(px - 0.28, py - 0.28, 0.35, 0.56, 0.56, 0.6, '#16a34a'); } }));
+    for (const p of Object.values(ISO.people)) items.push({ k: p.x + p.y + 0.4, draw: () => person(p, now) });
+    items.sort((a, b) => a.k - b.k).forEach(i => i.draw());
+  }
+  function isoTarget(p) {
+    const [dx, dy] = DESKS[p.id];
+    if (p.state !== 'idle') return [dx, dy + 0.72];
+    if (p.seat == null) { const taken = new Set(Object.values(ISO.people).map(q => q.seat).filter(v => v != null)); p.seat = CAFE.findIndex((_, i) => !taken.has(i)); if (p.seat < 0) p.seat = 0; }
+    return CAFE[p.seat];
+  }
+  function isoTick(now) {
+    if (!ISO.canvas || !ISO.canvas.isConnected || document.hidden) { ISO.raf = 0; return; }
+    const dt = Math.min(0.05, (now - (ISO.last || now)) / 1000); ISO.last = now;
+    const still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    for (const p of Object.values(ISO.people)) {
+      const [tx, ty] = isoTarget(p), ddx = tx - p.x, ddy = ty - p.y, dist = Math.hypot(ddx, ddy), sp = 2.2 * dt;
+      if (still || dist < Math.max(sp, 0.001) || !isFinite(dist)) { p.x = tx; p.y = ty; p.moving = false; } else { p.x += ddx / dist * sp; p.y += ddy / dist * sp; p.moving = true; }
+      p.atDesk = !p.moving && p.state !== 'idle';
+    }
+    if (now > (ISO.swapAt || 0)) { ISO.swapAt = now + 15000 + Math.random() * 10000; const idle = Object.values(ISO.people).filter(p => p.state === 'idle' && p.seat != null); if (idle.length > 1) { const a = idle[Math.floor(Math.random() * idle.length)], b = idle.filter(q => q !== a)[Math.floor(Math.random() * (idle.length - 1))]; [a.seat, b.seat] = [b.seat, a.seat]; } }
+    if (now > ISO.chatAt) { ISO.chatAt = now + 7000 + Math.random() * 6000; const idle = Object.values(ISO.people).filter(p => p.state === 'idle' && !p.moving && !(p.say && now < p.sayUntil)); if (idle.length) { const p = idle[Math.floor(Math.random() * idle.length)]; p.say = CHAT[Math.floor(Math.random() * CHAT.length)]; p.sayUntil = now + 4200; } }
+    scene(now); ISO.raf = requestAnimationFrame(isoTick);
+  }
+  function isoMount() {
+    const slot = document.querySelector('#rshBots [data-bot-iso]'); if (!slot) return;
+    if (!ISO.canvas) {
+      ISO.canvas = document.createElement('canvas'); ISO.canvas.setAttribute('role', 'img'); ISO.canvas.style.cssText = 'width:100%;display:block;border-radius:16px;background:#1b1d19;cursor:pointer;margin-bottom:14px';
+      ISO.canvas.addEventListener('click', e => { const r = ISO.canvas.getBoundingClientRect(), mx = (e.clientX - r.left) * (ISO.w / r.width), my = (e.clientY - r.top) * (ISO.h / r.height); let best = null, bd = 40;
+        for (const p of Object.values(ISO.people)) { if (!p.hit) continue; const d = Math.hypot(p.hit[0] - mx, p.hit[1] - my); if (d < bd) { bd = d; best = p; } }
+        if (best) { const t = team()[best.id]; best.say = `${t[1]}: ${t[3]}`; best.sayUntil = performance.now() + 6500; } });
+      document.addEventListener('visibilitychange', () => { if (!document.hidden && ISO.canvas && ISO.canvas.isConnected && !ISO.raf) ISO.raf = requestAnimationFrame(isoTick); });
+    }
+    if (ISO.canvas.parentNode !== slot) slot.appendChild(ISO.canvas);
+    const W = Math.max(320, slot.clientWidth || 900), H = Math.round(W * 0.6), dpr = Math.min(2, window.devicePixelRatio || 1);
+    const scale = Math.min(W / ((GW + GH) * TW / 2 + 24), H / ((GW + GH) * TH / 2 + 2.4 * ZH + 74));
+    if (ISO.w0 !== W || ISO.dpr !== dpr) { ISO.canvas.width = Math.round(W * dpr); ISO.canvas.height = Math.round(H * dpr); ISO.dpr = dpr; }
+    ISO.ctx = ISO.canvas.getContext('2d'); ISO.ctx.setTransform(dpr * scale, 0, 0, dpr * scale, 0, 0); ISO.w = W / scale; ISO.h = H / scale; ISO.ox = GH * TW / 2 + 12; ISO.oy = 2.4 * ZH + 62; ISO.w0 = W;
+    const t = team(), summary = [];
+    TEAM.forEach(([id, name], n) => { const face = t[id][2], state = face === 'asleep' ? 'asleep' : face === 'working' ? 'working' : 'idle';
+      let p = ISO.people[id]; if (!p) { const c = CAFE[n % CAFE.length]; p = ISO.people[id] = { id, x: c[0], y: c[1], state, moving: false }; }
+      if (p.state !== state) { p.state = state; p.say = state === 'working' ? t[id][3] : state === 'asleep' ? 'Matutulog muna ako… 😴' : t[id][3]; p.sayUntil = performance.now() + 4500; }
+      summary.push(`${name}: ${state}`); });
+    ISO.canvas.setAttribute('aria-label', 'Live office: ' + summary.join(', ') + '. Click a bot to hear its status.');
+    if (!ISO.raf) ISO.raf = requestAnimationFrame(isoTick);
+  }
+
   /* ---------- rendering ---------- */
-  function render() {
+  function render() { renderMain(); isoMount(); }
+  function renderMain() {
     const host = document.getElementById('rshBots'); if (!host || !app()) return;
     const posts = app().data().posts || [], items = (plan && plan.items) || [];
     if (items.length) check(items, posts);             // statuses always reflect the campaigns as they are now
@@ -981,6 +1095,7 @@ Answer with JSON only, exactly these keys:
       </div>
       <div data-bot-panel="office" ${tab === 'office' ? '' : 'hidden'}>
         <div class="card" style="margin-top:16px">
+        <div data-bot-iso></div>
         ${office()}
         ${reportsHtml()}
         ${log.length ? `<div class="log" role="status"><div class="log-h"><strong>Bot log</strong><span class="small">latest run${plan ? ' · ' + esc(new Date(plan.generatedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })) : ''}</span></div>${log.map(l => { const m = TEAM.find(t => t[0] === l[0]) || TEAM[0]; return `<div class="log-row"><span class="log-av">${botSvg(m[3], l[0] === 'courier' ? 'asleep' : 'happy')}</span><div><strong>${esc(m[1])}</strong> <span class="small">${esc(m[2])}</span><div>${esc(l[1])}</div></div></div>`; }).join('')}</div>` : ''}
@@ -1315,5 +1430,5 @@ Answer with JSON only, exactly these keys:
     }
     render();
   }
-  window.RSH_BOTS = { dlRead, dlAlive, FLOOR_JSON: () => FLOOR_JSON, aoCycle, aoStart, aoBeat, aoAlive, reviseFromNotes, shrinkVideo, nightOwl, weeklyReport, learnedTags, resultsForPrompt, openRaw, addRaw, sendRaw, rawCount, loadRaw, dayFor, isDyk, targets, sendText, autoSend, seoFor, seoRun, learnedTimes, schedule, attachForPost, driveUpload, fileFor, autoLink, needsFile, readyItems, placedOn, place, unplace, setMediaUrl, sendToMetricool, metricoolPost, NAME, freshVideos, watch, onChange: f => listeners.push(f), handoff, collect, start, captionFor, assetNeeds, imagePrompt, videoBrief, editJob };
+  window.RSH_BOTS = { isoPeople: () => ISO.people, dlRead, dlAlive, FLOOR_JSON: () => FLOOR_JSON, aoCycle, aoStart, aoBeat, aoAlive, reviseFromNotes, shrinkVideo, nightOwl, weeklyReport, learnedTags, resultsForPrompt, openRaw, addRaw, sendRaw, rawCount, loadRaw, dayFor, isDyk, targets, sendText, autoSend, seoFor, seoRun, learnedTimes, schedule, attachForPost, driveUpload, fileFor, autoLink, needsFile, readyItems, placedOn, place, unplace, setMediaUrl, sendToMetricool, metricoolPost, NAME, freshVideos, watch, onChange: f => listeners.push(f), handoff, collect, start, captionFor, assetNeeds, imagePrompt, videoBrief, editJob };
 })();

@@ -445,6 +445,9 @@ const out = []; const ok = (n, c, d) => { out.push(c); console.log((c ? 'PASS  '
   await p.click('#rshBots [data-bot-tab="office"]'); await p.click('#rshBots [data-bot-tab="devlabs"]'); await p.waitForTimeout(200);
   const dl1 = await p.evaluate(() => { const h = document.querySelector('#rshBots [data-bot-panel="devlabs"]'); return { online: (h.textContent.match(/● Online/g) || []).length, status: /nothing waiting/.test(h.textContent), saved: (window.__downloads || []).some(d => /floor\.json$/.test(d.filename || '')) }; });
   ok('The 24/7 Bots screen has a DevLabs tab: setup steps, team file download, schedules to copy, and live status from the agents’ heartbeat', dl0.shown && dl0.notYet && dl0.steps === 5 && dl0.copies === 3 && dl0.floorOk && dl1.online >= 2 && dl1.status, JSON.stringify({ dl0, dl1 }));
+  await p.click('#rshBots [data-bot-tab="office"]'); await p.waitForTimeout(1500);
+  const iso = await p.evaluate(() => { const ppl = Object.values(window.RSH_BOTS.isoPeople()), cv = document.querySelector('#rshBots [data-bot-iso] canvas'); return { n: ppl.length, finite: ppl.every(q => isFinite(q.x) && isFinite(q.y)), canvas: !!cv && cv.width > 300, label: cv && /Live office: Pixel/.test(cv.getAttribute('aria-label') || '') }; });
+  ok('The Office shows a live isometric office with all 7 bots placed by their real state', iso.n === 7 && iso.finite && iso.canvas && iso.label, JSON.stringify(iso));
   await b.close(); srv.close();
   process.exit(out.every(Boolean) ? 0 : 1);
 })().catch(e => { console.error(e); process.exit(1); });
