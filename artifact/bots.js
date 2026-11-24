@@ -967,7 +967,7 @@ Answer with JSON only, exactly these keys:
     c.fillStyle = '#fff'; c.textAlign = 'left'; c.textBaseline = 'top'; L.forEach((l, i) => c.fillText(l + (i === 2 && lines.length > 3 ? '…' : ''), bx + 9, by + 6 + i * 15));
   }
   function person(p, now) {
-    const [id, name, , color] = TEAM.find(t => t[0] === p.id), sit = p.state !== 'idle' && p.atDesk, bob = p.moving ? Math.abs(Math.sin(now / 120)) * 0.08 : 0, z0 = sit ? 0.35 : bob;
+    const [id, name, role, color] = TEAM.find(t => t[0] === p.id), sit = p.state !== 'idle' && p.atDesk, bob = p.moving ? Math.abs(Math.sin(now / 120)) * 0.08 : 0, z0 = sit ? 0.35 : bob;
     disc(p.x, p.y, 0.01, 0.32, 'rgba(0,0,0,.18)');
     if (!sit) { box(p.x - 0.14, p.y - 0.06, 0, 0.12, 0.12, 0.5, '#1f2937'); box(p.x + 0.02, p.y - 0.06, 0, 0.12, 0.12, 0.5, '#1f2937'); }
     box(p.x - 0.18, p.y - 0.12, z0 + (sit ? 0 : 0.5), 0.36, 0.24, 0.62, color);                   // body
@@ -975,12 +975,15 @@ Answer with JSON only, exactly these keys:
     box(p.x - 0.15, p.y - 0.15, hz, 0.3, 0.3, 0.34, '#f1c27d');                                       // head
     box(p.x - 0.16, p.y - 0.16, hz + 0.3, 0.32, 0.32, 0.08, '#2b2118');                              // hair
     if (id === 'owl') { box(p.x - 0.05, p.y - 0.05, hz + 0.38, 0.1, 0.1, 0.12, '#64748b'); }
-    const tagZ = hz + 0.75; label(p.x, p.y, tagZ, name.toUpperCase(), color, '#fff', '700 10px system-ui, sans-serif');
+    const tagZ = hz + 0.75;
+    { const [cx, cy] = isoPt(p.x, p.y, tagZ), c = ISO.ctx; c.font = '800 10px system-ui, sans-serif'; const n = name.toUpperCase(), r = role, w1 = c.measureText(n).width; c.font = '600 9px system-ui, sans-serif'; const w = Math.max(w1, c.measureText(r).width) + 14;
+      c.fillStyle = color; c.beginPath(); c.roundRect ? c.roundRect(cx - w / 2, cy - 14, w, 28, 6) : c.rect(cx - w / 2, cy - 14, w, 28); c.fill();
+      c.fillStyle = '#fff'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.font = '800 10px system-ui, sans-serif'; c.fillText(n, cx, cy - 5); c.font = '600 9px system-ui, sans-serif'; c.fillStyle = 'rgba(255,255,255,.88)'; c.fillText(r, cx, cy + 7); }
     const st = p.state === 'working' ? ['WORKING', '#16a34a'] : p.state === 'asleep' ? ['ASLEEP', '#64748b'] : ['IDLE', '#111827'];
-    label(p.x, p.y, tagZ + 0.85, '● ' + st[0], 'rgba(255,255,255,.95)', st[1], '700 10px system-ui, sans-serif');
+    label(p.x, p.y, tagZ + 1.15, '● ' + st[0], 'rgba(255,255,255,.95)', st[1], '700 10px system-ui, sans-serif');
     if (p.state === 'asleep') { const [cx, cy] = isoPt(p.x + 0.3, p.y - 0.2, hz + 0.5); ISO.ctx.fillStyle = '#94a3b8'; ISO.ctx.font = '700 12px system-ui'; ISO.ctx.fillText('z', cx, cy - (now / 300 % 8)); ISO.ctx.fillText('z', cx + 8, cy - 8 - (now / 300 % 8)); }
     p.hit = (() => { const [cx, cy] = isoPt(p.x, p.y, 0.8); return [cx, cy]; })();
-    if (p.say && now < p.sayUntil) bubble(p.x, p.y, tagZ + 1.6, p.say);
+    if (p.say && now < p.sayUntil) bubble(p.x, p.y, tagZ + 1.9, p.say);
   }
   function scene(now) {
     const c = ISO.ctx; c.clearRect(0, 0, ISO.w, ISO.h);
