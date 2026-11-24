@@ -605,7 +605,7 @@ Answer with JSON only, exactly these keys:
       : !items.length ? ['plain', 'Watching', 'neutral', 'Nothing to check yet.']
       : !held ? ['good', 'Satisfied', 'happy', `All ${items.length} posts passed. Good work, team.`]
       : ['bad', ready ? 'Strict' : 'Frustrated', 'strict', `I’m holding back ${held} of ${items.length} posts.` + (noMedia ? ` ${noMedia} campaign${noMedia === 1 ? ' has' : 's have'} no media.` : '') + (waiting ? ` ${waiting} still need${waiting === 1 ? 's' : ''} a review or approval.` : '')];
-    out.courier = ['off', 'Asleep', 'asleep', `Direct posting without Metricool isn’t built yet. ${settings.autoSend ? 'Tempo schedules ready posts through Metricool for now.' : 'Ready posts go to Metricool from the Calendar.'}`];
+    out.courier = settings.autoSend ? ['plain', 'Standing by', 'neutral', 'Direct posting without Metricool isn’t built yet, so I help Tempo keep an eye on the posts in Metricool.'] : ['off', 'Asleep', 'asleep', 'Direct posting without Metricool isn’t built yet. Ready posts go to Metricool from the Calendar.'];
     const all = (app().data().posts || []).filter(q => q.date && (!plan || (q.date >= plan.from && q.date <= plan.to))), missing = all.filter(q => assetNeeds(q).missing).length;
     const js = Object.values(jobs), active = js.filter(j => j.status === 'sent').length, jWait = js.filter(j => j.status === 'queued').length, done = js.filter(j => j.status === 'attached').length, failed = js.filter(j => j.status === 'failed').length;
     out.reel = !settings.autoEdit ? ['off', 'Paused', 'asleep', 'Automatic editing is turned off in Setup.']
@@ -917,9 +917,14 @@ Answer with JSON only, exactly these keys:
     tempo: ['#8d5524', '#111111', 'short', '#1e293b'], ref: ['#e0ac69', '#9ca3af', 'short', '#27272a'], courier: ['#d9a066', '#2d2117', 'messy', '#374151'], owl: ['#f3cfa6', '#4b5563', 'long', '#1f2937']
   };
   const DESKS = { pixel: [3.2, 4.2], reel: [5.9, 4.2], quill: [8.6, 4.2], tempo: [3.2, 8.4], ref: [5.9, 8.4], courier: [8.6, 8.4], owl: [12.2, 8.4] };
-  const TABLES = [[17.6, 5.2], [20.9, 6.6], [18.2, 10.0]];
+  const TABLES = [[17.6, 5.2], [20.9, 6.6], [18.4, 9.0]];
   const SEATS = t => [[t[0] - 0.95, t[1]], [t[0] + 0.95, t[1]], [t[0], t[1] + 0.95], [t[0], t[1] - 0.95]];
-  const SPOTS = [[17.2, 2.1], [19.2, 2.1], [23.0, 3.4], [22.4, 11.2], [23.3, 11.2], [15.2, 7.8], [21.4, 9.2]];   // coffee machine, counter, water cooler, sofa, sofa, window, standing
+  const SPOTS = [[17.2, 2.1], [19.2, 2.1], [22.6, 3.4], [17.8, 12.0], [18.9, 12.0], [15.2, 7.8], [21.0, 9.4]];   // coffee machine, counter, water cooler, sofa, sofa, window, standing
+  const COFFEE = [[17.2, 2.1], [17.8, 2.2], [19.2, 2.1], [22.6, 3.4]];
+  const CANTEEN = [[9.6, 10.75], [10.8, 10.75], [12.0, 10.75], [13.2, 10.75], [9.6, 12.35], [10.8, 12.35], [12.0, 12.35], [13.2, 12.35]];
+  const CR_DOOR = [22.55, 14.25];
+  const WANDER = [[11.0, 5.8], [5.6, 11.0], [13.6, 6.2], [15.6, 4.2], [16.0, 10.6], [2.0, 6.3], [3.4, 12.2], [20.0, 8.4], [9.6, 2.2], [15.4, 9.4]];
+  const mealNow = () => { const d = new Date(), m = d.getHours() * 60 + d.getMinutes(); return m >= 720 && m < 780 ? 'Lunch' : (m >= 600 && m < 620) || (m >= 900 && m < 920) ? 'Snack time' : ''; };
   const shade = (hex, f) => { const n = parseInt(String(hex).slice(1), 16); const r = n >> 16, g = (n >> 8) & 255, b = n & 255; const m = c => Math.max(0, Math.min(255, Math.round(f < 0 ? c * (1 + f) : c + (255 - c) * f))); return `rgb(${m(r)},${m(g)},${m(b)})`; };
   function isoPt(x, y, z) { return [ISO.ox + (x - y) * TW / 2, ISO.oy + (x + y) * TH / 2 - (z || 0) * ZH]; }
   function poly(pts, fill, stroke, alpha) { const c = ISO.ctx; c.save(); if (alpha != null) c.globalAlpha = alpha; c.beginPath(); pts.forEach((q, i) => i ? c.lineTo(q[0], q[1]) : c.moveTo(q[0], q[1])); c.closePath(); c.fillStyle = fill; c.fill(); if (stroke) { c.strokeStyle = stroke; c.lineWidth = 1; c.stroke(); } c.restore(); }
@@ -937,7 +942,8 @@ Answer with JSON only, exactly these keys:
   function chair(x, y, facing, col) { box(x - 0.04, y - 0.04, 0, 0.08, 0.08, 0.38, '#4b5563'); disc(x, y, 0.02, 0.28, 'rgba(0,0,0,.12)'); box(x - 0.26, y - 0.26, 0.38, 0.52, 0.52, 0.1, col || '#374151'); if (facing === 'up') box(x - 0.26, y + 0.2, 0.48, 0.52, 0.08, 0.55, col || '#374151'); else box(x - 0.26, y - 0.28, 0.48, 0.52, 0.08, 0.55, col || '#374151'); }
 
   function person(p, now) {
-    const [id, , , color] = TEAM.find(t => t[0] === p.id), L = LOOK[id], sit = p.sit, asleep = p.state === 'asleep' && sit;
+    if (p.hidden) { p.head = null; return; }
+    const [id, , , color] = TEAM.find(t => t[0] === p.id), L = LOOK[id], sit = p.sit, asleep = (p.state === 'asleep' || (p.act && p.act.type === 'nap' && p.act.start)) && sit;
     const step = p.moving ? Math.sin(now / 110) * 0.06 : 0, X = p.x, Y = p.y;
     disc(X, Y, 0.01, 0.3, 'rgba(0,0,0,.16)');
     let hip;
@@ -957,6 +963,7 @@ Answer with JSON only, exactly these keys:
     else { box(X - 0.17, Y - 0.17 + lean, hz + 0.32, 0.34, 0.34, 0.09, L[1]); if (L[2] === 'bun') box(X - 0.07, Y - 0.12 + lean, hz + 0.41, 0.14, 0.14, 0.1, L[1]); if (L[2] === 'long') box(X - 0.17, Y - 0.19 + lean, hz + 0.05, 0.34, 0.06, 0.32, L[1]); if (L[2] === 'side') box(X + 0.12, Y - 0.17 + lean, hz + 0.2, 0.05, 0.34, 0.15, L[1]); if (L[2] === 'messy') box(X - 0.1, Y - 0.05 + lean, hz + 0.41, 0.2, 0.1, 0.05, L[1]); }
     if (id === 'owl' && !asleep) { const [gx, gy] = isoPt(X - 0.04, Y + 0.17, hz + 0.25), c = ISO.ctx; c.strokeStyle = '#111827'; c.lineWidth = 1.2; c.strokeRect(gx - 6, gy - 2, 5, 4); c.strokeRect(gx + 1, gy - 3.5, 5, 4); }
     if (p.mug && !p.moving && !sit) box(X + 0.22, Y + 0.02, hip + 0.1, 0.1, 0.1, 0.12, '#f8fafc');
+    if (p.act && p.act.type === 'canteen' && p.act.start && sit) { const ty = Y < 11.5 ? Y + 0.45 : Y - 0.65; box(X - 0.25, ty, 0.78, 0.5, 0.32, 0.03, '#94a3b8'); disc(X - 0.05, ty + 0.16, 0.82, 0.12, '#fef3c7'); box(X + 0.08, ty + 0.06, 0.82, 0.1, 0.1, 0.12, '#f97316'); }
     if (asleep) { const [cx, cy] = isoPt(X + 0.3, Y - 0.2, hz + 0.5), c = ISO.ctx, k = (now / 350) % 6; c.fillStyle = '#94a3b8'; c.font = '700 12px system-ui'; c.fillText('z', cx, cy - k); c.font = '700 9px system-ui'; c.fillText('z', cx + 8, cy - 9 - k); }
     p.head = isoPt(X, Y, hz + 0.6); p.hit = isoPt(X, Y, hip + 0.3);
   }
@@ -991,7 +998,9 @@ Answer with JSON only, exactly these keys:
       box(dx - 0.9, dy - 0.6, 0.72, 1.8, 0.85, 0.06, '#c79b6d');                         // desk top
       box(dx - 0.06, dy - 0.48, 0.78, 0.12, 0.1, 0.18, '#374151');                       // monitor stand
       box(dx - 0.42, dy - 0.52, 0.94, 0.84, 0.06, 0.48, '#111827');                      // monitor
-      poly([isoPt(dx - 0.38, dy - 0.455, 0.98), isoPt(dx + 0.38, dy - 0.455, 0.98), isoPt(dx + 0.38, dy - 0.455, 1.38), isoPt(dx - 0.38, dy - 0.455, 1.38)], on ? shade(col, 0.25) : (p && p.state === 'asleep' ? '#0f172a' : '#1e3a5f'));
+      const gaming = p && p.sit && p.act && p.act.type === 'game' && p.act.start;
+      poly([isoPt(dx - 0.38, dy - 0.455, 0.98), isoPt(dx + 0.38, dy - 0.455, 0.98), isoPt(dx + 0.38, dy - 0.455, 1.38), isoPt(dx - 0.38, dy - 0.455, 1.38)], on ? shade(col, 0.25) : gaming ? '#0b1020' : (p && (p.state === 'asleep' || (p.act && p.act.type === 'nap')) ? '#0f172a' : '#1e3a5f'));
+      if (gaming) { const t2 = now / 260; for (let k = 0; k < 5; k++) { const gx = dx - 0.32 + ((k * 0.17 + t2 * 0.05 * (k % 2 ? 1 : -1)) % 0.62 + 0.62) % 0.62, gz = 1.02 + ((k * 0.11 + t2 * 0.04) % 0.3); poly([isoPt(gx, dy - 0.45, gz), isoPt(gx + 0.06, dy - 0.45, gz), isoPt(gx + 0.06, dy - 0.45, gz + 0.06), isoPt(gx, dy - 0.45, gz + 0.06)], ['#22d3ee', '#f472b6', '#facc15', '#4ade80', '#a78bfa'][k]); } }
       if (on) for (let r = 0; r < 4; r++) poly([isoPt(dx - 0.3, dy - 0.45, 1.3 - r * 0.08), isoPt(dx + 0.05 + (r % 2) * 0.2, dy - 0.45, 1.3 - r * 0.08), isoPt(dx + 0.05 + (r % 2) * 0.2, dy - 0.45, 1.27 - r * 0.08), isoPt(dx - 0.3, dy - 0.45, 1.27 - r * 0.08)], 'rgba(255,255,255,.7)');
       box(dx - 0.3, dy - 0.12, 0.78, 0.6, 0.18, 0.03, '#e5e7eb');                         // keyboard
       box(dx + 0.42, dy - 0.05, 0.78, 0.1, 0.14, 0.03, '#e5e7eb');                        // mouse
@@ -1012,10 +1021,26 @@ Answer with JSON only, exactly these keys:
     add(22 + 1.2, () => { box(21.4, 0.2, 0, 1.1, 0.95, 2.1, '#d6d3d1'); box(21.42, 1.16, 1.25, 0.06, 0.02, 0.5, '#78716c'); });
     add(23 + 2.3, () => { box(22.7, 2.0, 0, 0.6, 0.6, 1.0, '#e2e8f0'); box(22.75, 2.05, 1.0, 0.5, 0.5, 0.55, '#7dd3fc', 0.85); });
     for (const t of TABLES) { add(t[0] + t[1], () => { box(t[0] - 0.06, t[1] - 0.06, 0, 0.12, 0.12, 0.7, '#57534e'); disc(t[0], t[1], 0.72, 0.62, '#f5f5f4'); disc(t[0], t[1], 0.7, 0.62, '#d6d3d1'); }); SEATS(t).forEach(([sx, sy], n) => add(sx + sy - 0.2, () => { box(sx - 0.2, sy - 0.2, 0, 0.4, 0.4, 0.42, '#a8a29e'); box(sx - 0.22, sy - 0.22, 0.42, 0.44, 0.44, 0.06, ['#0ea5e9', '#f97316', '#10b981', '#8b5cf6'][n]); })); }
-    add(21.5 + 11.8, () => { box(21.4, 11.6, 0, 2.4, 0.9, 0.42, '#475569'); box(21.4, 12.3, 0.42, 2.4, 0.22, 0.5, '#475569'); box(21.6, 10.4, 0, 1.6, 0.6, 0.3, '#a16207'); });
-    for (const [px, py] of [[0.6, 0.6], [14.2, 12.6], [15.5, 13.0], [0.6, 13.0], [23.4, 13.2]]) add(px + py, () => { box(px - 0.22, py - 0.22, 0, 0.44, 0.44, 0.42, '#78350f'); box(px - 0.3, py - 0.3, 0.42, 0.6, 0.6, 0.55, '#16a34a'); box(px - 0.18, py - 0.18, 0.97, 0.36, 0.36, 0.3, '#22c55e'); });
+    add(17.2 + 12.6, () => { box(17.2, 12.4, 0, 2.4, 0.9, 0.42, '#475569'); box(17.2, 13.1, 0.42, 2.4, 0.22, 0.5, '#475569'); box(17.6, 11.2, 0, 1.6, 0.6, 0.3, '#a16207'); });
+    // CR (comfort room): a tiled cubicle with a door and a sign
+    add(21.6 + 11.6 + 2.6, () => { box(21.6, 11.6, 0, 2.3, 2.3, 2.0, '#e0f2fe'); poly([isoPt(22.2, 13.92, 0), isoPt(22.9, 13.92, 0), isoPt(22.9, 13.92, 1.6), isoPt(22.2, 13.92, 1.6)], ISO.crBusy ? '#0369a1' : '#64748b'); { const [tx, ty] = isoPt(22.55, 13.92, 1.82), c2 = ISO.ctx; c2.fillStyle = '#0f172a'; c2.font = '800 10px system-ui'; c2.textAlign = 'center'; c2.fillText(ISO.crBusy ? 'CR · occupied' : 'CR', tx, ty); } });
+    // canteen: food counter on the left wall, a long table with stools, a menu sign
+    add(14.5 + 12, () => { box(14.2, 10.5, 0, 0.9, 3.0, 0.9, '#d6d3d1'); box(14.2, 10.5, 0.9, 0.9, 3.0, 0.06, '#78716c'); [['#f59e0b', 10.7], ['#16a34a', 11.4], ['#dc2626', 12.1], ['#eab308', 12.8]].forEach(([col, y]) => { box(14.35, y, 0.96, 0.6, 0.5, 0.06, '#e5e7eb'); box(14.47, y + 0.1, 1.02, 0.36, 0.3, 0.08, col); });
+      box(14.6, 11.95, 0.96, 0.06, 0.06, 1.4, '#6b7280'); box(14.1, 11.6, 2.36, 1.1, 0.8, 0.32, '#14532d'); { const [sx, sy] = isoPt(14.65, 12.0, 2.55), c2 = ISO.ctx; c2.fillStyle = '#fef9c3'; c2.textAlign = 'center'; c2.textBaseline = 'middle'; c2.font = '800 10px system-ui, sans-serif'; c2.fillText('🍽 CANTEEN', sx, sy - 5); c2.font = '600 8px system-ui, sans-serif'; c2.fillText(mealNow() ? mealNow() + ' now!' : 'Lunch 12–1 · Snacks 10 & 3', sx, sy + 7); } });
+    add(9 + 11.5, () => { for (const lx of [9.2, 13.6]) for (const ly of [11.25, 11.8]) box(lx, ly, 0, 0.08, 0.08, 0.72, '#6b7280'); box(9.1, 11.15, 0.72, 4.7, 0.8, 0.06, '#f5f5f4'); });
+    CANTEEN.forEach(([sx, sy]) => add(sx + sy - 0.1, () => { box(sx - 0.18, sy - 0.18, 0, 0.36, 0.36, 0.44, '#9ca3af'); box(sx - 0.2, sy - 0.2, 0.44, 0.4, 0.4, 0.05, '#f97316'); }));
+    for (const [px, py] of [[0.6, 0.6], [0.6, 13.0], [8.4, 13.4], [24.4, 13.2]]) add(px + py, () => { box(px - 0.22, py - 0.22, 0, 0.44, 0.44, 0.42, '#78350f'); box(px - 0.3, py - 0.3, 0.42, 0.6, 0.6, 0.55, '#16a34a'); box(px - 0.18, py - 0.18, 0.97, 0.36, 0.36, 0.3, '#22c55e'); });
     for (const p of Object.values(ISO.people)) add(p.x + p.y + 0.3, () => person(p, now));
     items.sort((a, b) => a.k - b.k).forEach(i => i.draw());
+    // holograms: what each working bot is doing, floating over its screen
+    for (const p of Object.values(ISO.people)) if (p.state === 'working' && p.sit) {
+      const [dx, dy] = DESKS[p.id], col = TEAM.find(t => t[0] === p.id)[3], [hx, hy] = isoPt(dx, dy - 0.5, 2.25 + Math.sin(now / 500 + dx) * 0.04), txt = cut(String((team()[p.id] || [])[3] || 'Working…'), 34);
+      c.save(); c.font = '700 10px system-ui, sans-serif'; const w = Math.min(190, c.measureText(txt).width + 22), h = 30, x = hx - w / 2, y = hy - h;
+      c.globalAlpha = 0.9; c.fillStyle = shade(col, 0.55); rr(c, x, y, w, h, 6); c.fill(); c.globalAlpha = 1; c.strokeStyle = col; c.lineWidth = 1.2; rr(c, x, y, w, h, 6); c.stroke();
+      c.fillStyle = '#0f172a'; c.textAlign = 'left'; c.textBaseline = 'middle'; c.fillText(txt, x + 8, y + 11);
+      const prog = (now / 40 + dx * 37) % 100 / 100; c.fillStyle = 'rgba(15,23,42,.15)'; c.fillRect(x + 8, y + 20, w - 16, 4); c.fillStyle = col; c.fillRect(x + 8, y + 20, (w - 16) * prog, 4);
+      c.globalAlpha = 0.35; c.fillStyle = col; c.beginPath(); c.moveTo(hx - 10, y + h); c.lineTo(hx + 10, y + h); const [bx, by] = isoPt(dx, dy - 0.5, 1.42); c.lineTo(bx + 4, by); c.lineTo(bx - 4, by); c.closePath(); c.fill(); c.restore();
+    }
     // name tags last, nudged apart so they never cover each other
     const placed = [], tags = Object.values(ISO.people).filter(p => p.head).sort((a, b) => a.head[1] - b.head[1]);
     for (const p of tags) {
@@ -1058,7 +1083,8 @@ Answer with JSON only, exactly these keys:
     f => f.best ? [['tempo', `Our best hour is still ${f.best}.`], ['quill', 'People love dinner with a side of content.'], ['tempo', 'I’ll take it. Dinner is undefeated.']] : null,
     f => [['quill', 'Instagram only allows five hashtags now.'], ['pixel', 'How are you coping?'], ['quill', '#NotWell #ButProfessional']],
     f => [['ref', 'I checked every post twice this morning.'], ['owl', 'I checked them three times last night.'], ['ref', 'Show-off.']],
-    f => [['pixel', 'Is Courier still asleep?'], ['tempo', 'Waiting for direct posting to be built.'], ['pixel', 'Living the dream.']],
+    f => [['pixel', 'Courier, what do you actually do all day?'], ['courier', 'I watch every post in Metricool like a hawk.'], ['pixel', 'From the coffee machine?'], ['courier', 'Hawks need coffee too.']],
+    f => [['courier', 'When direct posting ships, I’m finally getting a real desk job.'], ['tempo', 'You already have a desk.'], ['courier', 'A desk with purpose, Tempo.']],
     f => f.tomorrowTue ? [['quill', 'Tomorrow is Tuesday. DYK day.'], ['reel', 'Did you know I need a script first?'], ['quill', 'Did you know I’m already writing it?']] : null,
     f => [['pixel', 'No third-party logos in any shot. I zoomed in on every sock.'], ['ref', 'That’s why you’re my favorite.'], ['pixel', 'Can I get that in writing?'], ['ref', 'No.']],
     f => f.total ? [['ref', `${f.ready} posts are ready and ${f.held} are still waiting.`], ['tempo', 'So we’re on schedule?'], ['ref', 'We’re on process. Schedule follows process.']] : null,
@@ -1083,37 +1109,81 @@ Answer with JSON only, exactly these keys:
   };
   function sayLine(p, text, ms) { p.say = text; p.sayUntil = performance.now() + (ms || 4200); ISO.transcript.push([p.id, text]); ISO.transcript = ISO.transcript.slice(-4); paintLog(); }
   function paintLog() { if (!ISO.log) return; ISO.log.innerHTML = ISO.transcript.length ? ISO.transcript.map(([id, t]) => { const m = TEAM.find(x => x[0] === id); return `<div><strong style="color:${m[3]}">${esc(m[1])}:</strong> ${esc(t)}</div>`; }).join('') : '<div>The office is quiet.</div>'; }
+  /* idle life: each free bot picks an activity — coffee, a nap at the desk (often right after coffee), the CR, a walk,
+     a game on the computer — and at lunch (12–1) and snack time (10:00, 3:00) everyone free goes to the canteen. */
+  const FOOD_TALKS = [
+    f => [['tempo', 'Lunch at 12:00 sharp. Finally, a schedule everyone respects.'], ['pixel', 'The food is plated beautifully today.'], ['tempo', 'You say that every day.'], ['pixel', 'Because it’s true every day.']],
+    f => [['reel', 'If this sandwich had a trailer, it would win awards.'], ['quill', 'Please never write food reviews.'], ['reel', 'Too late. I have a draft.']],
+    f => [['ref', 'No talking about work at lunch.'], ['quill', 'So… how many posts are ready?'], ['ref', 'Eat your rice, Quill.']],
+    f => [['owl', 'This is technically my midnight snack.'], ['courier', 'It’s noon.'], ['owl', 'Time is a construct.']],
+    f => [['courier', 'Can someone pass the soy sauce?'], ['tempo', 'Delivered in under two seconds.'], ['courier', 'Show-off. That’s my job.']],
+    f => [['quill', 'Snack time is my favorite meeting.'], ['pixel', 'No agenda, just cookies.'], ['ref', 'I’m adding cookies to the checklist.']]
+  ];
+  const ACT_LINES = {
+    coffee: ['Coffee time. Don’t tell Ref it’s my third.', 'This coffee machine deserves a raise.', 'Just a quick refill.'],
+    nap: ['Power nap. Five minutes. Wake me if Anthony calls.', 'Resting my eyes. Totally different from sleeping.'],
+    cr: ['Quick CR break. Be right back.', 'BRB, CR.'],
+    game: ['One more level, then back to work.', 'New high score incoming.', 'Just testing the monitor’s refresh rate. Professionally.'],
+    wander: ['Stretching my legs.', 'Walking meeting with myself.', 'Getting my steps in.'],
+    canteen: ['Lunch is served!', 'What’s on the menu today?', 'Snack break, finally.']
+  };
+  const pick = a => a[Math.floor(Math.random() * a.length)];
+  function nextAct(p, now) {
+    const meal = mealNow();
+    if (meal) { const taken = new Set(Object.values(ISO.people).filter(q => q !== p && q.act && q.act.type === 'canteen').map(q => q.act.seat)); const seat = CANTEEN.findIndex((_, i) => !taken.has(i)); p.act = { type: 'canteen', target: CANTEEN[seat < 0 ? 0 : seat], seat, dur: 60000 }; if (Math.random() < 0.5) sayLine(p, pick(ACT_LINES.canteen)); return; }
+    const after = p.act && p.act.type;
+    const w = [['coffee', after === 'coffee' ? 4 : 22], ['nap', after === 'coffee' ? 34 : 10], ['cr', ISO.crBusy || after === 'cr' ? 0 : 9], ['game', 16], ['wander', 20]];
+    let r = Math.random() * w.reduce((a, b) => a + b[1], 0), type = 'wander'; for (const [t, n] of w) { if ((r -= n) < 0) { type = t; break; } }
+    const [dx, dy] = DESKS[p.id];
+    const target = type === 'coffee' ? pick(COFFEE).map(v => v + (Math.random() - 0.5) * 0.5) : type === 'cr' ? CR_DOOR : type === 'wander' ? pick(WANDER) : [dx, dy + 0.78];
+    const dur = { coffee: 9000, nap: 16000, cr: 7000, game: 15000, wander: 3500 }[type] + Math.random() * 6000;
+    p.act = { type, target, dur }; p.mug = type === 'coffee';
+    if (type === 'cr') ISO.crBusy = p.id;
+    if (Math.random() < 0.45) sayLine(p, pick(ACT_LINES[type]));
+  }
+  function actTick(p, now) {
+    if (p.state !== 'idle') { if (p.act && p.act.type === 'cr' && ISO.crBusy === p.id) ISO.crBusy = null; p.act = null; p.hidden = false; return; }
+    if (mealNow() && (!p.act || p.act.type !== 'canteen') && !p.convo) { if (p.act && p.act.type === 'cr' && ISO.crBusy === p.id) ISO.crBusy = null; p.hidden = false; nextAct(p, now); return; }
+    if (!mealNow() && p.act && p.act.type === 'canteen' && !p.convo) { p.act = null; }
+    if (!p.act) return nextAct(p, now);
+    if (p.convo) { if (p.act.start) p.act.start = now - 1; return; }
+    if (!p.moving && !p.act.start) { p.act.start = now; if (p.act.type === 'cr') p.hidden = true; }
+    if (p.act.start && now - p.act.start > p.act.dur) { if (p.act.type === 'cr') { p.hidden = false; if (ISO.crBusy === p.id) ISO.crBusy = null; } nextAct(p, now); }
+  }
+  const chatty = p => p.state === 'idle' && !p.convo && !p.moving && !p.hidden && p.act && ['coffee', 'wander', 'canteen', 'game'].includes(p.act.type) && p.act.start;
   function startConvo(now) {
-    const idle = Object.values(ISO.people).filter(p => p.state === 'idle'), f = facts();
-    const options = TALKS.map(t => t(f)).filter(Boolean).filter(lines => { const who = [...new Set(lines.map(l => l[0]))]; return who.every(id => idle.some(p => p.id === id)); });
-    if (!options.length) { if (idle.length && now > ISO.solos) { const p = idle[Math.floor(Math.random() * idle.length)], l = SOLO[p.id] || []; if (l.length) sayLine(p, l[Math.floor(Math.random() * l.length)]); ISO.solos = now + 9000; } return; }
-    const lines = options[Math.floor(Math.random() * options.length)], who = [...new Set(lines.map(l => l[0]))], t = TABLES[Math.floor(Math.random() * TABLES.length)], seats = SEATS(t);
-    who.forEach((id, n) => { ISO.people[id].goal = seats[n % seats.length]; ISO.people[id].convo = true; });
-    ISO.convo = { who, lines, i: 0, next: now + 2600, until: now + 30000 };
+    const free = Object.values(ISO.people).filter(chatty); if (free.length < 2) return;
+    const f = facts(), atLunch = free.filter(q => q.act.type === 'canteen').length >= 2;
+    const pool = (atLunch ? FOOD_TALKS.concat(TALKS) : TALKS).map(t => t(f)).filter(Boolean).filter(lines => { const who = [...new Set(lines.map(l => l[0]))]; return who.every(id => free.some(q => q.id === id)) && (!atLunch || who.every(id => ISO.people[id].act.type === 'canteen')); });
+    if (!pool.length) return;
+    const lines = pool[Math.floor(Math.random() * pool.length)], who = [...new Set(lines.map(l => l[0]))], host = ISO.people[who[0]];
+    who.forEach((id, n) => { const q = ISO.people[id]; q.convo = true; if (q.act.type !== 'canteen' && n > 0) { const a = (n / who.length) * Math.PI * 2; q.goal = [host.x + Math.cos(a) * 0.85, host.y + Math.sin(a) * 0.85]; } });
+    ISO.convo = { who, lines, i: 0, next: now + 2200, until: now + 32000 };
   }
   function stepConvo(now) {
     const cv = ISO.convo; if (!cv) return;
     const people = cv.who.map(id => ISO.people[id]);
-    if (people.some(p => p.state !== 'idle') || now > cv.until) { people.forEach(p => { p.convo = false; p.goal = null; }); ISO.convo = null; ISO.nextConvo = now + 6000; return; }
-    if (now < cv.next || people.some(p => p.moving)) return;
-    if (cv.i >= cv.lines.length) { people.forEach(p => { p.convo = false; p.goal = null; }); ISO.convo = null; ISO.nextConvo = now + 8000 + Math.random() * 6000; return; }
+    const end = gap => { people.forEach(q => { q.convo = false; q.goal = null; }); ISO.convo = null; ISO.nextConvo = now + gap; };
+    if (people.some(q => q.state !== 'idle' || q.hidden) || now > cv.until) return end(5000);
+    if (now < cv.next || people.some(q => q.moving)) return;
+    if (cv.i >= cv.lines.length) return end(7000 + Math.random() * 6000);
     const [id, text] = cv.lines[cv.i++]; sayLine(ISO.people[id], text, 3600); cv.next = now + 3300;
   }
   function isoTarget(p) {
     const [dx, dy] = DESKS[p.id];
     if (p.state !== 'idle') return [dx, dy + 0.78];
     if (p.goal) return p.goal;
-    if (p.spot == null) { const taken = new Set(Object.values(ISO.people).map(q => q.spot).filter(v => v != null)); p.spot = SPOTS.findIndex((_, i) => !taken.has(i)); if (p.spot < 0) p.spot = 0; p.mug = Math.random() < 0.6; }
-    return SPOTS[p.spot];
+    return p.act ? p.act.target : [p.x, p.y];
   }
   function isoTick(now) {
     if (!ISO.canvas || !ISO.canvas.isConnected || document.hidden) { ISO.raf = 0; return; }
     const dt = Math.min(0.05, (now - (ISO.last || now)) / 1000); ISO.last = now;
     const still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     for (const p of Object.values(ISO.people)) {
+      actTick(p, now);
       const [tx, ty] = isoTarget(p), ddx = tx - p.x, ddy = ty - p.y, dist = Math.hypot(ddx, ddy), sp = 2.0 * dt;
       if (still || dist < Math.max(sp, 0.001) || !isFinite(dist)) { p.x = tx; p.y = ty; p.moving = false; } else { p.x += ddx / dist * sp; p.y += ddy / dist * sp; p.moving = true; }
-      p.sit = !p.moving && (p.state !== 'idle' || (p.goal && p.convo));
+      p.sit = !p.moving && (p.state !== 'idle' || (p.act && !p.goal && ['nap', 'game', 'canteen'].includes(p.act.type)));
     }
     if (!ISO.convo && now > ISO.nextConvo) startConvo(now);
     stepConvo(now);
@@ -1140,7 +1210,7 @@ Answer with JSON only, exactly these keys:
     const t = team(), summary = [];
     TEAM.forEach(([id, name], n) => { const face = t[id][2], state = face === 'asleep' ? 'asleep' : face === 'working' ? 'working' : 'idle';
       let p = ISO.people[id]; if (!p) { const s0 = SPOTS[n % SPOTS.length]; p = ISO.people[id] = { id, x: s0[0], y: s0[1], state, moving: false }; }
-      if (p.state !== state) { p.state = state; p.goal = null; p.convo = false; if (state !== 'idle') sayLine(p, state === 'working' ? t[id][3] : 'Taking a quick nap. Wake me when direct posting ships.'); }
+      if (p.state !== state) { p.state = state; p.goal = null; p.convo = false; p.act = null; if (state !== 'idle') sayLine(p, state === 'working' ? t[id][3] : 'Switched off for now. Wake me when direct posting ships.'); }
       summary.push(`${name}: ${state}`); });
     ISO.canvas.setAttribute('aria-label', 'Live office: ' + summary.join(', ') + '. Idle bots chat in the break room; the latest lines are shown below. Click a bot to hear its status.');
     if (!ISO.raf) ISO.raf = requestAnimationFrame(isoTick);
