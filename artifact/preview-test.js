@@ -433,6 +433,11 @@ const out = []; const ok = (n, c, d) => { out.push(c); console.log((c ? 'PASS  '
     const before = (window.__sent || []).length; await B.reviseFromNotes(); await new Promise(r => setTimeout(r, 500)); const j = st['editJobs/' + id], m = ((window.__sent || [])[before] || {}).input || {};
     return { src: j.source, notes: j.notes, rev: j.revision, base: !!j.baseAssetId, msg: /REVISION/.test(m.message || '') && /cheerful music/.test(m.message || '') }; });
   ok('New review notes on a video Reel delivered start a revision job with those notes, sent to the editor', rvn.src === 'revision' && /cheerful music/.test(rvn.notes) && rvn.rev >= 2 && rvn.base && rvn.msg, JSON.stringify(rvn));
+  const ao = await p.evaluate(async () => { const B = window.RSH_BOTS, st = window.__store; localStorage.setItem('rsh_bots_always_on', '1'); delete st['bots/alwaysOn'];
+    const before = JSON.parse(st['bots/plan'].json).generatedAt; await new Promise(r => setTimeout(r, 1100)); await B.aoCycle(); const after = JSON.parse(st['bots/plan'].json).generatedAt, hb = st['bots/alwaysOn'];
+    st['bots/alwaysOn'] = { id: 'otherpc', on: true, at: new Date().toISOString(), status: 'on duty' }; const blocked = !(await B.aoBeat('x'));
+    localStorage.setItem('rsh_bots_always_on', '0'); return { ran: after !== before, hb: !!(hb && hb.on && /on duty/.test(hb.status)), blocked, banner: /24\/7/.test(document.getElementById('rshBots').textContent) }; });
+  ok('Always-on mode runs the whole team on a timer from one computer, with a heartbeat, and a second computer stands by', ao.ran && ao.hb && ao.blocked && ao.banner, JSON.stringify(ao));
   await b.close(); srv.close();
   process.exit(out.every(Boolean) ? 0 : 1);
 })().catch(e => { console.error(e); process.exit(1); });

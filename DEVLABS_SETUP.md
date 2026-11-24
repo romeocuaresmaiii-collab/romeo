@@ -1,9 +1,18 @@
 # Connecting DevLabs to the RSH 24/7 Bots
 
-DevLabs (https://devlabs.atmt.dev) runs AI agents on your own computer. Here it becomes the **night and day shift** for the RSH Sports Marketing OS:
-- The app keeps planning: bots, approvals, the calendar.
-- DevLabs agents do the work the app page is not allowed to do: edit videos, run revisions, and send waiting posts to Metricool.
-- They run on a timer, in Auto mode, so nobody has to type "yes".
+DevLabs (https://devlabs.atmt.dev) runs AI agents on your own computer. Together with the app's **always-on mode**, it keeps **all 7 bots working 24/7**:
+
+| Bot | Runs in | How often |
+|---|---|---|
+| Pixel (asset briefs and prompts) | the app, always-on window | every 30 min |
+| Quill (captions and SEO) | the app, always-on window | every 30 min |
+| Tempo (best times, schedules approved posts in Metricool) | the app, always-on window | every 30 min |
+| Ref (checks, next steps) | the app, always-on window | every 30 min |
+| Courier (posting status, Metricool queue) | the app, plus DevLabs Night Owl | every 30 min, plus 6:45 AM |
+| Reel (video edits and revisions) | the app queues the job, DevLabs Reel edits it | every 15 min |
+| Night Owl (daily run, report, watchdog) | DevLabs | daily at 6:45 AM; watchdog hourly |
+
+Nobody has to type "yes": DevLabs runs in Auto mode, and the app only ever schedules posts that have both approvals.
 
 App: https://claude.ai/artifact/YR8cQvQaSPNMVNxngvihpz
 
@@ -20,7 +29,12 @@ App: https://claude.ai/artifact/YR8cQvQaSPNMVNxngvihpz
    - pick **Claude Code** as the AI tool;
    - make a project folder, for example `Documents/RSH-DevLabs`;
    - choose **Auto mode**, so agents work without asking.
-5. **Check that the agent can reach the RSH app.** In DevLabs, talk to Ramon:
+5. **Turn on the app's always-on mode** on this same computer:
+   - Open https://claude.ai/artifact/YR8cQvQaSPNMVNxngvihpz in Chrome, signed in to the owner account, in its own window. Leave it open; it can sit behind other windows.
+   - Go to 24/7 Bots → Setup and tick **"Run all bots 24/7 on this computer"**. The Bots screen then shows **🟢 24/7: the whole team is on duty**.
+   - In Chrome → Settings → Performance, add `claude.ai` to **"Always keep these sites active"**, so Chrome never puts the tab to sleep.
+   - Set the computer to never sleep while plugged in. On Mac: System Settings → Battery/Energy → "Prevent automatic sleeping".
+6. **Check that the agent can reach the RSH app.** In DevLabs, talk to Ramon:
    > "Can you use the ArtifactData tool on https://claude.ai/artifact/YR8cQvQaSPNMVNxngvihpz and list the collection editJobs? Also check that you have the Metricool connector."
 
    If both work, continue. If not, open Claude Code on that computer, run `/mcp`, and check that the claude.ai connectors (Metricool) are on.
@@ -71,6 +85,15 @@ Role description:
 > If nothing is queued, stop immediately and do nothing.
 
 The app picks up a "done" video by itself and attaches it to the campaign for review.
+
+### Every hour, for Night Owl (watchdog)
+> Night Owl watchdog: use ArtifactData on https://claude.ai/artifact/YR8cQvQaSPNMVNxngvihpz and read collection "bots", document "alwaysOn".
+> - If "on" is true and "at" is less than 75 minutes old, stop: all is well.
+> - Otherwise the always-on window has stopped. Reopen it on this computer:
+>   - Mac: `open -a "Google Chrome" "https://claude.ai/artifact/YR8cQvQaSPNMVNxngvihpz"`
+>   - Windows: `start chrome "https://claude.ai/artifact/YR8cQvQaSPNMVNxngvihpz"`
+>
+>   Wait 5 minutes, then read "alwaysOn" again. If it is still old, write one line to the morning report (bots/morning, bot "owl"): "The 24/7 window stopped at <time> and could not be reopened. Please check the computer."
 
 ### Every day at 6:45 AM, for Night Owl
 > Night Owl: daily run for the RSH app at https://claude.ai/artifact/YR8cQvQaSPNMVNxngvihpz.

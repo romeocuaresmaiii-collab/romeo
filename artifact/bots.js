@@ -617,7 +617,7 @@ Answer with JSON only, exactly these keys:
     out.pixel = !all.length ? ['plain', 'Idle', 'neutral', 'No campaigns to prepare assets for.']
       : missing ? ['bad', 'Busy', 'worried', `${missing} of ${all.length} campaign${all.length === 1 ? '' : 's'} still need${missing === 1 ? 's' : ''} files. I wrote a brief and a ready-to-paste prompt for each.`]
       : ['good', 'Happy', 'happy', `Every campaign has the files it needs.`];
-    out.owl = !settings.dailyAuto ? ['off', 'Off', 'asleep', 'Daily run is off in Setup.'] : morning && morning.at && new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date(morning.at)) === new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date()) ? ['good', 'Done for today', 'happy', `I ran the whole team at ${new Date(morning.at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}${morning.by === 'cloud' ? ' from the cloud' : ''}. See my report below.`] : ['plain', 'Waiting', 'neutral', 'I run the whole team once a day: every morning from the cloud, and on the first visit of the day.'];
+    out.owl = aoAlive() ? ['good', 'On duty 24/7', 'happy', `The whole team runs every 30 minutes from the always-on computer. Last check ${new Date(aoInfo.at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}.`] : !settings.dailyAuto ? ['off', 'Off', 'asleep', 'Daily run is off in Setup.'] : morning && morning.at && new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date(morning.at)) === new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date()) ? ['good', 'Done for today', 'happy', `I ran the whole team at ${new Date(morning.at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}${morning.by === 'cloud' ? ' from the cloud' : ''}. See my report below.`] : ['plain', 'Waiting', 'neutral', 'I run the whole team once a day: every morning from the cloud, and on the first visit of the day.'];
     const task = { pixel: 'Writing asset briefs…', reel: 'Sending edit jobs…', quill: 'Writing captions…', tempo: 'Picking times…', ref: 'Checking every post…' };
     if (phase && out[phase]) out[phase] = ['busy', 'Working', 'working', task[phase]];
     return out;
@@ -769,6 +769,51 @@ Answer with JSON only, exactly these keys:
     await work('Night Owl started the daily run: first visit today.'); await saveMorning('app'); render(); return true;
   }
 
+  /* ---------- Always-on mode ----------
+   * One computer (the DevLabs computer) keeps the app open and runs the whole team every 30 minutes, day and night:
+   * Pixel's briefs, Reel's edit and revision queue, Quill's SEO, Tempo's timing and scheduling of approved posts,
+   * Ref's checks, and the live numbers. Only the browser where it is switched on runs it (a per-browser setting),
+   * and a shared heartbeat (bots/alwaysOn) stops two computers from running at once and shows the team it is alive. */
+  const AO_KEY = 'rsh_bots_always_on', AO_EVERY = 30 * 60000, AO_STALE = 75 * 60000;
+  let aoTimer = null, aoInfo = null, aoLast = 0, wakeLock = null;
+  const aoOn = () => { try { return localStorage.getItem(AO_KEY) === '1'; } catch (_) { return false; } };
+  const aoId = (() => { let v = ''; try { v = localStorage.getItem(AO_KEY + ':id') || ''; if (!v) { v = Math.random().toString(36).slice(2, 10); localStorage.setItem(AO_KEY + ':id', v); } } catch (_) { v = 'tab'; } return v; })();
+  async function aoBeat(status) {
+    if (!db) return false;
+    try {
+      const d = await db.doc('bots/alwaysOn').get(), cur = d.exists ? d.data() : null;
+      if (cur && cur.id !== aoId && cur.on && Date.now() - new Date(cur.at).getTime() < AO_STALE) { aoInfo = cur; return false; }   // another computer is on duty
+      aoInfo = { id: aoId, on: true, at: new Date().toISOString(), status: String(status || 'on duty').slice(0, 200), every: AO_EVERY / 60000, device: (navigator.userAgent.match(/\(([^)]+)\)/) || [, ''])[1].slice(0, 60) };
+      await db.doc('bots/alwaysOn').set(aoInfo); return true;
+    } catch (_) { return false; }
+  }
+  async function aoCycle() {
+    if (!aoOn() || busy) return;
+    if (!(await aoBeat('working'))) { render(); return; }
+    aoLast = Date.now();
+    try { if (window.RSH_LIVE && window.RSH_LIVE.refresh) { const f = window.RSH_LIVE.fetchedAt && window.RSH_LIVE.fetchedAt(); if (!f || Date.now() - new Date(f).getTime() > 3 * 3600000) await window.RSH_LIVE.refresh(false); } } catch (_) {}
+    try { await collect(); } catch (_) {}
+    try { await reconcileJobs(); } catch (_) {}
+    try { await reviseFromNotes(); } catch (_) {}
+    await work('Always-on: the team’s scheduled round (every 30 minutes).');
+    try { const today = etToday(), d = await db.doc('bots/dailyRun').get(); if (!d.exists || d.data().date !== today) { await db.doc('bots/dailyRun').set({ date: today, at: new Date().toISOString(), by: 'always-on' }); await saveMorning('app'); } } catch (_) {}
+    await aoBeat('on duty · last round ' + new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })); render();
+  }
+  async function aoStart() {
+    if (aoTimer) clearInterval(aoTimer); aoTimer = null;
+    if (!aoOn()) return;
+    try { if (navigator.wakeLock) { wakeLock = await navigator.wakeLock.request('screen'); } } catch (_) {}
+    aoTimer = setInterval(() => { if (Date.now() - aoLast >= AO_EVERY - 5000) aoCycle(); }, 60000);   // checks every minute; works even when the browser slows background tabs
+    setTimeout(aoCycle, 3000);
+  }
+  async function aoRead() { if (!db) return; try { const d = await db.doc('bots/alwaysOn').get(); aoInfo = d.exists ? d.data() : null; } catch (_) {} }
+  const aoAlive = () => !!(aoInfo && aoInfo.on && Date.now() - new Date(aoInfo.at).getTime() < AO_STALE);
+  function aoHtml() {
+    const mine = aoOn(), alive = aoAlive(), here = aoInfo && aoInfo.id === aoId;
+    const when = aoInfo && aoInfo.at ? new Date(aoInfo.at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
+    return `<div class="hint" role="status" style="margin-top:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><strong>${alive ? '🟢 24/7: the whole team is on duty' : '⚪ 24/7 is off'}</strong><span class="small">${alive ? `${here ? 'This computer' : 'Another computer'} runs every bot every 30 minutes · last check ${esc(when)}` : 'Turn on “Run all bots 24/7 on this computer” in Setup on the computer that stays on (the DevLabs computer).'}${mine && !here && alive ? ' · this computer is on standby' : ''}</span></div>`;
+  }
+
   /* ---------- Campaign asset box ----------
    * Every campaign has a box for its raw files (clips, photos, music, logo, script). The manager adds files over time;
    * “Assets ready: start editing” hands them all to Reel, who sends the edit job to the RSH SPORTS editor
@@ -901,6 +946,7 @@ Answer with JSON only, exactly these keys:
         </div>
         <div class="tabs" role="tablist">${tabBtn('office', 'Office')}${tabBtn('plan', `Plan${ran && items.length ? ` <span class="tcount">${ready} of ${items.length} ready</span>` : ''}`)}${tabBtn('channels', 'Channels')}${tabBtn('setup', 'Setup')}</div>
         ${note ? `<div class="hint" role="status" style="margin-top:12px">${esc(note)}</div>` : ''}
+        ${aoHtml()}
       </div>
       <div data-bot-panel="office" ${tab === 'office' ? '' : 'hidden'}>
         <div class="card" style="margin-top:16px">
@@ -939,6 +985,7 @@ Answer with JSON only, exactly these keys:
           <div><label class="h" for="rshBotDyk">“Did You Know” video day</label><select id="rshBotDyk"><option value="" ${settings.dykDay == null || settings.dykDay === '' ? 'selected' : ''}>No weekly DYK day</option>${['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((d, i) => `<option value="${i}" ${String(settings.dykDay) === String(i) ? 'selected' : ''}>${d}</option>`).join('')}</select><div class="small" style="margin-top:4px">DYK campaigns go to every channel except Pinterest on this day; other posts move off it (Pinterest stays as planned).</div></div>
           <div><label class="h" for="rshBotDays">Look ahead</label><select id="rshBotDays">${[7, 14, 21, 30].map(n => `<option value="${n}" ${settings.days === n ? 'selected' : ''}>${n} days</option>`).join('')}</select></div>
         </div>
+        <div style="margin-top:16px"><label style="display:inline-flex;gap:8px;align-items:flex-start;font-size:13px;cursor:pointer"><input type="checkbox" id="rshBotAlways" ${aoOn() ? 'checked' : ''} style="margin-top:2px"><span><strong>Run all bots 24/7 on this computer</strong><br><span class="small">Switch this on only on the computer that stays on (the DevLabs computer), with this app left open in its own window. Every 30 minutes, day and night, the whole team runs: Pixel, Reel's queue, Quill, Tempo, Ref and Courier, plus fresh Metricool numbers. Only approved posts are ever scheduled. One computer runs at a time; the others stand by.</span></span></label></div>
         <div style="margin-top:16px"><label style="display:inline-flex;gap:8px;align-items:flex-start;font-size:13px;cursor:pointer"><input type="checkbox" id="rshBotDaily" ${settings.dailyAuto ? 'checked' : ''} style="margin-top:2px"><span><strong>Night Owl runs the whole team once a day</strong><br><span class="small">Every morning from the cloud, and on the first visit of the day by someone who can edit: refresh Metricool numbers, write SEO, time and check every post, and schedule the approved ones.</span></span></label></div>
         <div style="margin-top:16px"><label style="display:inline-flex;gap:8px;align-items:flex-start;font-size:13px;cursor:pointer"><input type="checkbox" id="rshBotAutoSend" ${settings.autoSend ? 'checked' : ''} style="margin-top:2px"><span><strong>Tempo schedules ready posts in Metricool by itself</strong><br><span class="small">When you press Run everything, every post with both approvals and all checks passed is scheduled on its day, with its photo or video and Quill’s hashtags. Posts that are not approved are never sent.</span></span></label></div>
         <div style="margin-top:16px"><label style="display:inline-flex;gap:8px;align-items:flex-start;font-size:13px;cursor:pointer"><input type="checkbox" id="rshBotAutoEdit" ${settings.autoEdit ? 'checked' : ''} style="margin-top:2px"><span><strong>Send video jobs to the RSH SPORTS editor automatically</strong><br><span class="small">When a Reel or video campaign has no video, Reel sends the edit job to your RSH SPORTS session and attaches the finished MP4. At most three new jobs per run. This uses your Claude usage in that session.</span></span></label></div>
@@ -1190,6 +1237,7 @@ Answer with JSON only, exactly these keys:
     const t = e.target;
     if (t.matches('[data-bot-file]')) { const files = [...t.files], camp = document.querySelector('#rshBots [data-bot-dropcamp]'); t.value = ''; return attach(files, camp && camp.value); }
     if (t.matches('[data-bot-dropcamp]')) return;
+    if (t.id === 'rshBotAlways') { try { localStorage.setItem(AO_KEY, t.checked ? '1' : '0'); } catch (_) {} if (t.checked) aoStart(); else { if (aoTimer) clearInterval(aoTimer); aoTimer = null; if (aoInfo && aoInfo.id === aoId && db) { try { await db.doc('bots/alwaysOn').set({ ...aoInfo, on: false, at: new Date().toISOString(), status: 'switched off' }); } catch (_) {} } await aoRead(); } return render(); }
     if (t.id === 'rshBotDaily') { settings.dailyAuto = t.checked; if (db) { try { await db.doc('bots/settings').set({ json: JSON.stringify(settings) }); } catch (_) {} } return render(); }
     if (t.id === 'rshBotAutoSend') { settings.autoSend = t.checked; if (db) { try { await db.doc('bots/settings').set({ json: JSON.stringify(settings) }); } catch (_) {} } return render(); }
     if (t.id === 'rshBotAutoEdit') { settings.autoEdit = t.checked; if (db) { try { await db.doc('bots/settings').set({ json: JSON.stringify(settings) }); } catch (_) {} } return render(); }
@@ -1227,9 +1275,11 @@ Answer with JSON only, exactly these keys:
       await reconcileJobs();
       reviseFromNotes();   // remember the notes already there, so only new ones start a revision
       await collect();
-      setTimeout(() => { nightOwl(); }, 1500);
+      await aoRead();
+      setTimeout(() => { if (aoOn()) aoStart(); else nightOwl(); }, 1500);
+      setInterval(() => { aoRead().then(render); }, 5 * 60000);
     }
     render();
   }
-  window.RSH_BOTS = { reviseFromNotes, shrinkVideo, nightOwl, weeklyReport, learnedTags, resultsForPrompt, openRaw, addRaw, sendRaw, rawCount, loadRaw, dayFor, isDyk, targets, sendText, autoSend, seoFor, seoRun, learnedTimes, schedule, attachForPost, driveUpload, fileFor, autoLink, needsFile, readyItems, placedOn, place, unplace, setMediaUrl, sendToMetricool, metricoolPost, NAME, freshVideos, watch, onChange: f => listeners.push(f), handoff, collect, start, captionFor, assetNeeds, imagePrompt, videoBrief, editJob };
+  window.RSH_BOTS = { aoCycle, aoStart, aoBeat, aoAlive, reviseFromNotes, shrinkVideo, nightOwl, weeklyReport, learnedTags, resultsForPrompt, openRaw, addRaw, sendRaw, rawCount, loadRaw, dayFor, isDyk, targets, sendText, autoSend, seoFor, seoRun, learnedTimes, schedule, attachForPost, driveUpload, fileFor, autoLink, needsFile, readyItems, placedOn, place, unplace, setMediaUrl, sendToMetricool, metricoolPost, NAME, freshVideos, watch, onChange: f => listeners.push(f), handoff, collect, start, captionFor, assetNeeds, imagePrompt, videoBrief, editJob };
 })();
