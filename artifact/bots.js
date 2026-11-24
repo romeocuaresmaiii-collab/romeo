@@ -617,7 +617,6 @@ Answer with JSON only, exactly these keys:
     out.pixel = !all.length ? ['plain', 'Idle', 'neutral', 'No campaigns to prepare assets for.']
       : missing ? ['bad', 'Busy', 'worried', `${missing} of ${all.length} campaign${all.length === 1 ? '' : 's'} still need${missing === 1 ? 's' : ''} files. I wrote a brief and a ready-to-paste prompt for each.`]
       : ['good', 'Happy', 'happy', `Every campaign has the files it needs.`];
-    if (dlAlive('reel')) out.reel = ['good', 'On duty in DevLabs', 'happy', `I edit new videos and revisions in DevLabs every 15 minutes. Last check ${ago(dlAge('reel'))}${devlabs.reel.status ? ': ' + devlabs.reel.status : ''}.`];
     out.owl = aoAlive() ? ['good', 'On duty 24/7', 'happy', `The whole team runs every 30 minutes from the always-on computer. Last check ${new Date(aoInfo.at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}.`] : !settings.dailyAuto ? ['off', 'Off', 'asleep', 'Daily run is off in Setup.'] : morning && morning.at && new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date(morning.at)) === new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date()) ? ['good', 'Done for today', 'happy', `I ran the whole team at ${new Date(morning.at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}${morning.by === 'cloud' ? ' from the cloud' : ''}. See my report below.`] : ['plain', 'Waiting', 'neutral', 'I run the whole team once a day: every morning from the cloud, and on the first visit of the day.'];
     const task = { pixel: 'Writing asset briefs…', reel: 'Sending edit jobs…', quill: 'Writing captions…', tempo: 'Picking times…', ref: 'Checking every post…' };
     if (phase && out[phase]) out[phase] = ['busy', 'Working', 'working', task[phase]];
@@ -770,38 +769,8 @@ Answer with JSON only, exactly these keys:
     await work('Night Owl started the daily run: first visit today.'); await saveMorning('app'); render(); return true;
   }
 
-  /* ---------- DevLabs ----------
-   * DevLabs (devlabs.atmt.dev) runs the agents a web page cannot: Reel edits videos and revisions, Night Owl sends the
-   * queue to Metricool, writes the morning report and reopens the 24/7 window. They report a heartbeat to bots/devlabs. */
-  const FLOOR_JSON = __RSH_FLOOR_JSON__;
-  const DL_SCHEDULES = [['Every 15 minutes', 'Reel - Video Editor', 'Reel - Video Editor: check the queue.', 'reel', 40], ['Every hour', 'Night Owl - Daily Run', 'Night Owl - Daily Run: watchdog.', 'owl', 150], ['Every day, 6:45 AM US Eastern', 'Night Owl - Daily Run', 'Night Owl - Daily Run: daily run.', 'owl', 0]];
-  let devlabs = null;
-  async function dlRead() { if (!db) return; try { const d = await db.doc('bots/devlabs').get(); devlabs = d.exists ? d.data() : null; } catch (_) {} }
-  const dlAge = k => devlabs && devlabs[k] && devlabs[k].at ? (Date.now() - new Date(devlabs[k].at).getTime()) / 60000 : Infinity;
-  const dlAlive = k => dlAge(k) < (k === 'reel' ? 40 : 150);
-  const ago = m => !isFinite(m) ? 'never' : m < 1 ? 'just now' : m < 60 ? Math.round(m) + ' min ago' : m < 2880 ? Math.round(m / 60) + ' h ago' : Math.round(m / 1440) + ' days ago';
-  function devlabsHtml() {
-    const reel = dlAlive('reel'), owl = dlAlive('owl'), ao = aoAlive(), any = isFinite(dlAge('reel')) || isFinite(dlAge('owl'));
-    const queue = Object.values(jobs).filter(j => j.status === 'queued' || j.status === 'sent');
-    const step = (done, title, body) => `<div class="dl-step" style="display:flex;gap:12px;padding:12px 0;border-top:1px solid #e5e5ea"><span style="font-size:18px;line-height:1.2">${done ? '✅' : '⬜'}</span><div style="flex:1"><strong>${title}</strong><div class="small" style="margin-top:4px">${body}</div></div></div>`;
-    const agent = (k, name, role) => { const a = devlabs && devlabs[k]; return `<div class="acc"><div class="top"><span style="font-size:22px">${k === 'reel' ? '🎬' : '🦉'}</span><div><strong>${esc(name)}</strong><div class="small">${esc(role)}</div></div></div><div><span class="st" style="${dlAlive(k) ? 'background:#e7f6ec;color:#11703a' : ''}">${dlAlive(k) ? '● Online' : any ? '○ Not seen recently' : '○ Not connected yet'}</span></div><div class="small">Last check: ${esc(ago(dlAge(k)))}${a && a.status ? ' · ' + esc(a.status) : ''}</div></div>`; };
-    return `<div class="card" style="margin-top:16px">
-      <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start"><div><h2 style="font-size:18px">DevLabs: the bots’ computer</h2><p class="small" style="margin-top:6px;max-width:640px">DevLabs runs AI agents on the computer that stays on. They do what this page cannot: <strong>Reel</strong> edits videos and revisions from review notes, and <strong>Night Owl</strong> sends waiting posts to Metricool, writes the morning report and reopens the 24/7 window if it stops. No “yes” needed, and nothing is ever posted without both approvals.</p></div>
-      <span class="st" style="${reel && owl && ao ? 'background:#e7f6ec;color:#11703a' : ''}">${reel && owl && ao ? '🟢 All 7 bots running 24/7' : any || ao ? '🟡 Partly connected' : '⚪ Not connected yet'}</span></div>
-      <div class="accs" style="margin-top:12px">${agent('reel', 'Reel - Video Editor', 'Edits videos and revisions · every 15 min')}${agent('owl', 'Night Owl - Daily Run', 'Metricool queue, report, watchdog · hourly and 6:45 AM')}
-        <div class="acc"><div class="top"><span style="font-size:22px">🖥️</span><div><strong>Always-on window</strong><div class="small">Pixel, Quill, Tempo, Ref, Courier · every 30 min</div></div></div><div><span class="st" style="${ao ? 'background:#e7f6ec;color:#11703a' : ''}">${ao ? '● Online' : '○ Off'}</span></div><div class="small">Last check: ${esc(aoInfo && aoInfo.at ? ago((Date.now() - new Date(aoInfo.at).getTime()) / 60000) : 'never')}</div></div></div>
-      ${queue.length ? `<div class="hint" style="margin-top:12px"><strong>Video queue:</strong> ${queue.map(j => `${esc(cut(j.title || '', 40))} (${j.source === 'revision' ? 'revision' : 'new video'}, ${j.status === 'queued' ? 'waiting for Reel' : 'Reel is editing'})`).join(' · ')}</div>` : ''}
-      <h3 style="margin-top:18px;font-size:15px">Set it up on the computer that stays on</h3>
-      ${step(false, '1. Install Claude Code, ffmpeg and DevLabs', 'Claude Code signed in to the Claude account that owns this app. ffmpeg: <code>brew install ffmpeg</code> (Mac) or <code>winget install ffmpeg</code> (Windows). DevLabs: <a href="https://devlabs.atmt.dev/#download" target="_blank" rel="noopener noreferrer">devlabs.atmt.dev ↗</a>. First start: choose Claude Code, a folder like <code>RSH-DevLabs</code>, and <strong>Auto mode</strong>.')}
-      ${step(any, '2. Import the RSH team', `In DevLabs: <strong>add agent → import floor…</strong> → pick this file → <strong>hire all</strong>. <div style="margin-top:8px"><button type="button" class="btn smallbtn" data-dl-floor>Download RSH team file</button></div>`)}
-      ${step(any, '3. Add the three schedules', `Click <strong>Ramon → triggers → SCHEDULES → add a schedule</strong>, once for each row. Ramon’s delivery at the top must say <strong>auto</strong>.<div style="overflow:auto;margin-top:8px"><table class="small" style="border-collapse:collapse;width:100%"><thead><tr><th style="text-align:left;padding:4px 6px">WHEN</th><th style="text-align:left;padding:4px 6px">GOES TO</th><th style="text-align:left;padding:4px 6px">PROMPT</th><th></th></tr></thead><tbody>${DL_SCHEDULES.map(([w, to, pr], n) => `<tr style="border-top:1px solid #eee"><td style="padding:6px">${esc(w)}${n === 2 ? '<div class="small">(set it in your computer’s local time)</div>' : ''}</td><td style="padding:6px">${esc(to)}</td><td style="padding:6px"><code>${esc(pr)}</code></td><td style="padding:6px"><button type="button" class="btn ghost smallbtn" data-dl-copy="${n}">Copy</button></td></tr>`).join('')}</tbody></table></div>`)}
-      ${step(ao, '4. Keep this app open in its own Chrome window', `Tick <strong>“Run all bots 24/7 on this computer”</strong> in Setup on that computer. In Chrome → Settings → Performance, add <code>claude.ai</code> to “Always keep these sites active”, and set the computer not to sleep.${ao ? ' <strong>Done: the always-on window is running.</strong>' : ''}`)}
-      ${step(reel && owl, '5. Connection check', `This ticks by itself when Reel and Night Owl report in. Their first report comes after their first scheduled run (Reel within 15 minutes). To test now, tell Ramon: <code>Reel - Video Editor: check the queue.</code>`)}
-      <p class="small" style="margin-top:12px">DevLabs is free and open source (MIT). It runs on your own computer with your own Claude account; nothing here holds keys.</p></div>`;
-  }
-
   /* ---------- Always-on mode ----------
-   * One computer (the DevLabs computer) keeps the app open and runs the whole team every 30 minutes, day and night:
+   * One computer keeps the app open and runs the whole team every 30 minutes, day and night:
    * Pixel's briefs, Reel's edit and revision queue, Quill's SEO, Tempo's timing and scheduling of approved posts,
    * Ref's checks, and the live numbers. Only the browser where it is switched on runs it (a per-browser setting),
    * and a shared heartbeat (bots/alwaysOn) stops two computers from running at once and shows the team it is alive. */
@@ -842,7 +811,7 @@ Answer with JSON only, exactly these keys:
   function aoHtml() {
     const mine = aoOn(), alive = aoAlive(), here = aoInfo && aoInfo.id === aoId;
     const when = aoInfo && aoInfo.at ? new Date(aoInfo.at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
-    return `<div class="hint" role="status" style="margin-top:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><strong>${alive ? '🟢 24/7: the whole team is on duty' : '⚪ 24/7 is off'}</strong><span class="small">${alive ? `${here ? 'This computer' : 'Another computer'} runs every bot every 30 minutes · last check ${esc(when)}` : 'Turn on “Run all bots 24/7 on this computer” in Setup on the computer that stays on (the DevLabs computer).'}${mine && !here && alive ? ' · this computer is on standby' : ''}</span></div>`;
+    return `<div class="hint" role="status" style="margin-top:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><strong>${alive ? '🟢 24/7: the whole team is on duty' : '⚪ 24/7 is off'}</strong><span class="small">${alive ? `${here ? 'This computer' : 'Another computer'} runs every bot every 30 minutes · last check ${esc(when)}` : 'Turn on “Run all bots 24/7 on this computer” in Setup on the computer that stays on.'}${mine && !here && alive ? ' · this computer is on standby' : ''}</span></div>`;
   }
 
   /* ---------- Campaign asset box ----------
@@ -1092,7 +1061,7 @@ Answer with JSON only, exactly these keys:
           <p style="margin-top:6px">The bots read your campaigns and prepare a caption and a time for every channel. They change nothing in your campaigns, calendar or Metricool.</p></div>
           <button type="button" class="btn" data-bot-run ${busy ? 'disabled' : ''}>${busy ? 'Running…' : '▶ Run everything'}</button>
         </div>
-        <div class="tabs" role="tablist">${tabBtn('office', 'Office')}${tabBtn('plan', `Plan${ran && items.length ? ` <span class="tcount">${ready} of ${items.length} ready</span>` : ''}`)}${tabBtn('channels', 'Channels')}${tabBtn('devlabs', `DevLabs${dlAlive('reel') && dlAlive('owl') ? ' <span class="tcount">●</span>' : ''}`)}${tabBtn('setup', 'Setup')}</div>
+        <div class="tabs" role="tablist">${tabBtn('office', 'Office')}${tabBtn('plan', `Plan${ran && items.length ? ` <span class="tcount">${ready} of ${items.length} ready</span>` : ''}`)}${tabBtn('channels', 'Channels')}${tabBtn('setup', 'Setup')}</div>
         ${note ? `<div class="hint" role="status" style="margin-top:12px">${esc(note)}</div>` : ''}
         ${aoHtml()}
       </div>
@@ -1124,7 +1093,6 @@ Answer with JSON only, exactly these keys:
             <div style="display:flex;gap:6px;flex-wrap:wrap"><a class="btn ghost smallbtn" href="${esc(url)}" target="_blank" rel="noopener noreferrer">Open ${esc(NAME[ch])} ↗</a><button type="button" class="btn ghost smallbtn" disabled title="Comes with direct posting">Connect directly</button></div></div>`; }).join('')}</div>
         </div>
       </div>
-      <div data-bot-panel="devlabs" ${tab === 'devlabs' ? '' : 'hidden'}>${tab === 'devlabs' ? devlabsHtml() : ''}</div>
       <div data-bot-panel="setup" ${tab === 'setup' ? '' : 'hidden'}>
         <div class="card" style="margin-top:16px">
         <h2 style="font-size:18px">Setup</h2><p class="small" style="margin-top:6px">Changes apply the next time the bots run.</p>
@@ -1135,7 +1103,7 @@ Answer with JSON only, exactly these keys:
           <div><label class="h" for="rshBotDyk">“Did You Know” video day</label><select id="rshBotDyk"><option value="" ${settings.dykDay == null || settings.dykDay === '' ? 'selected' : ''}>No weekly DYK day</option>${['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((d, i) => `<option value="${i}" ${String(settings.dykDay) === String(i) ? 'selected' : ''}>${d}</option>`).join('')}</select><div class="small" style="margin-top:4px">DYK campaigns go to every channel except Pinterest on this day; other posts move off it (Pinterest stays as planned).</div></div>
           <div><label class="h" for="rshBotDays">Look ahead</label><select id="rshBotDays">${[7, 14, 21, 30].map(n => `<option value="${n}" ${settings.days === n ? 'selected' : ''}>${n} days</option>`).join('')}</select></div>
         </div>
-        <div style="margin-top:16px"><label style="display:inline-flex;gap:8px;align-items:flex-start;font-size:13px;cursor:pointer"><input type="checkbox" id="rshBotAlways" ${aoOn() ? 'checked' : ''} style="margin-top:2px"><span><strong>Run all bots 24/7 on this computer</strong><br><span class="small">Switch this on only on the computer that stays on (the DevLabs computer), with this app left open in its own window. Every 30 minutes, day and night, the whole team runs: Pixel, Reel's queue, Quill, Tempo, Ref and Courier, plus fresh Metricool numbers. Only approved posts are ever scheduled. One computer runs at a time; the others stand by.</span></span></label></div>
+        <div style="margin-top:16px"><label style="display:inline-flex;gap:8px;align-items:flex-start;font-size:13px;cursor:pointer"><input type="checkbox" id="rshBotAlways" ${aoOn() ? 'checked' : ''} style="margin-top:2px"><span><strong>Run all bots 24/7 on this computer</strong><br><span class="small">Switch this on only on the computer that stays on, with this app left open in its own window. Every 30 minutes, day and night, the whole team runs: Pixel, Reel's queue, Quill, Tempo, Ref and Courier, plus fresh Metricool numbers. Only approved posts are ever scheduled. One computer runs at a time; the others stand by.</span></span></label></div>
         <div style="margin-top:16px"><label style="display:inline-flex;gap:8px;align-items:flex-start;font-size:13px;cursor:pointer"><input type="checkbox" id="rshBotDaily" ${settings.dailyAuto ? 'checked' : ''} style="margin-top:2px"><span><strong>Night Owl runs the whole team once a day</strong><br><span class="small">Every morning from the cloud, and on the first visit of the day by someone who can edit: refresh Metricool numbers, write SEO, time and check every post, and schedule the approved ones.</span></span></label></div>
         <div style="margin-top:16px"><label style="display:inline-flex;gap:8px;align-items:flex-start;font-size:13px;cursor:pointer"><input type="checkbox" id="rshBotAutoSend" ${settings.autoSend ? 'checked' : ''} style="margin-top:2px"><span><strong>Tempo schedules ready posts in Metricool by itself</strong><br><span class="small">When you press Run everything, every post with both approvals and all checks passed is scheduled on its day, with its photo or video and Quill’s hashtags. Posts that are not approved are never sent.</span></span></label></div>
         <div style="margin-top:16px"><label style="display:inline-flex;gap:8px;align-items:flex-start;font-size:13px;cursor:pointer"><input type="checkbox" id="rshBotAutoEdit" ${settings.autoEdit ? 'checked' : ''} style="margin-top:2px"><span><strong>Send video jobs to the RSH SPORTS editor automatically</strong><br><span class="small">When a Reel or video campaign has no video, Reel sends the edit job to your RSH SPORTS session and attaches the finished MP4. At most three new jobs per run. This uses your Claude usage in that session.</span></span></label></div>
@@ -1353,8 +1321,6 @@ Answer with JSON only, exactly these keys:
     const fln = e.target.closest('[data-bot-firstline]');
     if (fln) { const it = find(fln.dataset.botFirstline), so = it && seoFor(it.postId, it.channel); if (it && so && so.firstLine) { it.caption = so.firstLine + '\n\n' + it.caption; it.edited = true; await save(); render(); } return; }
     const oc = e.target.closest('[data-bot-opencamp]'); if (oc) { e.preventDefault(); if (app().openNext) app().openNext(oc.dataset.botOpencamp); return; }
-    if (e.target.closest('[data-dl-floor]')) { const b = e.target.closest('[data-dl-floor]'); try { const dl = await use('downloads'); if (!dl) throw new Error('no'); await dl.save({ filename: 'rsh-sports-24-7-bots.floor.json', data: new Blob([FLOOR_JSON], { type: 'application/json' }) }); b.textContent = 'Saved'; } catch (err) { b.textContent = (err && err.code === 'declined') ? 'Download RSH team file' : 'Could not save'; } setTimeout(() => { b.textContent = 'Download RSH team file'; }, 2500); return; }
-    const dc = e.target.closest('[data-dl-copy]'); if (dc) { const t = DL_SCHEDULES[Number(dc.dataset.dlCopy)][2]; try { navigator.clipboard.writeText(t).then(() => { dc.textContent = 'Copied'; setTimeout(() => { dc.textContent = 'Copy'; }, 1500); }, () => { dc.textContent = 'Copy failed'; }); } catch (_) {} return; }
     const tb = e.target.closest('[data-bot-tab]'); if (tb) { tab = tb.dataset.botTab; return render(); }
     const fl = e.target.closest('[data-bot-filter]'); if (fl) { filter = fl.dataset.botFilter; return render(); }
     if (e.target.closest('[data-bot-expand]')) { const ids = [...document.querySelectorAll('#rshBots details.camp')].map(d => d.dataset.botCamp), all = ids.length && ids.every(i => openCamps.has(i)); for (const i of ids) { if (all) openCamps.delete(i); else openCamps.add(i); } return render(); }
@@ -1427,11 +1393,11 @@ Answer with JSON only, exactly these keys:
       await reconcileJobs();
       reviseFromNotes();   // remember the notes already there, so only new ones start a revision
       await collect();
-      await aoRead(); await dlRead();
+      await aoRead();
       setTimeout(() => { if (aoOn()) aoStart(); else nightOwl(); }, 1500);
-      setInterval(() => { Promise.all([aoRead(), dlRead()]).then(render); }, 5 * 60000);
+      setInterval(() => { aoRead().then(render); }, 5 * 60000);
     }
     render();
   }
-  window.RSH_BOTS = { isoPeople: () => ISO.people, dlRead, dlAlive, FLOOR_JSON: () => FLOOR_JSON, aoCycle, aoStart, aoBeat, aoAlive, reviseFromNotes, shrinkVideo, nightOwl, weeklyReport, learnedTags, resultsForPrompt, openRaw, addRaw, sendRaw, rawCount, loadRaw, dayFor, isDyk, targets, sendText, autoSend, seoFor, seoRun, learnedTimes, schedule, attachForPost, driveUpload, fileFor, autoLink, needsFile, readyItems, placedOn, place, unplace, setMediaUrl, sendToMetricool, metricoolPost, NAME, freshVideos, watch, onChange: f => listeners.push(f), handoff, collect, start, captionFor, assetNeeds, imagePrompt, videoBrief, editJob };
+  window.RSH_BOTS = { isoPeople: () => ISO.people, aoCycle, aoStart, aoBeat, aoAlive, reviseFromNotes, shrinkVideo, nightOwl, weeklyReport, learnedTags, resultsForPrompt, openRaw, addRaw, sendRaw, rawCount, loadRaw, dayFor, isDyk, targets, sendText, autoSend, seoFor, seoRun, learnedTimes, schedule, attachForPost, driveUpload, fileFor, autoLink, needsFile, readyItems, placedOn, place, unplace, setMediaUrl, sendToMetricool, metricoolPost, NAME, freshVideos, watch, onChange: f => listeners.push(f), handoff, collect, start, captionFor, assetNeeds, imagePrompt, videoBrief, editJob };
 })();
