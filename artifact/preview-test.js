@@ -441,6 +441,9 @@ const out = []; const ok = (n, c, d) => { out.push(c); console.log((c ? 'PASS  '
   await p.click('.nav button[data-view="bots"]');
   await p.click('#rshBots [data-bot-tab="office"]'); await p.waitForTimeout(1500);
   const iso = await p.evaluate(() => { const ppl = Object.values(window.RSH_BOTS.isoPeople()), cv = document.querySelector('#rshBots [data-bot-iso] canvas'); return { n: ppl.length, finite: ppl.every(q => isFinite(q.x) && isFinite(q.y)), canvas: !!cv && cv.width > 300, label: cv && /Live office: Pixel/.test(cv.getAttribute('aria-label') || '') }; });
+  await p.waitForTimeout(7000);
+  const talk = await p.evaluate(() => { const l = document.querySelector('#rshBots [data-bot-iso] [aria-live]'); return l ? l.textContent : ''; });
+  ok('Idle bots chat with each other in English, and the conversation shows under the office', /:/.test(talk) && !/office is quiet/.test(talk), talk.slice(0, 160));
   ok('The Office shows a live isometric office with all 7 bots placed by their real state', iso.n === 7 && iso.finite && iso.canvas && iso.label, JSON.stringify(iso));
   await b.close(); srv.close();
   process.exit(out.every(Boolean) ? 0 : 1);
