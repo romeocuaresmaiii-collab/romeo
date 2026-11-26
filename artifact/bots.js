@@ -202,6 +202,7 @@
       p.visualConcept ? `VISUAL DIRECTION\n${String(p.visualConcept).trim()}` : '',
       `RULES\n${RULES} RSH branding only in the corner watermark and the end card.`,
       `HOUSE STYLE\n${HOUSE}\n${endCardLine(p)}\nStart from Video Studio Kit engine ${engineFor(p)}.`,
+      productBlock(p),
       packFor(p.id) ? `PRODUCTION PACK (written by Sage, the team’s script writer; follow it shot by shot)\n${packFor(p.id)}` : '',
       `DELIVER\nThe finished MP4 named ${slug(p.title) || 'campaign'}.mp4, plus a one-line note of anything you could not do.`].filter(Boolean).join('\n\n');
   }
@@ -227,14 +228,14 @@
   }
   const RULES = 'Realistic, natural light. Sport-correct gear and setting. No third-party logos, brand marks or wordmarks on shoes, socks, apparel, bags or equipment. No real, identifiable people. Suitable for parents, coaches and athletes.';
   function imagePrompt(p) {
-    { const part = packPart(packFor(p.id), 2); if (part) return part; }
+    { const part = packPart(packFor(p.id), 2), pb = productBlock(p); if (part) return pb ? part + '\n\n' + pb : part; }
     const type = String(p.postType || '').toLowerCase(), base = String(p.visualPrompt || p.visualConcept || '').trim();
     return [base || `A premium, photorealistic ${p.sport || 'sports'} photo for ${p.platform || 'social media'}: ${sentence(p.hook)}`,
       /carousel/.test(type) ? 'Make this a matching set of 3 to 5 images with the same athlete, setting and light: 1) a cover with clear space for the headline, 2 to 4) supporting moments, last) a calm closing frame.' : '',
-      `Aspect ratio ${p.aspectRatio || '4:5'}. Leave clean space for text; do not put any text in the image.`, base ? '' : RULES, app().logoRule ? 'RSH logo rule: ' + app().logoRule() : '', app().negativePrompt ? 'Negative prompt: ' + app().negativePrompt() : ''].filter(Boolean).join('\n\n');
+      productBlock(p), `Aspect ratio ${p.aspectRatio || '4:5'}. Leave clean space for text; do not put any text in the image.`, base ? '' : RULES, app().logoRule ? 'RSH logo rule: ' + app().logoRule() : '', app().negativePrompt ? 'Negative prompt: ' + app().negativePrompt() : ''].filter(Boolean).join('\n\n');
   }
   function videoBrief(p) {
-    { const part = packPart(packFor(p.id), 4); if (part) return part; }
+    { const part = packPart(packFor(p.id), 4), pb = productBlock(p); if (part) return pb ? part + '\n\n' + pb : part; }
     return [`Create a 10 to 15 second vertical 9:16 video for ${p.platform || 'social media'} about ${p.sport || 'the sport'}.`,
       p.visualConcept ? `Scene: ${String(p.visualConcept).trim()}` : '',
       `Shots: 1) Opening, first 2 seconds: the moment that matches the hook “${sentence(p.hook)}”. 2) Middle: the main action, one clear movement, steady framing. 3) Ending, last 2 seconds: hold on a clean frame with room for the call to action.`,
@@ -248,7 +249,7 @@
    * (asked for once); the finished file returns through the artifact's file store and a small
    * record in collection `editJobs`. One job per campaign, at most three new jobs per run.
    */
-  const EDITOR_SESSION = 'session_01EomsW2MJWVwshJ5YMhGGBP', APP_URL = 'https://claude.ai/artifact/YR8cQvQaSPNMVNxngvihpz', REMOTE = 'Claude Code Remote';
+  const EDITOR_SESSION = 'session_01EomsW5dcrYFpjjRDCZ7Frj', APP_URL = 'https://claude.ai/artifact/YR8cQvQaSPNMVNxngvihpz', REMOTE = 'Claude Code Remote';
   const needsVideo = p => { const n = assetNeeds(p).needs[0]; return /reel|video/i.test(p.postType || '') && n && n.state === 'miss'; };
   const RETURN_STEPS = id => `WHEN THE VIDEO IS FINISHED, return it to the app so nobody has to move it by hand:\n1. If the MP4 is 19 MB or smaller, upload it to the artifact ${APP_URL} as one asset (Artifact tool: action publish, url set to that artifact, asset true, file_path the MP4) and note the 32-character asset id. If it is larger, split it into 16 MB pieces (split -b 16m), upload each piece the same way with content type video/mp4, and note each piece's asset id with its start and end byte offsets.\n2. Record it with the ArtifactData tool on the same artifact: read collection "editJobs", document "${id}" (action get) to learn its version, then action update with if_version and data {"status":"done","assetId":"<the asset id, or the first piece's id>","parts":[{"id":"<piece id>","start":0,"end":16777216}, ...] (only when split),"mime":"video/mp4","bytes":<file size>,"name":"<file name>.mp4","finishedAt":"<current time, ISO 8601>"}.\nIf you cannot finish, update that document with {"status":"failed","reason":"<one sentence>"} instead.\nDo not change anything else in that artifact, and do not publish or schedule anything.`;
   function handoff(p, j) {
@@ -260,7 +261,7 @@
     if (j && (j.source === 'zip' || j.source === 'campaign')) {
       let files = []; try { files = JSON.parse(j.manifest || '[]'); } catch (_) {}
       const list = files.map((f, n) => `${n + 1}. ${f.name} (${f.mime}, ${Math.round(f.bytes / 1024)} KB${f.encoding === 'base64' ? ', stored base64-encoded: decode after joining' : ''}) asset${f.parts.length > 1 ? 's in order' : ''}: ${f.parts.map(x => x.id).join(' + ')}`).join('\n');
-      return `[RSH Sports Marketing OS: automatic edit job${j.source === 'zip' ? ' from a zip' : ' from the campaign’s asset box'}. Sent by the app on behalf of the team.]\n\nEDIT JOB — ${p.title}\nCampaign for ${p.platform || 'social media'}, planned ${p.date || 'no date yet'}. Sport: ${p.sport || 'not set'}.\n\n${j.source === 'zip' ? `The team uploaded a zip, "${j.zipName}", with every file for this video.` : `The manager gathered ${j.files} file${j.files === 1 ? '' : 's'} in the campaign’s asset box and marked them ready.`} Edit the full video exactly as the script says, using these files. Keep the finished MP4 1080×1920 and under 15 MB.${seoEditLine(p) ? '\n\n' + seoEditLine(p) : ''}\n\nGET THE FILES: for each asset id below, use the Artifact tool with action read, url ${APP_URL}, and path set to the asset id; it saves the file locally. Where a file has several asset ids, fetch them in order and join them (cat). Where it says base64, decode after joining (base64 -d).\n${list}\n\nSCRIPT${j.scriptName ? ' (' + j.scriptName + ')' : ''}:\n${j.script || (packFor(p.id) ? '(Production pack written by Sage, the team’s script writer.)\n' + packFor(p.id) : '') || 'No script file was found in the zip. Follow the campaign: hook "' + sentence(p.hook) + '".'}${j.scriptCut ? '\n[The script is longer than shown; the full file is in the list above.]' : ''}\n\nOUTPUT unless the script says otherwise: one vertical 9:16 video, 1080×1920, MP4 (H.264). RULES: ${RULES} RSH branding only in the corner watermark and the end card.\n\nHOUSE STYLE (follow the script where it says otherwise): ${HOUSE}\n${endCardLine(p)}\nStart from Video Studio Kit engine ${engineFor(p)}. Check stills of every beat before the full render, and list anything in the images that breaks the brand rules.\n\n${RETURN_STEPS(p.id)}`;
+      return `[RSH Sports Marketing OS: automatic edit job${j.source === 'zip' ? ' from a zip' : ' from the campaign’s asset box'}. Sent by the app on behalf of the team.]\n\nEDIT JOB — ${p.title}\nCampaign for ${p.platform || 'social media'}, planned ${p.date || 'no date yet'}. Sport: ${p.sport || 'not set'}.\n\n${j.source === 'zip' ? `The team uploaded a zip, "${j.zipName}", with every file for this video.` : `The manager gathered ${j.files} file${j.files === 1 ? '' : 's'} in the campaign’s asset box and marked them ready.`} Edit the full video exactly as the script says, using these files. Keep the finished MP4 1080×1920 and under 15 MB.${seoEditLine(p) ? '\n\n' + seoEditLine(p) : ''}${productBlock(p) ? '\n\n' + productBlock(p) : ''}\n\nGET THE FILES: for each asset id below, use the Artifact tool with action read, url ${APP_URL}, and path set to the asset id; it saves the file locally. Where a file has several asset ids, fetch them in order and join them (cat). Where it says base64, decode after joining (base64 -d).\n${list}\n\nSCRIPT${j.scriptName ? ' (' + j.scriptName + ')' : ''}:\n${j.script || (packFor(p.id) ? '(Production pack written by Sage, the team’s script writer.)\n' + packFor(p.id) : '') || 'No script file was found in the zip. Follow the campaign: hook "' + sentence(p.hook) + '".'}${j.scriptCut ? '\n[The script is longer than shown; the full file is in the list above.]' : ''}\n\nOUTPUT unless the script says otherwise: one vertical 9:16 video, 1080×1920, MP4 (H.264). RULES: ${RULES} RSH branding only in the corner watermark and the end card.\n\nHOUSE STYLE (follow the script where it says otherwise): ${HOUSE}\n${endCardLine(p)}\nStart from Video Studio Kit engine ${engineFor(p)}. Check stills of every beat before the full render, and list anything in the images that breaks the brand rules.\n\n${RETURN_STEPS(p.id)}`;
     }
     return `[RSH Sports Marketing OS: automatic edit job. Sent by the app on behalf of the team.]\n\n${editJob(p).replace('under 30 MB', 'under 19 MB if possible')}\n\n${RETURN_STEPS(p.id)}`;
   }
@@ -523,7 +524,7 @@ Visual concept / storyboard: ${p.visualConcept || ''}
 Caption: ${p.captionBody || p.caption || ''}
 Call to action: ${p.cta || ''}
 Hashtags: ${p.hashtags || ''}
-${isDyk(p) ? 'This is a Tuesday Did You Know post.\n' : ''}${seasonContext()}`;
+${isDyk(p) ? 'This is a Tuesday Did You Know post.\n' : ''}${productBlock(p) ? productBlock(p) + '\nThis campaign shows a real RSH product: route the product shots through these real photos (the reference image), never a text-to-image product; list the colorway, the reference photos and the vendor-mark check in TO CONFIRM.\n' : ''}${seasonContext()}`;
   }
   async function writeScript(p) {
     const sample = await use('sample'); if (!sample) { sageNote = 'Asking Claude is not available in this view, so Sage could not write production packs.'; return false; }
@@ -555,6 +556,83 @@ ${isDyk(p) ? 'This is a Tuesday Did You Know post.\n' : ''}${seasonContext()}`;
     return rest.slice(0, nx ? m[0].length + nx.index : undefined).replace(/[\s=]+$/, '').trim();
   }
   const packFor = id => (scripts[id] && scripts[id].text) || '';
+
+  /* ---------- Real products from rshsports.com ----------
+   * The store catalog (uniforms and apparel, built from rshsports.com/products.json by the Claude session) lives in
+   * catalog/chunk0..n. When a campaign is about a garment, the app matches it to the real products and shows their
+   * store photos. Photos are copied into this app (collection "refs", one document per product with asset ids) so the
+   * team can download them at full quality and attach them as the reference image when generating or editing.
+   * Store photos can show the vendor's logo, text panels or youth models: they are a garment reference only. */
+  let catalog = [], refs = {}, pins = {}, prodQ = {};
+  async function loadCatalog() {
+    if (!db) return; const all = [];
+    for (let n = 0; n < 8; n++) { try { const d = await db.doc('catalog/chunk' + n).get(); if (!d.exists) break; all.push(...(JSON.parse(d.data().json || '[]') || [])); } catch (_) { break; } }
+    catalog = all;
+    try { const q = await db.collection('refs').get(); const m = {}; for (const s of q.docs) { const d = s.data(); if (d && d.h) m[d.h] = d; } refs = m; } catch (_) {}
+    try { const d = await db.doc('bots/productPins').get(); pins = d.exists ? (JSON.parse(d.data().json || '{}') || {}) : {}; } catch (_) {}
+  }
+  const GARMENT = /singlet|uniform|jersey|\bkit\b|pants|shorts|rash ?guard|colou?rway|colou?r|apparel|team look|team store|size guide|\bfit\b|reversible|spat|trunks/;
+  const campText = p => [p.title, p.hook, p.captionBody || p.caption, p.visualConcept, p.visualPrompt, p.onImageText].join(' ').toLowerCase();
+  function productsFor(p, n) {
+    n = n || 4; if (!catalog.length || !p) return [];
+    if (pins[p.id] && pins[p.id].length) return pins[p.id].map(h => catalog.find(c => c.h === h)).filter(Boolean);
+    const T = campText(p); if (!GARMENT.test(T)) return [];
+    const sp = String(p.sport || '').toLowerCase().trim();
+    return catalog.map(c => {
+      const ct = (c.t + ' ' + c.ty).toLowerCase(); let s = 0;
+      if (sp && c.sp) { if (c.sp.toLowerCase() !== sp) return [c, -9]; s += 3; }
+      if (/reversible/.test(T)) s += /reversible/.test(ct) ? 6 : -2;
+      if (/\bgirls?\b|female|women/.test(T)) s += c.f ? 4 : -1; else if (c.f) s -= 2;
+      if (/youth|kids?\b/.test(T)) s += /youth|boys|kids/.test(ct) ? 1 : 0; else if (/youth|boys|kids/.test(ct) && !/adult/.test(ct)) s -= 1;
+      if (/sublimat|pattern|print/.test(T)) s += /sublimat/.test(ct) ? 2 : 0; else if (/solid/.test(ct)) s += 1;
+      if (/singlet/.test(T) && /singlet/.test(ct)) s += 2;
+      for (const col of String(c.col || '').toLowerCase().split(' / ')) if (col && new RegExp('\\b' + col.replace(/[^a-z ]/g, '') + '\\b').test(T)) s += 2;
+      return [c, s];
+    }).filter(x => x[1] >= 3).sort((a, b) => b[1] - a[1]).slice(0, n).map(x => x[0]);
+  }
+  function searchCatalog(q, n) {
+    const words = String(q || '').toLowerCase().split(/\s+/).filter(w => w.length > 1); if (!words.length) return [];
+    return catalog.map(c => { const t = `${c.t} ${c.ty} ${c.sp} ${c.col}`.toLowerCase(); return [c, words.filter(w => t.includes(w)).length]; }).filter(x => x[1] === words.length).slice(0, n || 8).map(x => x[0]);
+  }
+  async function savePins() { if (db) { try { await db.doc('bots/productPins').set({ json: JSON.stringify(pins), updatedAt: new Date().toISOString() }); } catch (_) { note = 'The product choice could not be saved.'; } } }
+  // Ask the Claude session to copy a product's store photos into the app (it downloads them and records them in "refs").
+  async function requestPhotos(handles) {
+    const hs = handles.filter(h => !refs[h] || refs[h].status === 'failed'); if (!hs.length || !db) return false;
+    for (const h of hs) { refs[h] = { h, status: 'queued', at: new Date().toISOString() }; try { await db.doc('refs/' + h).set(refs[h]); } catch (_) {} }
+    try { const mcp = await use('mcp'); if (mcp) await mcp.callTool(REMOTE, 'send_message', { session_id: EDITOR_SESSION, message: `[RSH Sports Marketing OS: product photo request. Sent by the app on behalf of the team.]\n\nCopy the store photos of these rshsports.com products into the app so the team can use them as references: ${hs.join(', ')}.\nFollow studio/WORKFLOW.md, section "Product photos": run studio/tools/mirror_refs.py, upload the files as assets of ${APP_URL}, then write refs/<handle> with status "ready" and the asset list. Do not change anything else.` }); } catch (_) {}
+    return true;
+  }
+  const refName = (c, k) => `${slug(c.t) || 'rsh-product'}-${k + 1}.${/\.png$/i.test((c.i[k] || {}).src || '') ? 'png' : /\.webp$/i.test((c.i[k] || {}).src || '') ? 'webp' : 'jpg'}`;
+  // The reference block for prompts and jobs: real product, store facts, and how to use the photo safely.
+  function productBlock(p) {
+    const ps = productsFor(p); if (!ps.length) return '';
+    return `REAL PRODUCT REFERENCE (an actual RSH Sports product: show it exactly, invent nothing)\n` + ps.map(c => {
+      const r = refs[c.h], files = r && r.status === 'ready' && r.assets ? r.assets.map(a => `${a.name} (asset ${a.id})`).join(', ') : '';
+      return `- ${c.t}${c.col ? ` · colorway ${c.col}` : ''} · store page ${c.url}${c.o && Object.keys(c.o).length ? ` · ${Object.entries(c.o).map(([k, v]) => `${k}: ${v.join(', ')}`).join(' · ')}` : ''}\n  Store facts: ${(c.b || []).join(' · ') || 'see the store page'}\n  Reference photos: ${files || `${c.i.length} store photos (download them from the campaign in the app)`}`;
+    }).join('\n') + `\nUse the main reference photo as the image generator's reference image and reproduce the garment exactly: same cut, colours, panels, piping and graphics; add nothing and remove nothing, except the vendor's logo or wordmark (for example the print on the leg), which must not appear anywhere. Do not copy any person, face or model from the store photos; use an adult athlete as the prompt describes. Never post a store photo as it is. No price, stock or delivery claims.`;
+  }
+  function productHtml(p) {
+    const ps = productsFor(p), q = prodQ[p.id], found = q ? searchCatalog(q) : [];
+    if (!ps.length && !GARMENT.test(campText(p)) && !q) return '';
+    const card = c => { const r = refs[c.h], ready = r && r.status === 'ready' && r.assets && r.assets.length;
+      return `<div style="display:grid;gap:6px;padding:8px;border:1px solid #e5e7eb;border-radius:10px;background:#fff"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><span><strong>${esc(c.t)}</strong>${c.col ? ` <span class="small">· ${esc(c.col)}</span>` : ''}</span><span style="display:flex;gap:6px;flex-wrap:wrap"><a class="small" href="${esc(c.url)}" target="_blank" rel="noopener noreferrer">Store page ↗</a>${pins[p.id] && pins[p.id].includes(c.h) ? `<button type="button" class="btn ghost smallbtn" data-prod-unpin="${esc(p.id)}|${esc(c.h)}">Remove</button>` : ''}</span></div>
+        ${ready ? `<div style="display:flex;gap:6px;flex-wrap:wrap">${r.assets.map((a, k) => `<figure style="margin:0;display:grid;gap:3px;justify-items:center"><img src="/_blob/${esc(a.id)}" alt="${esc(c.t)} store photo ${k + 1}" loading="lazy" style="width:84px;height:104px;object-fit:contain;background:#f8fafc;border-radius:6px;border:1px solid #e5e7eb"><button type="button" class="btn ghost smallbtn" data-prod-dl="${esc(c.h)}|${k}" style="padding:2px 8px">⬇ ${k === 0 ? 'Main' : k + 1}</button></figure>`).join('')}</div><div><button type="button" class="btn ghost smallbtn" data-prod-dl="${esc(c.h)}|all">⬇ Download all ${r.assets.length} photos</button></div>`
+        : r && (r.status === 'queued' || r.status === 'working') ? `<div class="small">Photos requested ${esc(new Date(r.at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }))}. The Claude session copies them in; they appear here when ready.</div>`
+        : `<div class="small">${c.i.length} store photo${c.i.length === 1 ? '' : 's'} on rshsports.com. ${r && r.status === 'failed' ? 'The last copy failed. ' : ''}<button type="button" class="btn ghost smallbtn" data-prod-get="${esc(p.id)}|${esc(c.h)}">Get the photos</button></div>`}</div>`; };
+    return `<details class="prods" data-prod-box="${esc(p.id)}" ${openProds.has(p.id) ? 'open' : ''} style="margin:8px 0;border:1px solid #dbeafe;background:#eff6ff;border-radius:10px;padding:6px 10px"><summary style="cursor:pointer"><strong>👕 Real products for this post</strong> <span class="small">· ${ps.length ? `${ps.length} from rshsports.com${pins[p.id] && pins[p.id].length ? ' (chosen by the team)' : ' (matched by the bots)'}` : 'none matched yet'}</span></summary>
+      <p class="small" style="margin:6px 0">Use these exact garments in the image prompt and the edit. Download a photo at full quality and attach it as the reference image. <strong>Store photos can show the vendor’s logo, text panels or youth models:</strong> use them only as a garment reference, keep the vendor’s logo out, and never post a store photo as it is.</p>
+      <div style="display:grid;gap:8px">${ps.map(card).join('') || '<div class="small">No product matched. Search the store catalog below.</div>'}</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;align-items:center"><input type="search" data-prod-q="${esc(p.id)}" value="${esc(q || '')}" placeholder="Find another product: e.g. navy singlet" aria-label="Search the store catalog" style="flex:1;min-width:180px"><button type="button" class="btn ghost smallbtn" data-prod-search="${esc(p.id)}">Search</button>${ps.some(c => !(refs[c.h] && refs[c.h].status === 'ready')) ? `<button type="button" class="btn ghost smallbtn" data-prod-getall="${esc(p.id)}">Get photos for all</button>` : ''}</div>
+      ${q ? `<div style="display:grid;gap:4px;margin-top:6px">${found.length ? found.map(c => `<div class="small" style="display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap"><span>${esc(c.t)}${c.col ? ' · ' + esc(c.col) : ''}</span><button type="button" class="btn ghost smallbtn" data-prod-pin="${esc(p.id)}|${esc(c.h)}">Use for this post</button></div>`).join('') : '<div class="small">Nothing in the catalog matches every word.</div>'}</div>` : ''}
+      ${catalog.length ? `<div class="small" style="margin-top:6px">Catalog: ${catalog.length} uniforms and apparel from rshsports.com.</div>` : '<div class="small" style="margin-top:6px">The store catalog has not been loaded into the app yet.</div>'}</details>`;
+  }
+  const openProds = new Set();
+  // Every file attached to the campaign, downloadable at its original quality.
+  function mediaHtml(p) {
+    const files = [p.creativeAsset].concat(p.creativeAssets || []).filter((a, i, arr) => a && a.id && arr.findIndex(b => b && b.id === a.id) === i);
+    if (!files.length) return '';
+    return `<div style="margin:6px 0;display:flex;gap:6px;flex-wrap:wrap;align-items:center"><span class="small"><strong>Attached files</strong> (original quality):</span>${files.map((a, k) => `<button type="button" class="btn ghost smallbtn" data-bot-dlmedia="${esc(p.id)}|${k}" title="${esc(a.name || '')}">⬇ ${esc(cut(a.name || (/video/.test(a.mime || '') ? 'video' : 'photo'), 32))}${a.bytes ? ` · ${kb(a.bytes)}` : ''}</button>`).join('')}</div>`;
+  }
   function packHtml(p) {
     const s = scripts[p.id];
     if (!s) return `<div class="small" style="margin:6px 0;display:flex;gap:8px;align-items:center;flex-wrap:wrap">📝 <span><strong>Sage</strong> ${sageBusy === p.id ? 'is writing this campaign’s production pack now…' : 'has not written this campaign’s production pack yet.'}</span>${sageBusy === p.id ? '' : `<button type="button" class="btn ghost smallbtn" data-sage-write="${esc(p.id)}">Write it now</button>`}</div>`;
@@ -1691,7 +1769,7 @@ ${isDyk(p) ? 'This is a Tuesday Did You Know post.\n' : ''}${seasonContext()}`;
         const p = c.p, an = c.an;
         if (p.date !== lastDay) { lastDay = p.date; list += `<div class="day">${esc(new Date(p.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }))}</div>`; }
         const badge = c.state === 'files' ? '<span class="chk stop">Needs files</span>' : c.state === 'ready' ? '<span class="chk ok">✓ Ready</span>' : '<span class="chk warn">Held back</span>';
-        list += `<details class="camp" data-bot-camp="${esc(p.id)}" ${openCamps.has(p.id) ? 'open' : ''}><summary><span><strong>${esc(p.title)}</strong><span class="small"> · ${esc(p.platform || '')} · ${c.mine.length} channel post${c.mine.length === 1 ? '' : 's'}</span></span><span class="sumr">${badge}<span class="small">${c.ok} of ${c.mine.length} ready</span><span class="nav-caret">⌄</span></span></summary>` + `<div style="margin:8px 0"><button type="button" class="btn ghost smallbtn" data-bot-raw="${esc(p.id)}">📁 Assets & comments (${rawCount(p.id)} · 💬 ${cmtCount(p.id)})</button></div>` + packHtml(p) + nextStep(p, c) + `<div class="assetrow"><div><strong>Files needed</strong> <span class="small">· ${an.files} attached</span><div>${an.needs.map(n => `<span class="need ${n.state}">${n.state === 'have' ? '✓ ' : ''}${esc(n.label)}${n.detail ? ' (' + esc(n.detail) + ')' : ''}</span>`).join('')}</div></div><div style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="btn ghost smallbtn" data-bot-brief="${esc(p.id)}">Copy full brief for AI</button><button type="button" class="btn ghost smallbtn" data-bot-prompt="image" data-bot-post="${esc(p.id)}">Copy image prompt</button><button type="button" class="btn ghost smallbtn" data-bot-prompt="video" data-bot-post="${esc(p.id)}">Copy video brief</button>${jobs[p.id] ? '' : `<button type="button" class="btn smallbtn" data-bot-askvideo="${esc(p.id)}">Have Reel make a video</button>`}<button type="button" class="btn ghost smallbtn" data-bot-editor="${esc(p.id)}">Copy edit job</button></div>${(() => { const j = jobs[p.id]; return j ? `<div class="small" style="flex-basis:100%"><strong>Video editor${j.source === 'zip' ? ` (from “${esc(j.zipName)}”, ${j.files} files)` : ''}:</strong> ${j.status === 'queued' ? 'job waiting to be sent to RSH SPORTS.' : j.status === 'sent' ? 'job sent to RSH SPORTS ' + esc(new Date(j.sentAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })) + '. The video is attached here when it comes back.' : j.status === 'attached' ? `edited video${j.revision > 1 ? ' (revision ' + j.revision + ')' : ''} came back and is attached. <button type="button" class="btn smallbtn" data-bot-watch="${esc(p.id)}" style="padding:3px 10px;margin-left:4px">Watch and review</button>` : j.status === 'failed' ? 'the edit did not finish. ' + esc(j.reason || '') : 'video received, attaching…'}</div>` : needsVideo(p) && settings.autoEdit ? '<div class="small" style="flex-basis:100%"><strong>Video editor:</strong> this campaign needs a video; Reel sends the job on the next run.</div>' : ''; })()}${kitSport(p) ? `<div class="small" style="flex-basis:100%">Kit clip: open your RSH Kit Animator artifact, choose <strong>${esc(kitSport(p).replace(/^./, c => c.toUpperCase()))}</strong>, set the team and colours, record the 4-second clip, then drop the saved MP4 on the Office tab with this campaign selected.</div>` : ''}</div>`;
+        list += `<details class="camp" data-bot-camp="${esc(p.id)}" ${openCamps.has(p.id) ? 'open' : ''}><summary><span><strong>${esc(p.title)}</strong><span class="small"> · ${esc(p.platform || '')} · ${c.mine.length} channel post${c.mine.length === 1 ? '' : 's'}</span></span><span class="sumr">${badge}<span class="small">${c.ok} of ${c.mine.length} ready</span><span class="nav-caret">⌄</span></span></summary>` + `<div style="margin:8px 0"><button type="button" class="btn ghost smallbtn" data-bot-raw="${esc(p.id)}">📁 Assets & comments (${rawCount(p.id)} · 💬 ${cmtCount(p.id)})</button></div>` + packHtml(p) + productHtml(p) + mediaHtml(p) + nextStep(p, c) + `<div class="assetrow"><div><strong>Files needed</strong> <span class="small">· ${an.files} attached</span><div>${an.needs.map(n => `<span class="need ${n.state}">${n.state === 'have' ? '✓ ' : ''}${esc(n.label)}${n.detail ? ' (' + esc(n.detail) + ')' : ''}</span>`).join('')}</div></div><div style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="btn ghost smallbtn" data-bot-brief="${esc(p.id)}">Copy full brief for AI</button><button type="button" class="btn ghost smallbtn" data-bot-prompt="image" data-bot-post="${esc(p.id)}">Copy image prompt</button><button type="button" class="btn ghost smallbtn" data-bot-prompt="video" data-bot-post="${esc(p.id)}">Copy video brief</button>${jobs[p.id] ? '' : `<button type="button" class="btn smallbtn" data-bot-askvideo="${esc(p.id)}">Have Reel make a video</button>`}<button type="button" class="btn ghost smallbtn" data-bot-editor="${esc(p.id)}">Copy edit job</button></div>${(() => { const j = jobs[p.id]; return j ? `<div class="small" style="flex-basis:100%"><strong>Video editor${j.source === 'zip' ? ` (from “${esc(j.zipName)}”, ${j.files} files)` : ''}:</strong> ${j.status === 'queued' ? 'job waiting to be sent to RSH SPORTS.' : j.status === 'sent' ? 'job sent to RSH SPORTS ' + esc(new Date(j.sentAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })) + '. The video is attached here when it comes back.' : j.status === 'attached' ? `edited video${j.revision > 1 ? ' (revision ' + j.revision + ')' : ''} came back and is attached. <button type="button" class="btn smallbtn" data-bot-watch="${esc(p.id)}" style="padding:3px 10px;margin-left:4px">Watch and review</button>` : j.status === 'failed' ? 'the edit did not finish. ' + esc(j.reason || '') : 'video received, attaching…'}</div>` : needsVideo(p) && settings.autoEdit ? '<div class="small" style="flex-basis:100%"><strong>Video editor:</strong> this campaign needs a video; Reel sends the job on the next run.</div>' : ''; })()}${kitSport(p) ? `<div class="small" style="flex-basis:100%">Kit clip: open your RSH Kit Animator artifact, choose <strong>${esc(kitSport(p).replace(/^./, c => c.toUpperCase()))}</strong>, set the team and colours, record the 4-second clip, then drop the saved MP4 on the Office tab with this campaign selected.</div>` : ''}</div>`;
         for (const it of c.mine) {
           const key = it.postId + '|' + it.channel, open = openItem === key;
           list += `<div class="item" data-bot-item="${esc(key)}"><div style="display:flex;gap:8px;align-items:flex-start">${chBadge(it.channel)}<div><strong>${esc(NAME[it.channel])}</strong><div class="small">${it.caption.length} characters</div>${it.posted ? `<div class="posted">✓ Posted ${esc(new Date(it.posted.at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }))}</div>` : ''}</div></div>
@@ -1979,6 +2057,20 @@ ${isDyk(p) ? 'This is a Tuesday Did You Know post.\n' : ''}${seasonContext()}`;
   }
   function find(key) { return ((plan && plan.items) || []).find(i => i.postId + '|' + i.channel === key); }
   async function onClick(e) {
+    const pg = e.target.closest('[data-prod-get],[data-prod-getall]');
+    if (pg) { const pid = (pg.dataset.prodGet || pg.dataset.prodGetall).split('|')[0], q = (app().data().posts || []).find(x => x.id === pid), hs = pg.dataset.prodGet ? [pg.dataset.prodGet.split('|')[1]] : productsFor(q).map(c => c.h); openProds.add(pid); await requestPhotos(hs); render(); return; }
+    const pp = e.target.closest('[data-prod-pin],[data-prod-unpin]');
+    if (pp) { const [pid, h] = (pp.dataset.prodPin || pp.dataset.prodUnpin).split('|'), q = (app().data().posts || []).find(x => x.id === pid); const cur = pins[pid] && pins[pid].length ? pins[pid].slice() : productsFor(q).map(c => c.h); pins[pid] = pp.dataset.prodPin ? [...new Set(cur.concat(h))].slice(0, 6) : cur.filter(x => x !== h); if (!pins[pid].length) delete pins[pid]; if (pp.dataset.prodPin) delete prodQ[pid]; openProds.add(pid); await savePins(); render(); return; }
+    const ps = e.target.closest('[data-prod-search]');
+    if (ps) { const inp = document.querySelector(`#rshBots [data-prod-q="${CSS.escape(ps.dataset.prodSearch)}"]`); prodQ[ps.dataset.prodSearch] = inp ? inp.value.trim() : ''; openProds.add(ps.dataset.prodSearch); render(); return; }
+    const pd = e.target.closest('[data-prod-dl]');
+    if (pd) { const [h, k] = pd.dataset.prodDl.split('|'), c = catalog.find(x => x.h === h), r = refs[h]; if (!c || !r || !r.assets) return; const old = pd.textContent; pd.textContent = 'Preparing…';
+      try { const dl = await use('downloads'); if (!dl) throw new Error('Saving files is not available here'); for (const [n, a] of (k === 'all' ? r.assets.map((a, n) => [n, a]) : [[Number(k), r.assets[Number(k)]]])) { const blob = await (await fetch('/_blob/' + a.id)).blob(); await dl.save({ filename: a.name || refName(c, n), data: blob }); } pd.textContent = 'Saved ✓'; } catch (err) { pd.textContent = 'Not saved'; note = 'The photo was not saved: ' + ((err && err.message) || 'cancelled') + '.'; }
+      setTimeout(() => { pd.textContent = old; }, 2000); return; }
+    const md = e.target.closest('[data-bot-dlmedia]');
+    if (md) { const [pid, k] = md.dataset.botDlmedia.split('|'), q = (app().data().posts || []).find(x => x.id === pid); if (!q) return; const files = [q.creativeAsset].concat(q.creativeAssets || []).filter((a, i, arr) => a && a.id && arr.findIndex(b => b && b.id === a.id) === i), a = files[Number(k)]; if (!a) return; const old = md.textContent; md.textContent = 'Preparing…';
+      try { const dl = await use('downloads'); if (!dl) throw new Error('Saving files is not available here'); const blob = await window.RSH_HOST.fileBlob(a); await dl.save({ filename: a.name || ('rsh-' + slug(q.title) + (/video/.test(a.mime || '') ? '.mp4' : '.jpg')), data: blob }); md.textContent = 'Saved ✓'; } catch (err) { md.textContent = 'Not saved'; note = 'The file was not saved: ' + ((err && err.message) || 'cancelled') + '.'; }
+      setTimeout(() => { md.textContent = old; }, 2000); return; }
     const sw = e.target.closest('[data-sage-write]');
     if (sw) { const q = (app().data().posts || []).find(x => x.id === sw.dataset.sageWrite); if (!q || sageBusy) return; if (scripts[q.id] && scripts[q.id].edited && !confirm('The team edited this pack. Replace it with a new one from Sage?')) return; sageNote = ''; sageBusy = q.id; openPacks.add(q.id); render(); const ok = await writeScript(q); sageBusy = ''; note = ok ? '' : sageNote; render(); return; }
     const ss = e.target.closest('[data-sage-save]');
@@ -2027,6 +2119,7 @@ ${isDyk(p) ? 'This is a Tuesday Did You Know post.\n' : ''}${seasonContext()}`;
   }
   async function onChange(e) {
     const t = e.target;
+    if (t.matches('[data-prod-q]')) { prodQ[t.dataset.prodQ] = String(t.value || '').trim(); openProds.add(t.dataset.prodQ); return render(); }
     if (t.matches('[data-conn-via]')) { const ch = t.dataset.connVia; conns[ch] = { ...(conns[ch] || {}), via: t.value }; await saveConns(); return render(); }
     if (t.matches('[data-conn-step]')) { const [ch, n] = t.dataset.connStep.split('|'); const c = conns[ch] = { ...(conns[ch] || {}) }; const st = new Set(c.steps || []); if (t.checked) st.add(Number(n)); else st.delete(Number(n)); c.steps = [...st].sort(); if (c.via === 'direct' && c.steps.length < CONN_STEPS.length) c.via = 'metricool'; await saveConns(); return render(); }
     if (t.matches('[data-conn-note]')) { const ch = t.dataset.connNote; conns[ch] = { ...(conns[ch] || {}), note: String(t.value).slice(0, 600) }; await saveConns(); return; }
@@ -2049,7 +2142,7 @@ ${isDyk(p) ? 'This is a Tuesday Did You Know post.\n' : ''}${seasonContext()}`;
     const view = document.getElementById('view-bots'); if (!view || !app() || !app().track || document.getElementById('rshBots')) return;
     const host = document.createElement('div'); host.id = 'rshBots'; view.appendChild(host);
     host.addEventListener('click', onClick); host.addEventListener('change', onChange);
-    host.addEventListener('toggle', e => { const d = e.target; if (d && d.matches && d.matches('details.camp')) { if (d.open) openCamps.add(d.dataset.botCamp); else openCamps.delete(d.dataset.botCamp); } if (d && d.matches && d.matches('details.pack')) { if (d.open) openPacks.add(d.dataset.sagePack); else openPacks.delete(d.dataset.sagePack); } }, true);
+    host.addEventListener('toggle', e => { const d = e.target; if (d && d.matches && d.matches('details.camp')) { if (d.open) openCamps.add(d.dataset.botCamp); else openCamps.delete(d.dataset.botCamp); } if (d && d.matches && d.matches('details.prods')) { if (d.open) openProds.add(d.dataset.prodBox); else openProds.delete(d.dataset.prodBox); } if (d && d.matches && d.matches('details.pack')) { if (d.open) openPacks.add(d.dataset.sagePack); else openPacks.delete(d.dataset.sagePack); } }, true);
     const zone = e => e.target.closest && e.target.closest('[data-bot-drop]'), files = dt => [...((dt && dt.files) || [])].filter(f => /^(image\/(png|jpeg|webp)|video\/(mp4|webm))$/.test(f.type) || isZip(f));
     host.addEventListener('dragover', e => { const z = zone(e); if (z) { e.preventDefault(); z.classList.add('over'); } });
     host.addEventListener('dragleave', e => { const z = zone(e); if (z) z.classList.remove('over'); });
@@ -2071,11 +2164,11 @@ ${isDyk(p) ? 'This is a Tuesday Did You Know post.\n' : ''}${seasonContext()}`;
       await reconcileJobs();
       reviseFromNotes();   // remember the notes already there, so only new ones start a revision
       await collect();
-      await aoRead(); await loadConns(); await loadScripts();
+      await aoRead(); await loadConns(); await loadScripts(); await loadCatalog();
       setTimeout(() => { if (aoOn()) aoStart(); else nightOwl(); }, 1500);
       setInterval(() => { aoRead().then(render); }, 5 * 60000);
     }
     render();
   }
-  window.RSH_BOTS = { scripts: () => scripts, scriptPrompt, writeScript, scriptRun, saveScript, packPart, packHtml, conns: () => conns, viaOf, engineFor, HOUSE, music: () => MUSIC, musicStart, musicStop, match: () => ISO.match, startMatch: (a, b) => startMatch(ISO.people[a], ISO.people[b], performance.now()), zoneAt, addIdea, IDEAS: () => IDEAS, postComment, loadAllComments, cmtCount, ctaFor, withCta, isoPeople: () => ISO.people, aoCycle, aoStart, aoBeat, aoAlive, reviseFromNotes, shrinkVideo, nightOwl, weeklyReport, learnedTags, resultsForPrompt, openRaw, addRaw, sendRaw, rawCount, loadRaw, dayFor, isDyk, targets, sendText, autoSend, seoFor, seoRun, learnedTimes, schedule, attachForPost, driveUpload, fileFor, autoLink, needsFile, readyItems, placedOn, place, unplace, setMediaUrl, sendToMetricool, metricoolPost, NAME, freshVideos, watch, onChange: f => listeners.push(f), handoff, collect, start, captionFor, assetNeeds, imagePrompt, videoBrief, editJob };
+  window.RSH_BOTS = { catalog: () => catalog, refs: () => refs, productsFor, productBlock, searchCatalog, requestPhotos, loadCatalog, scripts: () => scripts, scriptPrompt, writeScript, scriptRun, saveScript, packPart, packHtml, conns: () => conns, viaOf, engineFor, HOUSE, music: () => MUSIC, musicStart, musicStop, match: () => ISO.match, startMatch: (a, b) => startMatch(ISO.people[a], ISO.people[b], performance.now()), zoneAt, addIdea, IDEAS: () => IDEAS, postComment, loadAllComments, cmtCount, ctaFor, withCta, isoPeople: () => ISO.people, aoCycle, aoStart, aoBeat, aoAlive, reviseFromNotes, shrinkVideo, nightOwl, weeklyReport, learnedTags, resultsForPrompt, openRaw, addRaw, sendRaw, rawCount, loadRaw, dayFor, isDyk, targets, sendText, autoSend, seoFor, seoRun, learnedTimes, schedule, attachForPost, driveUpload, fileFor, autoLink, needsFile, readyItems, placedOn, place, unplace, setMediaUrl, sendToMetricool, metricoolPost, NAME, freshVideos, watch, onChange: f => listeners.push(f), handoff, collect, start, captionFor, assetNeeds, imagePrompt, videoBrief, editJob };
 })();
