@@ -74,12 +74,19 @@
     else if (t.stage === 'manager') { next = p.status === 'Approved' ? 'An earlier approval no longer applies. Review the current content again.' : 'Manager: check the media, claims and rights, then pass it on.'; button = 'Review'; }
     else if (t.stage === 'anthony') { next = 'Waiting for Anthony’s final approval.'; button = 'Open'; }
     else { next = p.published ? 'Published and linked to its results.' : p.status === 'Published' ? 'Marked as published. Link it to its post to see results.' : 'Approved. Schedule it in Metricool for this date.'; button = 'Open'; }
+    const fs = window.RSH_BOTS && window.RSH_BOTS.factState ? window.RSH_BOTS.factState(p.id) : null;
+    if (fs && !fs.ok) next = fs.label + (/corrected|failed/.test(fs.s) ? '' : '. Sage writes the script once the facts pass.');
     return { t, done, next, button, group: t.stage };
   }
 
   // Sage's production pack for this campaign: written, being written now, or next in line.
   function scriptChip(id) {
-    const B = window.RSH_BOTS, st = B && B.sageState ? B.sageState(id) : '';
+    const B = window.RSH_BOTS, st = B && B.sageState ? B.sageState(id) : '', fs = B && B.factState ? B.factState(id) : null;
+    const fchip = !fs ? '' : fs.ok ? `<span class="step done" title="${esc(fs.label)}">✓ Facts</span>` : /checking|none|changed/.test(fs.s) ? `<span class="step now" title="${esc(fs.label)}">🔎 Facts being checked</span>` : `<span class="step now late" title="${esc(fs.label)}">⚠ Facts: ${fs.s === 'corrected' ? 'fix needed' : 'not confirmed'}</span>`;
+    if (fs && !fs.ok) return fchip + '<span class="step todo">Script (after facts)</span>';
+    return fchip + scriptBody(st);
+  }
+  function scriptBody(st) {
     if (!st) return '';
     return st === 'done' ? '<span class="step done">✓ Script</span>' : st === 'writing' ? '<span class="step now">✎ Sage is writing the script…</span>' : st === 'next' ? '<span class="step now">Script: Sage starts next</span>' : '<span class="step todo">Script</span>';
   }

@@ -193,17 +193,21 @@
   const kindOf = p => { const t = String(p.postType || '').toLowerCase(); if (!t.trim() && String(p.video || '').trim()) return 'video';   // no post type but a video brief: a video campaign
     return /story/.test(t) ? 'story' : /reel|video|short/.test(t) ? 'video' : /carousel/.test(t) ? 'carousel' : 'image'; };
   const specFor = (ch, kind) => { const s = SPECS[ch] || SPECS.instagram; return s[kind] || s.image; };
+  // The Did You Know series is landscape: one 16:9 1920×1080 file for its Instagram Reel and YouTube post (the studio's DYK engine format).
+  const DYK_SPEC = [1920, 1080, '16:9', 'Did You Know video (16:9 landscape, the DYK series format)'];
+  const dykVideo = p => isDyk(p) && kindOf(p) !== 'image' && kindOf(p) !== 'carousel';
+  const specOf = (p, ch, kind) => dykVideo(p) && (ch === 'instagram' || ch === 'youtube') ? DYK_SPEC : specFor(ch, kind);
   // Every size this campaign needs, grouped: [{w, h, ratio, uses: ['Instagram feed photo', …], channels: [...] }], the main channel's size first.
   function sizePlan(p) {
     const kind = kindOf(p), out = [];
-    for (const ch of targets(p)) { const [w, h, ratio, use] = specFor(ch, kind); let g = out.find(x => x.w === w && x.h === h); if (!g) out.push(g = { w, h, ratio, uses: [], channels: [] }); g.uses.push(`${NAME[ch]} ${use}`); g.channels.push(ch); }
-    if (!out.length) { const [w, h, ratio, use] = specFor('instagram', kind); out.push({ w, h, ratio, uses: [`Instagram ${use}`], channels: ['instagram'] }); }
+    for (const ch of targets(p)) { const [w, h, ratio, use] = specOf(p, ch, kind); let g = out.find(x => x.w === w && x.h === h); if (!g) out.push(g = { w, h, ratio, uses: [], channels: [] }); g.uses.push(`${NAME[ch]} ${use}`); g.channels.push(ch); }
+    if (!out.length) { const [w, h, ratio, use] = specOf(p, 'instagram', kind); out.push({ w, h, ratio, uses: [`Instagram ${use}`], channels: ['instagram'] }); }
     return out;
   }
   function sizeLines(p) {
     const plan = sizePlan(p), kind = kindOf(p);
     return `EXACT SIZES FOR THIS CAMPAIGN (checked with the platforms, Nov 2026)\n` + plan.map((g, n) => `- ${n === 0 ? 'Main' : 'Also'}: ${g.w}×${g.h} (${g.ratio}) for ${g.uses.join('; ')}`).join('\n') +
-      `\n${kind === 'video' || kind === 'story' ? 'Every video: 1080×1920 (9:16), 30 fps, H.264 + AAC; keep text and faces inside the centre safe area (not in the top 8% or bottom 12%, nor under the right-side buttons).' : plan.length > 1 ? 'Deliver one file per size: the same scene re-framed for each ratio (not stretched, not letterboxed), nothing important near the edges. Name each file with its ratio, e.g. "-4x5", "-2x3", "-9x16".' : 'Nothing important near the edges.'}${rbOn(p.date) ? `\nPOSTING RULEBOOK: every platform gets its own separately produced file in its own style (never the same file or a trim of it${isDyk(p) ? '; the Tuesday DYK to Instagram and YouTube is the one shared file' : ''}). This idea goes to ${targets(p).map(c => NAME[c]).join(', ')}; home: ${NAME[targets(p)[0]]}. Put the platform in each file name (e.g. "-${targets(p)[0]}", "-tiktok", "-pinterest-2x3") and "flow" when the media was generated in Google Flow.` : ''}`;
+      `\n${dykVideo(p) ? 'Did You Know video: 1920×1080 (16:9 landscape), 30 fps, H.264 + AAC, one file shared by the Instagram Reel and the YouTube post; keep text inside the centre 90% and clear of the bottom 12%.' : kind === 'video' || kind === 'story' ? 'Every video: 1080×1920 (9:16), 30 fps, H.264 + AAC; keep text and faces inside the centre safe area (not in the top 8% or bottom 12%, nor under the right-side buttons).' : plan.length > 1 ? 'Deliver one file per size: the same scene re-framed for each ratio (not stretched, not letterboxed), nothing important near the edges. Name each file with its ratio, e.g. "-4x5", "-2x3", "-9x16".' : 'Nothing important near the edges.'}${rbOn(p.date) ? `\nPOSTING RULEBOOK: every platform gets its own separately produced file in its own style (never the same file or a trim of it${isDyk(p) ? '; the Tuesday DYK to Instagram and YouTube is the one shared file' : ''}). This idea goes to ${targets(p).map(c => NAME[c]).join(', ')}; home: ${NAME[targets(p)[0]]}. Put the platform in each file name (e.g. "-${targets(p)[0]}", "-tiktok", "-pinterest-2x3") and "flow" when the media was generated in Google Flow.` : ''}`;
   }
   // Which attached file fits a channel best: the one whose shape matches the channel's size (from its width and height, or the ratio in its name).
   const ratioOf = a => { if (a && a.width && a.height) return a.width / a.height; const m = /(\d+)x(\d+)(?=\D*$)/.exec(String(a && a.name || '')); if (m) { const x = +m[1], y = +m[2]; if (x && y && x < 50 && y < 50) return x / y; } return 0; };
@@ -255,7 +259,7 @@
   // Which Video Studio Kit engine fits the campaign (studio/video/engines).
   function engineFor(p) {
     const t = `${p.title || ''} ${p.postType || ''} ${p.hook || ''} ${p.visualConcept || ''}`.toLowerCase();
-    if (/did you know|\bdyk\b/.test(t)) return '01 Did You Know, rendered 9:16 1080×1920 for every channel (16:9 only for a separate YouTube long video)';
+    if (/did you know|\bdyk\b/.test(t)) return '01 Did You Know, rendered 16:9 1920×1080 (the DYK series is landscape; one file for its Instagram Reel and YouTube post)';
     if (/quiz| a or b|which one/.test(t)) return '09 quiz explainer (current house style)';
     if (/quote/.test(t)) return /kit|uniform|reveal/.test(t) ? '05 Quote of the Day kit reveal' : '04 Quote of the Day (calm)';
     if (/singlet|product|colorway|colourway|reversible|photo/.test(t)) return '07 product photos (real photos only)';
@@ -306,7 +310,7 @@
   }
   function queueEdits(campaigns) {
     if (!settings.autoEdit || !db) return; let added = 0;
-    for (const p of campaigns) { if (added >= 3) break; if (jobs[p.id] || !needsVideo(p)) continue; jobs[p.id] = { postId: p.id, title: String(p.title || '').slice(0, 120), status: 'queued', queuedAt: new Date().toISOString() }; added++; db.doc('editJobs/' + p.id).set(jobs[p.id]).catch(() => {}); }
+    for (const p of campaigns) { if (added >= 3) break; if (jobs[p.id] || !needsVideo(p) || !factState(p).ok) continue; jobs[p.id] = { postId: p.id, title: String(p.title || '').slice(0, 120), status: 'queued', queuedAt: new Date().toISOString() }; added++; db.doc('editJobs/' + p.id).set(jobs[p.id]).catch(() => {}); }
     if (added) dispatch();
   }
   async function dispatch() {
@@ -316,6 +320,7 @@
       const mcp = await use('mcp'); if (!mcp) { editorState = 'unavailable'; return; }
       for (const j of queued) {
         const p = (app().data().posts || []).find(x => x.id === j.postId); if (!p) continue;
+        if (j.source !== 'revision' && !factState(p).ok) continue;   // research first: the job waits until the campaign's facts pass
         try { await mcp.callTool(REMOTE, 'send_message', { session_id: EDITOR_SESSION, message: handoff(p, j) }); editorState = 'ok'; j.status = 'sent'; j.sentAt = new Date().toISOString(); await db.doc('editJobs/' + j.postId).set(j); }
         catch (e) {
           const code = String((e && e.code) || 'send_failed'); j.lastError = code; j.tries = (j.tries || 0) + 1; try { await db.doc('editJobs/' + j.postId).set(j); } catch (_) {}
@@ -331,6 +336,7 @@
   // Pick up what the editor sent back and attach it to its campaign.
   async function collect() {
     if (!db) return; let changed = false;
+    { const before = JSON.stringify(Object.values(factDocs).map(f => [f.postId, f.status, f.at])); await loadFacts(); if (JSON.stringify(Object.values(factDocs).map(f => [f.postId, f.status, f.at])) !== before) { try { window.RSH_TRACKER && window.RSH_TRACKER.render(); } catch (_) {} if (Object.values(factDocs).some(f => f.status !== 'pending') && !busy) { const p0 = Object.values(factDocs).sort((a, b) => String(b.at || '').localeCompare(String(a.at || '')))[0]; if (p0 && p0.status !== 'pending') { const t = p0.title || 'a campaign'; setTimeout(() => { if (!busy) work(`Fact check back for “${cut(t, 40)}”. The team got to work.`); }, 0); } } } }
     try { const q = await db.collection('editJobs').get(); const next = {}; for (const s of q.docs) { const d = s.data(); if (d && d.postId) next[d.postId] = { ...d }; } jobs = next; } catch (_) { return; }
     for (const j of Object.values(jobs)) {
       if (j.status !== 'done' || !j.assetId) continue;
@@ -609,8 +615,39 @@ Answer with JSON only, exactly these keys:
   const openPacks = new Set();
   let deskOpen = false;
   const hashOf = s => { let h = 5381; for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return (h >>> 0).toString(36); };
-  const scriptSig = p => hashOf([p.title, p.hook, p.caption, p.captionBody, p.cta, p.platform, p.postType, p.date, p.sport, p.audience, p.goal, p.onImageText, p.visualConcept, p.aspectRatio].map(x => String(x || '')).join('|') + (NO_NUMBER.test(String(p.sport || '')) ? '|kit-rule-2' : '') + (rbOn(p.date) ? '|rulebook-1' : ''));   // kit-rule-2: wrestling singlets carry no player number (Nov 26)
+  const scriptSig = p => hashOf([p.title, p.hook, p.caption, p.captionBody, p.cta, p.platform, p.postType, p.date, p.sport, p.audience, p.goal, p.onImageText, p.visualConcept, p.aspectRatio].map(x => String(x || '')).join('|') + (NO_NUMBER.test(String(p.sport || '')) ? '|kit-rule-2' : '') + (rbOn(p.date) ? '|rulebook-1' : '') + (factDocs[p.id] && factDocs[p.id].claims && factDocs[p.id].claims.length ? '|facts-' + factDocs[p.id].at : ''));   // kit-rule-2: wrestling singlets carry no player number (Nov 26)
   async function loadScripts() { if (!db) return; try { const q = await db.collection('scripts').get(); const m = {}; for (const s of q.docs) { const d = s.data(); if (d && d.postId && d.text) m[d.postId] = d; } scripts = m; } catch (_) {} }
+  function factBlock(p) {
+    const f = factDocs[p.id]; if (!f || !f.claims || !f.claims.length || !factState(p).ok) return '';
+    return `VERIFIED FACTS (researched on official sources before this pack; use them as checked, quote the rule where useful, and do not list them as a risk; add no other fact)\n${f.claims.map(c => `- ${c.text} — ${c.verdict === 'true' ? 'true' : c.verdict}${c.rule ? ', ' + c.rule : ''}${c.source ? ' (' + c.source + (c.url ? ', ' + c.url : '') + ')' : ''}`).join('\n')}\n`;
+  }
+  /* ---------- Fact check: research comes first ----------
+   * Every campaign is researched on the web by the Claude session (official sources: NFHS, NCAA, state associations,
+   * the rshsports.com product page) before Sage writes its pack, before the editor makes anything and before Ref lets
+   * it be scheduled. facts/<postId> = { status: 'pending' | 'verified' | 'no-claims' | 'corrected' | 'failed', summary,
+   * claims: [{ text, verdict, rule, source, url }], text, at }. `text` is the campaign wording that was checked: when
+   * the wording changes, the campaign is checked again. */
+  let factDocs = {}; const factAsked = new Set();
+  const factText = p => [p.title, p.hook, p.caption, p.captionBody, p.onImageText, p.video, p.visualConcept].map(x => String(x || '').replace(/\s+/g, ' ').trim()).join(' | ');
+  async function loadFacts() { if (!db) return; try { const q = await db.collection('facts').get(); const m = {}; for (const d of q.docs) { const x = d.data(); if (x && x.postId) m[x.postId] = x; } factDocs = m; } catch (_) {} }
+  function factState(p) {
+    const f = p && factDocs[p.id];
+    if ((!f || !f.status) && window.RSH_FACTS_OFF) return { ok: true, s: 'ok', label: 'Facts check off' };   // test harness only (like RSH_RB_FROM)
+    if (!f || !f.status) return { ok: false, s: 'none', label: 'Facts not checked yet: the research has been requested' };
+    if (f.status === 'pending') return { ok: false, s: 'checking', label: 'Facts are being researched (official sources)' };
+    if (f.text && f.text !== factText(p)) return { ok: false, s: 'changed', label: 'The campaign wording changed after its fact check: it is being checked again' };
+    if (f.status === 'verified' || f.status === 'no-claims') return { ok: true, s: 'ok', label: f.status === 'no-claims' ? 'No facts to check' : 'Facts verified' + (f.claims && f.claims[0] && f.claims[0].rule ? ` (${f.claims[0].rule})` : '') };
+    return { ok: false, s: f.status, label: f.status === 'corrected' ? `Fix the facts first: ${f.summary || 'see the fact check'}` : `Facts could not be confirmed, do not post: ${f.summary || 'see the fact check'}` };
+  }
+  // Ask the Claude session to research campaigns that have no current fact check (once per page load per wording).
+  async function requestFacts(posts) {
+    if (!db) return;
+    const need = posts.filter(p => { const st = factState(p).s; return (st === 'none' || st === 'changed') && !factAsked.has(p.id + '|' + factText(p)); }).slice(0, 5);
+    if (!need.length) return;
+    for (const p of need) { factAsked.add(p.id + '|' + factText(p)); factDocs[p.id] = { postId: p.id, title: String(p.title || '').slice(0, 120), status: 'pending', requestedAt: new Date().toISOString(), prev: factDocs[p.id] && factDocs[p.id].status || '' }; try { await db.doc('facts/' + p.id).set(factDocs[p.id]); } catch (_) {} }
+    const list = need.map((p, n) => `${n + 1}. ${p.title} (id ${p.id}, ${p.platform || ''}, ${p.date || 'no date'})\n   ${cut(factText(p), 1400)}${p.source ? '\n   Campaign source: ' + p.source : ''}`).join('\n');
+    try { const mcp = await use('mcp'); if (mcp) await mcp.callTool(REMOTE, 'send_message', { session_id: EDITOR_SESSION, message: `[RSH Sports Marketing OS: fact-check request. Sent by the app on behalf of the team.]\n\nResearch every factual claim in these campaigns on the internet before anything is written, made or posted (rules and rule numbers, seasons, dates, statistics, health claims, product facts). Use official sources: NFHS, NCAA, state associations, USA Wrestling, the rshsports.com product page. Follow studio/WORKFLOW.md, section "Fact checks", and write facts/<id> in ${APP_URL}.\n\n${list}` }); } catch (_) {}
+  }
   const isStill = p => /image|photo|carousel|graphic|pin/i.test(String(p.postType || '')) && !/video|reel|short|story/i.test(String(p.postType || ''));
   function scriptPrompt(p) {
     const sport = String(p.sport || '').trim(), tag = TAGVERB[sport.toLowerCase().split(/[ /]/)[0]], still = isStill(p), neg = app().negativePrompt ? app().negativePrompt() : '';
@@ -635,7 +672,7 @@ SCRIPT RULES
 - Music: one continuous free, no-copyright track, 0.5 s fade-in, 1.5 s fade-out, ducked under the voice, never cut.
 - Quote of the Day, Motivational and Did You Know videos without a storyboard get a 2–3 s mid-roll soft sell at the midpoint: "Custom teamwear · RSH Sports" over a uniform shot.
 - Did You Know: evergreen facts only, and list each key fact with its source at the end of Part 1.
-- Length: about 15–20 s unless the campaign says otherwise. Every video, Did You Know included, is 9:16 1080×1920 (Facebook now shows every video as a Reel; YouTube takes it as a Short). Only a separate YouTube long video is 16:9 1920×1080.
+- Length: about 15–20 s unless the campaign says otherwise. Every video is 9:16 1080×1920 (Facebook now shows every video as a Reel; YouTube takes it as a Short), except the Did You Know series, which is 16:9 1920×1080 landscape (one file for its Instagram Reel and YouTube post), and a separate YouTube long video, also 16:9 1920×1080.
 ${sizeLines(p)}
 Write every image prompt for the main size above, and say in each scene how to re-frame it for the other sizes listed (same scene, nothing important near the edges).
 
@@ -664,7 +701,7 @@ Visual concept / storyboard: ${p.visualConcept || ''}
 Caption: ${p.captionBody || p.caption || ''}
 Call to action: ${p.cta || ''}
 Hashtags: ${p.hashtags || ''}
-${isDyk(p) ? 'This is a Tuesday Did You Know post.\n' : ''}${productBlock(p) ? productBlock(p) + '\nThis campaign shows a real RSH product: route the product shots through these real photos (the reference image), never a text-to-image product; list the colorway, the reference photos and the vendor-mark check in TO CONFIRM.\n' : ''}${seasonContext()}`;
+${p.source ? 'Source: ' + p.source + '\n' : ''}${factBlock(p)}${isDyk(p) ? 'This is a Tuesday Did You Know post.\n' : ''}${productBlock(p) ? productBlock(p) + '\nThis campaign shows a real RSH product: route the product shots through these real photos (the reference image), never a text-to-image product; list the colorway, the reference photos and the vendor-mark check in TO CONFIRM.\n' : ''}${seasonContext()}`;
   }
   function rbPackRules(p) {
     const t = rbTargets(p), home = rbHome(p);
@@ -697,7 +734,7 @@ Add PART 8 — PLATFORM VERSIONS: one block for each of ${t.map(c => NAME[c]).jo
   // Writes packs for campaigns that have none, or whose campaign changed since (never over a pack the team edited). At most 3 per run.
   async function scriptRun(posts, step) {
     sageNote = ''; let wrote = 0;
-    const todo = posts.filter(p => { const s = scripts[p.id]; return !s || (!s.edited && s.sig !== scriptSig(p)); }).slice(0, 3);
+    const todo = posts.filter(p => { const s = scripts[p.id]; return factState(p).ok && (!s || (!s.edited && s.sig !== scriptSig(p))); }).slice(0, 3);   // research first: Sage writes once the facts are checked
     for (const p of todo) { sageBusy = p.id; try { window.RSH_TRACKER && window.RSH_TRACKER.render(); } catch (_) {} step && step(`Sage is writing the production pack for “${cut(p.title, 40)}”…`); const ok = await writeScript(p); if (ok) wrote++; else if (sageNote) break; }
     sageBusy = ''; try { window.RSH_TRACKER && window.RSH_TRACKER.render(); } catch (_) {}
     return { wrote, have: posts.filter(p => scripts[p.id]).length, total: posts.length };
@@ -930,6 +967,7 @@ Add PART 8 — PLATFORM VERSIONS: one block for each of ${t.map(c => NAME[c]).jo
     for (const it of items) {
       const p = posts.find(x => x.id === it.postId), out = []; if (!p) { it.checks = [['stop', 'Campaign no longer exists']]; it.ready = false; continue; }
       const t = app().track(p);
+      { const fs = factState(p); out.push([fs.ok ? 'ok' : 'stop', fs.label]); }
       if (t.stage !== 'ready') out.push(['stop', t.stage === 'brief' ? 'Brief not finished' : t.stage === 'media' ? (t.assets ? 'Visual checks not done' : 'No media attached') : t.stage === 'manager' ? 'Waiting for manager review' : 'Waiting for Anthony’s approval']); else out.push(['ok', 'Approved']);
       if (new Date(`${it.date}T${it.time}:00`) < now) out.push(['stop', 'Time is in the past']);
       if (seen[`${it.date}|${it.time}|${it.channel}`] > 1) out.push(['stop', 'Two posts at the same time on this channel']);
@@ -1141,9 +1179,11 @@ Add PART 8 — PLATFORM VERSIONS: one block for each of ${t.map(c => NAME[c]).jo
     await runAll();
     const inRange = [...new Set(((plan && plan.items) || []).map(i => i.postId))].map(id => (app().data().posts || []).find(x => x.id === id)).filter(Boolean);
     const all = app().data().posts || [], fresh = freshIds.map(id => all.find(x => x.id === id)).filter(Boolean);
+    await requestFacts([...new Set(fresh.concat(inRange))]);
+    const waitingFacts = [...new Set(fresh.concat(inRange))].filter(p => !factState(p).ok);
     const sg = await scriptRun([...new Set(fresh.concat(inRange))], t => { wake = t; render(); });
     freshIds = freshIds.filter(id => !scripts[id]);   // keep any Sage could not write yet at the front of the next run
-    log.unshift(['sage', sageNote ? sageNote : `Production packs ready for ${sg.have} of ${sg.total} campaign${sg.total === 1 ? '' : 's'}${sg.wrote ? ` (${sg.wrote} written now)` : ''}: script, image prompts, motion prompts, editor prompt, voiceover, caption and checks.`]);
+    log.unshift(['sage', sageNote ? sageNote : `${waitingFacts.length ? `Waiting for the fact check on ${waitingFacts.length} campaign${waitingFacts.length === 1 ? '' : 's'} before writing (${waitingFacts.slice(0, 2).map(p => '“' + cut(p.title, 30) + '”').join(', ')}${waitingFacts.length > 2 ? ' …' : ''}). ` : ''}Production packs ready for ${sg.have} of ${sg.total} campaign${sg.total === 1 ? '' : 's'}${sg.wrote ? ` (${sg.wrote} written now)` : ''}: script, image prompts, motion prompts, editor prompt, voiceover, caption and checks.`]);
     const sr = await seoRun(inRange, t => { wake = t; render(); });
     log.splice(3, 0, ['quill', seoNote ? seoNote : `SEO ready for ${sr.have} of ${sr.total} campaign${sr.total === 1 ? '' : 's'}${sr.wrote ? ` (${sr.wrote} written now)` : ''}: keywords, hashtags, YouTube titles and tags, Pinterest titles and alt text. Approved captions are not changed; press “Add hashtags” on a post to use them.`]);
     if (settings.autoSend) { const r = await autoSend(t => { wake = t; render(); }); log.splice(log.findIndex(l => l[0] === 'tempo') + 1, 0, ['tempo', r]); }
@@ -2152,7 +2192,7 @@ Add PART 8 — PLATFORM VERSIONS: one block for each of ${t.map(c => NAME[c]).jo
     if (ch === 'instagram') info.instagramData = { type: vid ? 'REEL' : 'POST', showReelOnFeed: true, isAiGenerated: !!ai };
     if (ch === 'facebook') info.facebookData = { type: vid ? 'REEL' : 'POST', title: vid ? title : '' };
     if (ch === 'tiktok') info.tiktokData = { privacyOption: 'PUBLIC_TO_EVERYONE', title: (so && so.ch.title) || title, isAigc: !!ai };
-    if (ch === 'youtube') info.youtubeData = { title: it.rb ? rbYouTubeTitle(p) : (so && so.ch.title) || title, tags: (so && so.ch.tags) || [], category: 'SPORTS', type: 'short', privacy: 'public', madeForKids: false, isAiGeneratedContent: !!ai };
+    if (ch === 'youtube') info.youtubeData = { title: it.rb ? rbYouTubeTitle(p) : (so && so.ch.title) || title, tags: (so && so.ch.tags) || [], category: 'SPORTS', type: dykVideo(p) ? 'video' : 'short', privacy: 'public', madeForKids: false, isAiGeneratedContent: !!ai };
     if (ch === 'pinterest') info.pinterestData = { boardId: settings.pinBoard || '', pinTitle: (so && so.ch.title) || title, pinLink: (String(it.caption).match(/https:\/\/\S+/) || [it.rb ? rbLink(p, 'pinterest') : ''])[0], isAiGenerated: !!ai };
     if (ch === 'threads') info.threadsData = {};
     if (ch === 'bluesky') info.blueskyData = {};
@@ -2168,7 +2208,7 @@ Add PART 8 — PLATFORM VERSIONS: one block for each of ${t.map(c => NAME[c]).jo
     const vid = all.filter(a => /^video\//.test(a.mime || '')), pic = all.filter(a => /^image\//.test(a.mime || ''));
     const pool = (it.channel === 'facebook' || it.channel === 'youtube') ? vid : (vid.length ? vid : pic);
     if (!pool.length) return null;
-    const want = specFor(it.channel, vid.length && pool === vid ? 'video' : kindOf(p)), r = want[0] / want[1];
+    const want = specOf(p, it.channel, vid.length && pool === vid ? 'video' : kindOf(p)), r = want[0] / want[1];
     const fit = pool.filter(a => Math.abs(ratioOf(a) - r) < 0.03);
     return fit.length ? fit[fit.length - 1] : pool[pool.length - 1];   // the exact size for this channel if attached; else the latest one (a revision replaces the older cut)
   }
@@ -2420,11 +2460,11 @@ Add PART 8 — PLATFORM VERSIONS: one block for each of ${t.map(c => NAME[c]).jo
       await reconcileJobs();
       reviseFromNotes();   // remember the notes already there, so only new ones start a revision
       await collect();
-      await aoRead(); await loadConns(); await loadScripts(); await loadCatalog();
+      await aoRead(); await loadConns(); await loadScripts(); await loadFacts(); await loadCatalog();
       setTimeout(() => { if (aoOn()) aoStart(); else nightOwl(); }, 1500);
       setInterval(() => { aoRead().then(render); }, 5 * 60000);
     }
     render();
   }
-  window.RSH_BOTS = { isBusy: () => busy, sageState: id => scripts[id] ? 'done' : sageBusy === id ? 'writing' : freshIds.includes(id) ? 'next' : 'todo', isNew, planItems: id => ((plan && plan.items) || []).filter(i => i.postId === id), commentsFor: id => (comments[id] || []).slice(), whoIs: async ids => { await whoIs(ids); return Object.fromEntries(ids.map(i => [i, names[i] || 'Teammate'])); }, mealNow, rbOn, rbHome, rbTargets, rbPlace, rbCaption, rbChecks, rbFileFor, rbYouTubeTitle, manila, TAGLINE, RB_SLOTS, aiOf, SPECS, sizePlan, sizeLines, specFor, kindOf, ratioOf, productJob, readyRefs, POST_SIZE, catalog: () => catalog, refs: () => refs, productsFor, productBlock, searchCatalog, requestPhotos, loadCatalog, scripts: () => scripts, scriptPrompt, writeScript, scriptRun, saveScript, packPart, packHtml, conns: () => conns, viaOf, engineFor, HOUSE, music: () => MUSIC, musicStart, musicStop, match: () => ISO.match, startMatch: (a, b) => startMatch(ISO.people[a], ISO.people[b], performance.now()), zoneAt, addIdea, IDEAS: () => IDEAS, postComment, loadAllComments, cmtCount, ctaFor, withCta, isoPeople: () => ISO.people, aoCycle, aoStart, aoBeat, aoAlive, reviseFromNotes, shrinkVideo, nightOwl, weeklyReport, learnedTags, resultsForPrompt, openRaw, addRaw, sendRaw, rawCount, loadRaw, dayFor, isDyk, targets, sendText, autoSend, seoFor, seoRun, learnedTimes, schedule, attachForPost, driveUpload, fileFor, autoLink, needsFile, readyItems, placedOn, place, unplace, setMediaUrl, sendToMetricool, metricoolPost, NAME, freshVideos, watch, onChange: f => listeners.push(f), handoff, collect, start, captionFor, assetNeeds, imagePrompt, videoBrief, editJob };
+  window.RSH_BOTS = { factState: id => { const p = (app().data().posts || []).find(x => x.id === id); return p ? factState(p) : null; }, factDocs: () => factDocs, factText, refreshFacts: async () => { await loadFacts(); }, requestFacts: ids => requestFacts((app().data().posts || []).filter(p => ids.includes(p.id))), sizePlan, isBusy: () => busy, sageState: id => scripts[id] ? 'done' : sageBusy === id ? 'writing' : freshIds.includes(id) ? 'next' : 'todo', isNew, planItems: id => ((plan && plan.items) || []).filter(i => i.postId === id), commentsFor: id => (comments[id] || []).slice(), whoIs: async ids => { await whoIs(ids); return Object.fromEntries(ids.map(i => [i, names[i] || 'Teammate'])); }, mealNow, rbOn, rbHome, rbTargets, rbPlace, rbCaption, rbChecks, rbFileFor, rbYouTubeTitle, manila, TAGLINE, RB_SLOTS, aiOf, SPECS, sizePlan, sizeLines, specFor, kindOf, ratioOf, productJob, readyRefs, POST_SIZE, catalog: () => catalog, refs: () => refs, productsFor, productBlock, searchCatalog, requestPhotos, loadCatalog, scripts: () => scripts, scriptPrompt, writeScript, scriptRun, saveScript, packPart, packHtml, conns: () => conns, viaOf, engineFor, HOUSE, music: () => MUSIC, musicStart, musicStop, match: () => ISO.match, startMatch: (a, b) => startMatch(ISO.people[a], ISO.people[b], performance.now()), zoneAt, addIdea, IDEAS: () => IDEAS, postComment, loadAllComments, cmtCount, ctaFor, withCta, isoPeople: () => ISO.people, aoCycle, aoStart, aoBeat, aoAlive, reviseFromNotes, shrinkVideo, nightOwl, weeklyReport, learnedTags, resultsForPrompt, openRaw, addRaw, sendRaw, rawCount, loadRaw, dayFor, isDyk, targets, sendText, autoSend, seoFor, seoRun, learnedTimes, schedule, attachForPost, driveUpload, fileFor, autoLink, needsFile, readyItems, placedOn, place, unplace, setMediaUrl, sendToMetricool, metricoolPost, NAME, freshVideos, watch, onChange: f => listeners.push(f), handoff, collect, start, captionFor, assetNeeds, imagePrompt, videoBrief, editJob };
 })();
