@@ -77,6 +77,12 @@
     return { t, done, next, button, group: t.stage };
   }
 
+  // Sage's production pack for this campaign: written, being written now, or next in line.
+  function scriptChip(id) {
+    const B = window.RSH_BOTS, st = B && B.sageState ? B.sageState(id) : '';
+    if (!st) return '';
+    return st === 'done' ? '<span class="step done">✓ Script</span>' : st === 'writing' ? '<span class="step now">✎ Sage is writing the script…</span>' : st === 'next' ? '<span class="step now">Script: Sage starts next</span>' : '<span class="step todo">Script</span>';
+  }
   function defaultRange(posts) {
     const today = todayIso(), dates = posts.map(p => p.date).filter(Boolean).sort();
     const first = dates.find(d => d >= today) || dates[dates.length - 1] || today;
@@ -92,18 +98,20 @@
     const host = document.getElementById('rshTracker'); if (!host || !app()) return;
     const all = (app().data().posts || []).filter(p => p.date);
     if (!range) { try { range = JSON.parse(localStorage.getItem(PREF) || 'null'); } catch (_) {} if (!range || !range.from || !range.to) range = defaultRange(all); }
-    const inRange = all.filter(p => p.date >= range.from && p.date <= range.to).sort((a, b) => a.date.localeCompare(b.date) || String(a.title).localeCompare(String(b.title)));
-    const rows = inRange.map(p => ({ p, ...describe(p) }));
+    const B = window.RSH_BOTS, fresh = (app().data().posts || []).filter(p => B && B.isNew && B.isNew(p)).sort((a, b) => String(b.created).localeCompare(String(a.created)));
+    const inRange = all.filter(p => p.date >= range.from && p.date <= range.to && !fresh.includes(p)).sort((a, b) => a.date.localeCompare(b.date) || String(a.title).localeCompare(String(b.title)));
+    const rows = fresh.map(p => ({ p, fresh: true, ...describe(p) })).concat(inRange.map(p => ({ p, ...describe(p) })));
     const counts = {}; for (const r of rows) counts[r.group] = (counts[r.group] || 0) + 1;
     if (only !== 'all' && !counts[only]) only = 'all';
     const shown = rows.filter(r => only === 'all' || r.group === only);
     let html = '', lastDay = '';
     for (const r of shown) {
-      if (r.p.date !== lastDay) { lastDay = r.p.date; const d = dayLabel(lastDay); html += `<div class="day">${esc(d.name)}<span class="when">${esc(d.when)}</span></div>`; }
-      const late = dayLabel(r.p.date).past && r.group !== 'ready';
+      if (r.fresh) { if (lastDay !== 'fresh') { lastDay = 'fresh'; html += `<div class="day">Just added<span class="when">new campaigns from the last 7 days, wherever their date falls</span></div>`; } }
+      else if (r.p.date !== lastDay) { lastDay = r.p.date; const d = dayLabel(lastDay); html += `<div class="day">${esc(d.name)}<span class="when">${esc(d.when)}</span></div>`; }
+      const late = !!r.p.date && dayLabel(r.p.date).past && r.group !== 'ready';
       let seenNow = false;
-      const steps = STEPS.map(([k, label]) => { const done = r.done[k]; const cls = done ? 'done' : (!seenNow ? 'now' : 'todo'); if (!done) seenNow = true; return `<span class="step ${cls}">${done ? '✓ ' : ''}${esc(label)}</span>`; }).join('');
-      html += `<div class="row" data-track-row="${esc(r.p.id)}"><div><div class="title">${esc(r.p.title)}</div><div class="small">${esc(r.p.platform || '')} · ${esc(r.p.owner || 'No owner')}${late ? ' · <span class="late">past its date</span>' : ''}</div><div class="steps">${steps}</div></div>
+      const steps = scriptChip(r.p.id) + STEPS.map(([k, label]) => { const done = r.done[k]; const cls = done ? 'done' : (!seenNow ? 'now' : 'todo'); if (!done) seenNow = true; return `<span class="step ${cls}">${done ? '✓ ' : ''}${esc(label)}</span>`; }).join('');
+      html += `<div class="row" data-track-row="${esc(r.p.id)}"><div><div class="title">${esc(r.p.title)}</div><div class="small">${r.fresh ? (r.p.date ? esc(dayLabel(r.p.date).name) + ' · ' : '<span class="late">no date yet</span> · ') : ''}${esc(r.p.platform || '')} · ${esc(r.p.owner || 'No owner')}${late ? ' · <span class="late">past its date</span>' : ''}</div><div class="steps">${steps}</div></div>
         <div class="next"><strong>Next</strong>${esc(r.next)}</div>
         <div class="acts"><button type="button" class="btn ${r.group === 'ready' || r.group === 'anthony' ? 'ghost ' : ''}smallbtn" data-track-open="${esc(r.p.id)}">${esc(r.button)} →</button><button type="button" class="btn ghost smallbtn" data-track-details="${esc(r.p.id)}">Details</button><button type="button" class="btn ghost smallbtn" data-track-assets="${esc(r.p.id)}">📁 Assets & 💬 ${window.RSH_BOTS && window.RSH_BOTS.rawCount ? window.RSH_BOTS.rawCount(r.p.id) + ' · ' + window.RSH_BOTS.cmtCount(r.p.id) : ''}</button></div></div>`;
     }
@@ -128,7 +136,7 @@
   }
   function copyText(host) {
     let last = '', out = `RSH Sports campaigns, ${host._label}\n`;
-    for (const r of host._rows) { if (r.p.date !== last) { last = r.p.date; out += `\n${dayLabel(last).name}\n`; } out += `• ${r.p.title} (${r.p.platform}, ${r.p.owner || 'no owner'}) — ${GROUPS[r.group]}. Next: ${r.next}\n`; }
+    for (const r of host._rows) { const k = r.fresh ? 'fresh' : r.p.date; if (k !== last) { last = k; out += `\n${r.fresh ? 'Just added' : dayLabel(last).name}\n`; } out += `• ${r.p.title} (${r.p.platform}, ${r.p.owner || 'no owner'}) — ${GROUPS[r.group]}. Next: ${r.next}\n`; }
     return out;
   }
 

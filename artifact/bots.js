@@ -698,8 +698,8 @@ Add PART 8 — PLATFORM VERSIONS: one block for each of ${t.map(c => NAME[c]).jo
   async function scriptRun(posts, step) {
     sageNote = ''; let wrote = 0;
     const todo = posts.filter(p => { const s = scripts[p.id]; return !s || (!s.edited && s.sig !== scriptSig(p)); }).slice(0, 3);
-    for (const p of todo) { sageBusy = p.id; step && step(`Sage is writing the production pack for “${cut(p.title, 40)}”…`); const ok = await writeScript(p); if (ok) wrote++; else if (sageNote) break; }
-    sageBusy = '';
+    for (const p of todo) { sageBusy = p.id; try { window.RSH_TRACKER && window.RSH_TRACKER.render(); } catch (_) {} step && step(`Sage is writing the production pack for “${cut(p.title, 40)}”…`); const ok = await writeScript(p); if (ok) wrote++; else if (sageNote) break; }
+    sageBusy = ''; try { window.RSH_TRACKER && window.RSH_TRACKER.render(); } catch (_) {}
     return { wrote, have: posts.filter(p => scripts[p.id]).length, total: posts.length };
   }
   async function saveScript(id, text) {
@@ -971,7 +971,7 @@ Add PART 8 — PLATFORM VERSIONS: one block for each of ${t.map(c => NAME[c]).jo
   }
   function runAll() {
     const posts = (app().data().posts || []).filter(p => p.date), from = iso(new Date()), end = new Date(); end.setDate(end.getDate() + settings.days); const to = iso(end);
-    const inRange = posts.filter(p => p.date >= from && p.date <= to).sort((a, b) => a.date.localeCompare(b.date) || String(a.title).localeCompare(String(b.title)));
+    const inRange = posts.filter(p => p.date >= from && (p.date <= to || isNew(p))).sort((a, b) => a.date.localeCompare(b.date) || String(a.title).localeCompare(String(b.title)));
     const old = new Map(((plan && plan.items) || []).map(i => [i.postId + '|' + i.channel, i])), items = [];
     for (const p of inRange) for (const ch of targets(p)) {
       const prev = old.get(p.id + '|' + ch);
@@ -1095,7 +1095,10 @@ Add PART 8 — PLATFORM VERSIONS: one block for each of ${t.map(c => NAME[c]).jo
   // The team starts on its own when a new file is attached to any campaign.
   const signature = () => (app().data().posts || []).map(p => [p.creativeAsset].concat(Array.isArray(p.creativeAssets) ? p.creativeAssets : []).filter(Boolean).map(a => a.id).sort().join(',')).join('|');
   // A campaign that just got its final approval is scheduled straight away (when Tempo's auto-scheduling is on).
-  let apprSig = null;
+  let apprSig = null, campSig = null, freshIds = [];
+  // A campaign added in the last 7 days: it joins the checklist and gets its production pack first, whatever its date.
+  const isNew = p => !!p && !!p.created && Date.now() - Date.parse(p.created) < 7 * 864e5;
+  const campaignIds = () => (app().data().posts || []).map(p => p.id).sort().join(',');
   const approvals = () => (app().data().posts || []).filter(p => p.date && app().track(p).stage === 'ready').map(p => p.id).sort().join(',');
   let notesSig = null;
   const latestNotes = p => { const h = (p.revisionHistory || []).filter(x => /changes requested/i.test(x.type || '') && (x.reviewNotes || x.detail)); return h.length ? h.sort((a, b) => String(b.at).localeCompare(String(a.at)))[0] : null; };
@@ -1116,6 +1119,10 @@ Add PART 8 — PLATFORM VERSIONS: one block for each of ${t.map(c => NAME[c]).jo
   }
   async function onCampaignsChanged() {
     reviseFromNotes();
+    const ids = campaignIds(); if (campSig === null) campSig = ids;
+    if (ids !== campSig) { const before = new Set(campSig.split(',')), added = ids.split(',').filter(x => x && !before.has(x)); campSig = ids;
+      if (added.length) { freshIds = [...new Set(freshIds.concat(added))]; const t = ((app().data().posts || []).find(x => x.id === added[0]) || {}).title;
+        const why = `New campaign “${cut(t || 'Untitled', 40)}”. Ref added it to the checklist and Sage is writing its script.`; if (busy) queued = why; else await work(why); return; } }
     const ap = approvals(); if (apprSig === null) apprSig = ap;
     if (ap !== apprSig) { const before = new Set(apprSig.split(',')), fresh = ap.split(',').filter(x => x && !before.has(x)); apprSig = ap;
       if (fresh.length && settings.autoSend && plan) { const t = ((app().data().posts || []).find(x => x.id === fresh[0]) || {}).title; const why = `“${cut(t || 'A campaign', 40)}” was approved. Tempo is scheduling it.`; if (busy) queued = why; else await work(why); return; } }
@@ -1133,7 +1140,9 @@ Add PART 8 — PLATFORM VERSIONS: one block for each of ${t.map(c => NAME[c]).jo
     busy = true; wake = why; log = []; render();
     await runAll();
     const inRange = [...new Set(((plan && plan.items) || []).map(i => i.postId))].map(id => (app().data().posts || []).find(x => x.id === id)).filter(Boolean);
-    const sg = await scriptRun(inRange, t => { wake = t; render(); });
+    const all = app().data().posts || [], fresh = freshIds.map(id => all.find(x => x.id === id)).filter(Boolean);
+    const sg = await scriptRun([...new Set(fresh.concat(inRange))], t => { wake = t; render(); });
+    freshIds = freshIds.filter(id => !scripts[id]);   // keep any Sage could not write yet at the front of the next run
     log.unshift(['sage', sageNote ? sageNote : `Production packs ready for ${sg.have} of ${sg.total} campaign${sg.total === 1 ? '' : 's'}${sg.wrote ? ` (${sg.wrote} written now)` : ''}: script, image prompts, motion prompts, editor prompt, voiceover, caption and checks.`]);
     const sr = await seoRun(inRange, t => { wake = t; render(); });
     log.splice(3, 0, ['quill', seoNote ? seoNote : `SEO ready for ${sr.have} of ${sr.total} campaign${sr.total === 1 ? '' : 's'}${sr.wrote ? ` (${sr.wrote} written now)` : ''}: keywords, hashtags, YouTube titles and tags, Pinterest titles and alt text. Approved captions are not changed; press “Add hashtags” on a post to use them.`]);
@@ -2397,6 +2406,7 @@ Add PART 8 — PLATFORM VERSIONS: one block for each of ${t.map(c => NAME[c]).jo
     document.querySelectorAll('[data-view="bots"]').forEach(b => b.addEventListener('click', () => setTimeout(render, 0)));
     render();
     assetSig = signature();
+    try { campSig = campaignIds(); } catch (_) {}   // campaigns already there at load are not "new"
     window.addEventListener('rsh:saved', () => { onCampaignsChanged(); });
     setInterval(() => { if (document.visibilityState === 'visible' && Object.values(jobs).some(j => j.status === 'sent' || j.status === 'queued' || j.status === 'done')) collect(); }, 60000);   // check for finished videos while the screen is open
     document.querySelectorAll('[data-view="bots"]').forEach(b => b.addEventListener('click', () => collect()));   // fires after every saved change to the campaigns
@@ -2416,5 +2426,5 @@ Add PART 8 — PLATFORM VERSIONS: one block for each of ${t.map(c => NAME[c]).jo
     }
     render();
   }
-  window.RSH_BOTS = { planItems: id => ((plan && plan.items) || []).filter(i => i.postId === id), commentsFor: id => (comments[id] || []).slice(), whoIs: async ids => { await whoIs(ids); return Object.fromEntries(ids.map(i => [i, names[i] || 'Teammate'])); }, mealNow, rbOn, rbHome, rbTargets, rbPlace, rbCaption, rbChecks, rbFileFor, rbYouTubeTitle, manila, TAGLINE, RB_SLOTS, aiOf, SPECS, sizePlan, sizeLines, specFor, kindOf, ratioOf, productJob, readyRefs, POST_SIZE, catalog: () => catalog, refs: () => refs, productsFor, productBlock, searchCatalog, requestPhotos, loadCatalog, scripts: () => scripts, scriptPrompt, writeScript, scriptRun, saveScript, packPart, packHtml, conns: () => conns, viaOf, engineFor, HOUSE, music: () => MUSIC, musicStart, musicStop, match: () => ISO.match, startMatch: (a, b) => startMatch(ISO.people[a], ISO.people[b], performance.now()), zoneAt, addIdea, IDEAS: () => IDEAS, postComment, loadAllComments, cmtCount, ctaFor, withCta, isoPeople: () => ISO.people, aoCycle, aoStart, aoBeat, aoAlive, reviseFromNotes, shrinkVideo, nightOwl, weeklyReport, learnedTags, resultsForPrompt, openRaw, addRaw, sendRaw, rawCount, loadRaw, dayFor, isDyk, targets, sendText, autoSend, seoFor, seoRun, learnedTimes, schedule, attachForPost, driveUpload, fileFor, autoLink, needsFile, readyItems, placedOn, place, unplace, setMediaUrl, sendToMetricool, metricoolPost, NAME, freshVideos, watch, onChange: f => listeners.push(f), handoff, collect, start, captionFor, assetNeeds, imagePrompt, videoBrief, editJob };
+  window.RSH_BOTS = { isBusy: () => busy, sageState: id => scripts[id] ? 'done' : sageBusy === id ? 'writing' : freshIds.includes(id) ? 'next' : 'todo', isNew, planItems: id => ((plan && plan.items) || []).filter(i => i.postId === id), commentsFor: id => (comments[id] || []).slice(), whoIs: async ids => { await whoIs(ids); return Object.fromEntries(ids.map(i => [i, names[i] || 'Teammate'])); }, mealNow, rbOn, rbHome, rbTargets, rbPlace, rbCaption, rbChecks, rbFileFor, rbYouTubeTitle, manila, TAGLINE, RB_SLOTS, aiOf, SPECS, sizePlan, sizeLines, specFor, kindOf, ratioOf, productJob, readyRefs, POST_SIZE, catalog: () => catalog, refs: () => refs, productsFor, productBlock, searchCatalog, requestPhotos, loadCatalog, scripts: () => scripts, scriptPrompt, writeScript, scriptRun, saveScript, packPart, packHtml, conns: () => conns, viaOf, engineFor, HOUSE, music: () => MUSIC, musicStart, musicStop, match: () => ISO.match, startMatch: (a, b) => startMatch(ISO.people[a], ISO.people[b], performance.now()), zoneAt, addIdea, IDEAS: () => IDEAS, postComment, loadAllComments, cmtCount, ctaFor, withCta, isoPeople: () => ISO.people, aoCycle, aoStart, aoBeat, aoAlive, reviseFromNotes, shrinkVideo, nightOwl, weeklyReport, learnedTags, resultsForPrompt, openRaw, addRaw, sendRaw, rawCount, loadRaw, dayFor, isDyk, targets, sendText, autoSend, seoFor, seoRun, learnedTimes, schedule, attachForPost, driveUpload, fileFor, autoLink, needsFile, readyItems, placedOn, place, unplace, setMediaUrl, sendToMetricool, metricoolPost, NAME, freshVideos, watch, onChange: f => listeners.push(f), handoff, collect, start, captionFor, assetNeeds, imagePrompt, videoBrief, editJob };
 })();
