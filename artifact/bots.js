@@ -182,13 +182,13 @@
    * (4:5) with the subject kept inside the centre 3:4 area. Videos everywhere are 1080×1920 (9:16), 30 fps, H.264 + AAC. */
   const V916 = [1080, 1920, '9:16'];
   const SPECS = {
-    instagram: { video: [...V916, 'Reel'], story: [...V916, 'Story'], image: [1080, 1350, '4:5', 'feed photo (keep the subject inside the centre 3:4 area; the profile grid crops to 3:4)'], carousel: [1080, 1350, '4:5', 'carousel, every slide the same size'] },
+    instagram: { video: [...V916, 'Reel'], story: [...V916, 'Story'], image: [1080, 1350, '4:5', 'feed photo (keep the subject inside the centre 3:4 area; the profile grid crops to 3:4)'], carousel: [1080, 1350, '4:5', 'carousel of 6 to 8 frames, one angle per frame, the last frame is the tagline'] },
     facebook: { video: [...V916, 'Reel (every Facebook video is now a Reel)'], story: [...V916, 'Story'], image: [1080, 1350, '4:5', 'feed photo'], carousel: [1080, 1080, '1:1', 'carousel (Meta crops carousel cards to 1:1)'] },
     tiktok: { video: [...V916, 'video'], story: [...V916, 'video'], image: [...V916, 'photo post (other sizes get black bars)'], carousel: [...V916, 'photo carousel, every slide the same size'] },
     youtube: { video: [...V916, 'Short (up to 3 minutes)'], story: [...V916, 'Short'], image: [...V916, 'Short made from the photo'], carousel: [...V916, 'Short made from the photos'] },
-    pinterest: { video: [...V916, 'video pin (Pinterest recommends 9:16 for full-screen video)'], story: [...V916, 'video pin'], image: [1000, 1500, '2:3', 'standard pin'], carousel: [1000, 1500, '2:3', 'carousel pin, every slide the same size'] },
-    threads: { video: [...V916, 'video'], story: [...V916, 'video'], image: [1080, 1350, '4:5', 'photo'], carousel: [1080, 1350, '4:5', 'carousel'] },
-    bluesky: { video: [...V916, 'video (up to 3 minutes; photos and video cannot be mixed)'], story: [...V916, 'video'], image: [1080, 1350, '4:5', 'photo (Bluesky compresses to about 1 MB: export a JPEG)'], carousel: [1080, 1350, '4:5', 'up to 4 photos'] }
+    pinterest: { video: [1000, 1500, '2:3', 'product pin still (rulebook; a 9:16 Idea Pin of 3–5 slides is the alternative)'], story: [1000, 1500, '2:3', 'product pin still'], image: [1000, 1500, '2:3', 'standard pin'], carousel: [1000, 1500, '2:3', 'carousel pin, every slide the same size'] },
+    threads: { video: [1080, 1350, '4:5', 'proof frame: a 3-second loop or still (the text is the post)'], story: [1080, 1350, '4:5', 'proof frame'], image: [1080, 1350, '4:5', 'photo'], carousel: [1080, 1350, '4:5', 'carousel'] },
+    bluesky: { video: [1080, 1350, '4:5', 'still image only: the best frame (rulebook: no reels on Bluesky)'], story: [1080, 1350, '4:5', 'still image'], image: [1080, 1350, '4:5', 'photo (Bluesky compresses to about 1 MB: export a JPEG)'], carousel: [1080, 1350, '4:5', 'up to 4 photos'] }
   };
   const kindOf = p => { const t = String(p.postType || '').toLowerCase(); if (!t.trim() && String(p.video || '').trim()) return 'video';   // no post type but a video brief: a video campaign
     return /story/.test(t) ? 'story' : /reel|video|short/.test(t) ? 'video' : /carousel/.test(t) ? 'carousel' : 'image'; };
@@ -203,7 +203,7 @@
   function sizeLines(p) {
     const plan = sizePlan(p), kind = kindOf(p);
     return `EXACT SIZES FOR THIS CAMPAIGN (checked with the platforms, Nov 2026)\n` + plan.map((g, n) => `- ${n === 0 ? 'Main' : 'Also'}: ${g.w}×${g.h} (${g.ratio}) for ${g.uses.join('; ')}`).join('\n') +
-      `\n${kind === 'video' || kind === 'story' ? 'Every video: 1080×1920 (9:16), 30 fps, H.264 + AAC; keep text and faces inside the centre safe area (not in the top 8% or bottom 12%, nor under the right-side buttons).' : plan.length > 1 ? 'Deliver one file per size: the same scene re-framed for each ratio (not stretched, not letterboxed), nothing important near the edges. Name each file with its ratio, e.g. "-4x5", "-2x3", "-9x16".' : 'Nothing important near the edges.'}`;
+      `\n${kind === 'video' || kind === 'story' ? 'Every video: 1080×1920 (9:16), 30 fps, H.264 + AAC; keep text and faces inside the centre safe area (not in the top 8% or bottom 12%, nor under the right-side buttons).' : plan.length > 1 ? 'Deliver one file per size: the same scene re-framed for each ratio (not stretched, not letterboxed), nothing important near the edges. Name each file with its ratio, e.g. "-4x5", "-2x3", "-9x16".' : 'Nothing important near the edges.'}${rbOn(p.date) ? `\nPOSTING RULEBOOK: every platform gets its own separately produced file in its own style (never the same file or a trim of it${isDyk(p) ? '; the Tuesday DYK to Instagram and YouTube is the one shared file' : ''}). This idea goes to ${targets(p).map(c => NAME[c]).join(', ')}; home: ${NAME[targets(p)[0]]}. Put the platform in each file name (e.g. "-${targets(p)[0]}", "-tiktok", "-pinterest-2x3") and "flow" when the media was generated in Google Flow.` : ''}`;
   }
   // Which attached file fits a channel best: the one whose shape matches the channel's size (from its width and height, or the ratio in its name).
   const ratioOf = a => { if (a && a.width && a.height) return a.width / a.height; const m = /(\d+)x(\d+)(?=\D*$)/.exec(String(a && a.name || '')); if (m) { const x = +m[1], y = +m[2]; if (x && y && x < 50 && y < 50) return x / y; } return 0; };
@@ -212,7 +212,7 @@
     const vids = files.filter(a => /^video\//.test(a.mime || '')).length, imgs = files.length - vids, type = String(p.postType || '').toLowerCase(), ratio = p.aspectRatio || '4:5', needs = [];
     const plan = sizePlan(p), main = plan[0], sz = g => `${g.w}×${g.h}`, k = kindOf(p);
     if (k === 'video') needs.push({ label: `a vertical 9:16 video, 8–20 seconds (${sz(main)})`, state: vids ? 'have' : 'miss' });
-    else if (k === 'carousel') needs.push({ label: `3 to 5 matching ${main.ratio} photos (${sz(main)})`, state: imgs >= 3 ? 'have' : 'miss', detail: imgs ? `${imgs} so far` : '' });
+    else if (k === 'carousel') needs.push({ label: `${rbOn(p.date) ? '6 to 8' : '3 to 5'} matching ${main.ratio} photos (${sz(main)})`, state: imgs >= 3 ? 'have' : 'miss', detail: imgs ? `${imgs} so far` : '' });
     else if (k === 'story') needs.push({ label: `one vertical 9:16 photo or short video (${sz(main)})`, state: files.length ? 'have' : 'miss' });
     else needs.push({ label: `one ${main.ratio} photo (${sz(main)})`, state: imgs ? 'have' : 'miss' });
     if (k === 'image' || k === 'carousel') for (const g of plan.slice(1)) { const r = g.w / g.h, ok = files.some(a => /^image\//.test(a.mime || '') && Math.abs(ratioOf(a) - r) < 0.03); needs.push({ label: `a ${g.ratio} version (${sz(g)}) for ${g.channels.map(c => NAME[c]).join(', ')}`, state: ok ? 'have' : 'opt' }); }
@@ -243,7 +243,7 @@
   function seoEditLine(p) { const x = seo && seo[p.id]; return x && (x.onScreen || x.spoken) ? `SEARCH (TikTok, YouTube and Instagram read on-screen text and speech)\nShow on screen in the first 3 seconds: “${x.onScreen}”\nSay in the first 3 seconds: “${x.spoken}”\nBurn in captions for the spoken words.` : ''; }
   // House style from the RSH Video Studio Kit + Content Rules Kit (studio/ in the repository). Every edit job carries it.
   const HOUSE = 'Smooth only: no shake, flash, glitch or zoom punch; slow straight push-ins; soft 10–15-frame cross-dissolves. One message on screen at a time, each line readable for at least 2.5 s (hook 3 s, on screen in the first second); text fades in as whole lines. Bold condensed uppercase white text with a soft shadow (Barlow Condensed 900). Nothing in the top 8% or bottom 12% of the frame. One continuous free, no-copyright music track, 0.5 s fade-in, 1.5 s fade-out, ducked under the voice, never cut. Small RSH watermark bottom-right on every shot. No filters that change kit or product colours. Same kit (colours, team name, and number in sports that use numbers) on the same athlete in every shot; wrestling singlets have no number. Loudness about −14 to −16 LUFS, 30 fps.';
-  const TAGVERB = { wrestling: 'Wrestle' };
+  const TAGVERB = { wrestling: 'Wrestle', soccer: 'Play', basketball: 'Play', hockey: 'Skate', ice: 'Skate', running: 'Run', track: 'Run', boxing: 'Fight', mma: 'Fight' };   // Posting Rulebook rule 5: never default to Play
   // What a uniform shows depends on the sport: wrestling singlets (and MMA or boxing kits) never carry a player number.
   const NO_NUMBER = /wrestl|singlet|mma|grappl|jiu|judo|boxing|kickbox/i;
   const kitId = sport => NO_NUMBER.test(String(sport || '')) ? 'the team or school name and crest only (no player number: wrestling singlets are not numbered; wrestlers are paired by weight class; an international scene may show a country code instead)' : 'the team\u2019s own name, number and crest only';
@@ -403,13 +403,100 @@
     drop.busy = false; render(); dispatch();
   }
 
+  /* ---------- RSH Sports Posting Rulebook (Nov 26, 2026; in force Dec 1, 2026 – Dec 31, 2027) ----------
+   * One idea, a separately produced post per platform, each at that platform's US Eastern slot. Posts dated before
+   * Dec 1, 2026 keep the earlier rules. The full text is in the Playbook tab and studio/rules/10_Posting_Rulebook.txt. */
+  const RB_FROM = '2026-12-01', RB_TO = '2027-12-31';
+  const rbOn = d => !!d && d >= (window.RSH_RB_FROM || RB_FROM) && d <= RB_TO;   // RSH_RB_FROM: tests of the earlier rules move the start date
+  // Weekly schedule, US Eastern: [time, format]. 0 = Sunday … 6 = Saturday.
+  const RB_SLOTS = {
+    facebook: { 1: [['10:00', 'reel'], ['12:00', 'image']], 2: [['10:00', 'reel'], ['17:00', 'image']], 3: [['10:00', 'reel'], ['12:00', 'image']], 4: [['10:00', 'reel'], ['18:00', 'image']], 5: [['10:00', 'reel']] },
+    instagram: { 1: [['07:00', 'reel']], 2: [['07:00', 'dyk'], ['13:00', 'carousel']], 3: [['12:00', 'reel'], ['18:00', 'image']], 4: [['09:00', 'reel'], ['12:00', 'carousel']], 5: [['07:00', 'reel']], 6: [['', 'story']], 0: [['', 'story']] },
+    tiktok: { 1: [['10:00', 'video']], 2: [['10:00', 'video'], ['18:00', 'video']], 3: [['10:00', 'video'], ['18:00', 'video']], 4: [['10:00', 'video'], ['18:00', 'video']], 5: [['10:00', 'video'], ['12:00', 'video']] },
+    youtube: { 2: [['16:00', 'dyk']], 3: [['16:00', 'short']], 4: [['16:00', 'short']], 5: [['16:00', 'short']] },
+    threads: { 1: [['09:00', 'text']], 2: [['10:00', 'text']], 3: [['09:00', 'text'], ['19:00', 'text']], 4: [['09:00', 'text']], 5: [['09:00', 'text']] },
+    bluesky: { 1: [['09:00', 'text']], 2: [['09:00', 'text']], 3: [['09:00', 'text']], 4: [['09:00', 'text']], 5: [['09:00', 'text'], ['20:00', 'test']], 6: [['17:00', 'test']] },
+    pinterest: { 5: [['19:00', 'pin']], 6: [['20:00', 'pin']], 0: [['19:00', 'pin']] }
+  };
+  const RB_ORDER = ['facebook', 'instagram', 'tiktok', 'youtube', 'threads', 'bluesky', 'pinterest'];
+  const RB_VOLUME = { facebook: '5 Reels + 3 images', instagram: '5 Reels (Tuesday is the DYK) + 2 carousels', tiktok: '7 videos', youtube: '4 Shorts (Tuesday is the DYK)', threads: '6 posts', bluesky: '6 posts', pinterest: '15 to 25 pins over the weekend' };
+  // Which slot format a post takes on a channel.
+  function rbFormat(p, ch) {
+    const k = kindOf(p);
+    if (ch === 'facebook') return k === 'video' || k === 'story' ? 'reel' : 'image';
+    if (ch === 'instagram') return isDyk(p) ? 'dyk' : k === 'carousel' ? 'carousel' : k === 'image' ? 'image' : 'reel';
+    if (ch === 'youtube') return isDyk(p) ? 'dyk' : 'short';
+    return { tiktok: 'video', threads: 'text', bluesky: 'text', pinterest: 'pin' }[ch] || 'reel';
+  }
+  const rbSlotsOn = (ch, date, fmt) => ((RB_SLOTS[ch] || {})[dow(date)] || []).filter(s => s[1] === fmt || (fmt === 'image' && ch === 'instagram' && s[1] === 'carousel') || (fmt === 'text' && s[1] === 'test')).map(s => s[0]).filter(Boolean);
+  // Reel routing: the home platform comes from what the post is; the first match wins.
+  function rbHome(p) {
+    const t = [p.title, p.hook, p.angle, p.visualConcept, p.captionBody || p.caption, p.onImageText].join(' ').toLowerCase();
+    if (isDyk(p)) return ['instagram', 'Did You Know: Instagram Reel 7 AM and YouTube Short 4 PM every Tuesday'];
+    const own = String(p.platform || '').toLowerCase().replace(/[^a-z]/g, '');
+    if (own === 'pinterest') return ['pinterest', 'A Pinterest product or design pin: weekend evening slot'];
+    if ((kindOf(p) === 'image' || kindOf(p) === 'carousel') && NAME[own]) return [own, `A ${kindOf(p) === 'carousel' ? 'carousel' : 'photo'} post keeps its own platform (the routing rules are for reels)`];
+    if (/team[- ]store|always open store|order(ing)? (now|window|deadline|news)|custom [a-z ]*uniforms?\b|uniform (reveal|design)|product reveal|new (colou?rway|design|uniform)|now available|pre-?order/.test(t)) return ['facebook', 'Product reveal, uniform design or team-store news: Facebook Reel 10 AM'];
+    if (/\bqotd\b|quote of the day|\bquote\b|motivation|motivational|shoot it like/.test(t)) return ['instagram', 'Spoken quote or motivational line with a text overlay: Instagram Reel'];
+    if (/\b[ab] or [ab]\b|which (side|one|look|color|colou?r)|one [a-z]+[.,]? two (looks|ways|sides)|\bpick (one|1|a)\b|\bvs\.?\b|\bversus\b|compare|1 or 2/.test(t)) return ['tiktok', 'A choice or comparison: TikTok 10 AM'];
+    if (/\brule(s| change)?\b|nfhs|explain|explainer|how to|how it works|what is (?!your)|weight[- ]management|guide|news/.test(t)) return ['youtube', 'News, rules or an explainer people search for: YouTube Short 4 PM'];
+    if (/what('s| is) your|your (ritual|story|routine)|tell us|\bstory\b|ritual/.test(t)) return ['threads', 'A question more than a picture: Threads 9 AM as text, clip as proof'];
+    return ['facebook', 'None of the routes above: Facebook Reel (the strongest channel in the account’s own data)'];
+  }
+  const rbProduct = p => /singlet|uniform|jersey|team[- ]store|colou?rway|kit\b|apparel|reversible/i.test([p.title, p.hook, p.captionBody || p.caption, p.visualConcept].join(' '));
+  // Platforms for one idea: DYK → Instagram + YouTube only; otherwise the home platform plus at most three others,
+  // TikTok first (the furthest from the Facebook look), Pinterest only for product and design ideas.
+  function rbTargets(p) {
+    if (isDyk(p)) return ['instagram', 'youtube'];
+    const home = rbHome(p)[0], pref = ['tiktok', 'instagram', 'facebook', 'youtube', 'threads', 'bluesky'].concat(rbProduct(p) ? ['pinterest'] : []);
+    const allowed = new Set([home].concat(settings.channels || []));
+    if (rbProduct(p)) allowed.add('pinterest');
+    return [home].concat(pref.filter(c => c !== home && allowed.has(c)).slice(0, 3));
+  }
+  // Day and time for one platform's post: its home goes first; the others follow later in the same week, each on its own slot.
+  function rbPlace(p, ch) {
+    const fmt = rbFormat(p, ch), home = rbTargets(p)[0], dyk = isDyk(p);
+    if (dyk) { const tue = dow(p.date) === 2, d = tue ? p.date : shiftDay(p.date, (9 - dow(p.date)) % 7 || 7); return { date: d, time: ch === 'instagram' ? '07:00' : '16:00', why: 'Rulebook: the DYK goes to Instagram 7 AM and YouTube 4 PM every Tuesday, and to no other platform.', moved: tue ? '' : `DYK posts go out on Tuesday, so this moved to ${d}.` }; }
+    const homeDate = ch === home ? p.date : rbPlace(p, home).date, start = ch === home ? p.date : shiftDay(homeDate, ch === 'pinterest' ? 0 : 1);   // the home platform posts first
+    for (let i = 0; i < 14; i++) { const d = shiftDay(start, i), times = rbSlotsOn(ch, d, fmt); if (dow(d) === 2 && ch === 'instagram' && fmt === 'reel') continue;   // Tuesday's Instagram Reel slot is the DYK
+      if (times.length) return { date: d, time: times[0], times, why: `Rulebook slot: ${NAME[ch]} ${fmt === 'text' ? 'post' : fmt} ${new Date(d + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long' })} ${clockTxt(times[0])} ET (${manila(d, times[0])} in Manila).`, moved: d === p.date ? '' : ch === home ? `No ${NAME[ch]} ${fmt} slot on the planned day, so this moved to ${d}.` : '' }; }
+    return { date: p.date, time: '', why: `No rulebook slot for ${NAME[ch]} ${fmt}.` };
+  }
+  // Manila time for an Eastern slot (Eastern = Manila − 13 h on standard time, − 12 h on daylight time).
+  function manila(date, time) {
+    if (!time) return '';
+    const off = date >= '2027-03-14' && date < '2027-11-07' ? 12 : 13, [h, m] = time.split(':').map(Number), t = h + off, next = t >= 24;
+    return `${(t % 24) % 12 || 12}${m ? ':' + String(m).padStart(2, '0') : ''} ${t % 24 < 12 ? 'AM' : 'PM'}${next ? ' next day' : ''}`;
+  }
+  const TAGLINE = sport => { const s = String(sport || '').toLowerCase(); const v = /wrestl/.test(s) ? 'Wrestle' : /hockey/.test(s) ? 'Skate' : /run|track|cross[- ]?country/.test(s) ? 'Run' : /box|mma|kickbox|fight/.test(s) ? 'Fight' : /soccer|basketball/.test(s) ? 'Play' : ''; return v ? `Look fearless. ${v} fearless.` : ''; };
+
   /* ---------- 1. Caption Bot ---------- */
   function bodyOf(p) {
     let b = String(p.captionBody || p.caption || '').trim();
     for (const part of [p.cta, p.hashtags]) if (part && b.endsWith(String(part).trim())) b = b.slice(0, -String(part).trim().length).trim();
     return b.replace(/(\s*#[\p{L}\p{N}_]+)+\s*$/u, '').trim();
   }
+  // Posting Rulebook captions: written for each platform, never copied from another; one CTA, placed where the platform wants it.
+  const RB_MAXTAGS = { facebook: 5, instagram: 5, tiktok: 4, youtube: 0, threads: 1, bluesky: 1, pinterest: 0 };   // Instagram: the rulebook says 5–8, the platform caps hashtags at 5
+  const RB_MINTAGS = { facebook: 3, instagram: 5, tiktok: 3 };
+  const rbLink = (p, ch) => `${(productsFor(p)[0] || {}).url || 'https://www.rshsports.com/'}?utm_source=${ch}&utm_medium=organic_social&utm_campaign=${slug(p.title)}`;
+  const rbQuestion = p => { const all = [p.hook, p.captionBody || p.caption, p.onImageText].map(x => String(x || '')).join(' '); const m = all.replace(/\s+/g, ' ').match(/[^.!?]*\?/); return m ? m[0].trim() : ''; };
+  const rbTopic = p => { const s = String(p.sport || '').trim(); return s ? '#' + s.split(/[ /]/)[0].replace(/[^\p{L}]/gu, '').replace(/^./, c => c.toUpperCase()) : ''; };
+  function rbTags(p, ch) { const so = seoFor(p.id, ch), own = (String(p.hashtags || '').match(/#[\p{L}\p{N}_]+/gu) || []), list = [...new Set(own.concat((so && so.ch.hashtags) || []).map(t => t.trim()).filter(Boolean))]; return list.slice(0, RB_MAXTAGS[ch] || 0); }
+  function rbYouTubeTitle(p) { const so = seoFor(p.id, 'youtube'), base = String((so && so.ch.title) || p.hook || p.title || '').replace(/^pinterest:\s*/i, '').replace(/\s*#\S+/g, '').trim(), tags = rbTags(p, 'tiktok').concat(rbTags(p, 'instagram')).filter((t, i, a) => a.indexOf(t) === i).slice(0, 3); return cut(base, 99 - tags.join(' ').length - 1) + (tags.length ? ' ' + tags.join(' ') : ''); }
+  function rbCaption(p, ch) {
+    const body = bodyOf(p), hook = sentence(p.hook) || firstSentences(body, 1), q = rbQuestion(p), join = parts => parts.filter(Boolean).join('\n\n'), tags = rbTags(p, ch).join(' ');
+    if (ch === 'facebook') { let t = firstSentences(body, 2); if (q && !t.includes(q)) t += ' ' + q; return join([t, tags]); }   // 2–3 sentences, a question; the link goes in the first comment
+    if (ch === 'instagram') { const lines = firstSentences(body.replace(hook, ''), 2) || firstSentences(body, 2); return join([hook, lines + ' Link in bio.', tags]); }
+    if (ch === 'tiktok') { const line = (q || hook).replace(/\s+/g, ' ').trim(); return cut(line + (tags ? ' ' + tags : ''), 300); }   // one line ending on a question; the bio link is the CTA
+    if (ch === 'youtube') return cut(firstSentences(body, 1) || hook, 200) + ' www.rshsports.com';   // the description: one line plus the website; the title carries the hashtags
+    if (ch === 'threads') return cut(join([firstSentences(body, 2) || hook, `Team gear at rshsports.com. ${rbTopic(p)}`.trim()]), 480);
+    if (ch === 'bluesky') return cut(`${firstSentences(body, 1) || hook} rshsports.com`, 290);
+    if (ch === 'pinterest') return join([cut(String(p.title || '').replace(/^pinterest:\s*/i, ''), 100), cut(firstSentences(body, 2), 380), rbLink(p, 'pinterest')]);
+    return join([body]);
+  }
   function captionFor(p, ch) {
+    if (rbOn(p.date)) return rbCaption(p, ch);
     const body = bodyOf(p), cta = String(p.cta || '').trim(), hook = sentence(p.hook), join = parts => parts.filter(Boolean).join('\n\n');
     if (ch === 'instagram') return join([body, cta, tagsOf(p, 8)]);
     if (ch === 'facebook') return join([body, cta, tagsOf(p, 2)]);
@@ -512,7 +599,7 @@ Answer with JSON only, exactly these keys:
   const openPacks = new Set();
   let deskOpen = false;
   const hashOf = s => { let h = 5381; for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return (h >>> 0).toString(36); };
-  const scriptSig = p => hashOf([p.title, p.hook, p.caption, p.captionBody, p.cta, p.platform, p.postType, p.date, p.sport, p.audience, p.goal, p.onImageText, p.visualConcept, p.aspectRatio].map(x => String(x || '')).join('|') + (NO_NUMBER.test(String(p.sport || '')) ? '|kit-rule-2' : ''));   // kit-rule-2: wrestling singlets carry no player number (Nov 26)
+  const scriptSig = p => hashOf([p.title, p.hook, p.caption, p.captionBody, p.cta, p.platform, p.postType, p.date, p.sport, p.audience, p.goal, p.onImageText, p.visualConcept, p.aspectRatio].map(x => String(x || '')).join('|') + (NO_NUMBER.test(String(p.sport || '')) ? '|kit-rule-2' : '') + (rbOn(p.date) ? '|rulebook-1' : ''));   // kit-rule-2: wrestling singlets carry no player number (Nov 26)
   async function loadScripts() { if (!db) return; try { const q = await db.collection('scripts').get(); const m = {}; for (const s of q.docs) { const d = s.data(); if (d && d.postId && d.text) m[d.postId] = d; } scripts = m; } catch (_) {} }
   const isStill = p => /image|photo|carousel|graphic|pin/i.test(String(p.postType || '')) && !/video|reel|short|story/i.test(String(p.postType || ''));
   function scriptPrompt(p) {
@@ -555,7 +642,7 @@ PART 5 — VOICEOVER (optional) — lines with time ranges, total words, tone.${
 PART 6 — CAPTION — the campaign caption unchanged. If there is none, write one: line 1 the hook (no brand); line 2 an optional payoff; a blank line; one easy question to answer in a comment; a blank line; the follow line ("Follow RSH Sports for more ${sport ? sport.toLowerCase() + ' ' : ''}stories, tips and team ideas."); "Tag a teammate who needs this."; then 8 to 12 relevant hashtags including #RSHSports.
 PART 7 — CHECK BEFORE IT GOES TO REVIEW — a tick-box list: product real and available (or no product shown); colours match; no third-party marks; no price, stock or performance claims; no identifiable person; hook readable in the first second; every line up at least 2.5 s; nothing shakes or flashes; end card and website right; caption matches the campaign.
 
-Keep it complete but tight: no introduction or sign-off outside the pack.
+${rbOn(p.date) ? rbPackRules(p) : ''}Keep it complete but tight: no introduction or sign-off outside the pack.
 
 CAMPAIGN
 Title: ${p.title || ''}
@@ -568,6 +655,24 @@ Caption: ${p.captionBody || p.caption || ''}
 Call to action: ${p.cta || ''}
 Hashtags: ${p.hashtags || ''}
 ${isDyk(p) ? 'This is a Tuesday Did You Know post.\n' : ''}${productBlock(p) ? productBlock(p) + '\nThis campaign shows a real RSH product: route the product shots through these real photos (the reference image), never a text-to-image product; list the colorway, the reference photos and the vendor-mark check in TO CONFIRM.\n' : ''}${seasonContext()}`;
+  }
+  function rbPackRules(p) {
+    const t = rbTargets(p), home = rbHome(p);
+    return `POSTING RULEBOOK (in force Dec 1, 2026 – Dec 31, 2027; it wins over the parts above where they differ)
+- Home platform: ${NAME[t[0]]} (${home[1]}). Write Parts 2–5 for the home platform's own style.
+- One idea, a separately produced post per platform: the same file never goes to two platforms, and a re-cut, trim or re-caption does not count${isDyk(p) ? ' (the DYK is the one exception: the same video goes to Instagram 7 AM and YouTube 4 PM on Tuesday, and to no other platform)' : ''}.
+- This idea goes to: ${t.map(c => NAME[c]).join(', ')} (the home platform first, the others later the same week; never more than three besides the home).
+- Tagline closes the Facebook and Instagram versions only: "${TAGLINE(p.sport) || 'Look fearless. [sport verb] fearless.'}" (soccer and basketball Play, wrestling Wrestle, hockey Skate, running Run, boxing and MMA Fight; never default to Play).
+- One CTA per post: Facebook and Instagram put the website link in the first comment (Instagram also says "Link in bio"); TikTok and YouTube Shorts point to the bio or channel link; Threads and Bluesky say it in plain words; Pinterest carries the link in the pin.
+Add PART 8 — PLATFORM VERSIONS: one block for each of ${t.map(c => NAME[c]).join(', ')}, each produced separately (its own Google Flow prompt, never a trim of another), with: video style, Flow prompt (complete, with the negative list), length and ratio, audio, text on screen, the caption in that platform's format, CTA placement, and the slot. Styles:
+  Facebook: story reel, cinematic three-beat narrative (setup, turn, payoff) with a coach voiceover and low music, 30–45 s 9:16, lower-third title on the last beat; caption 2–3 conversational sentences with a question, 3–5 hashtags.
+  Instagram: quote reel, one static hero frame with the athlete mid-motion on a clean background, bold centred overlay from frame 1 building word by word, trending audio, no voice, 7–15 s 9:16, loops cleanly; caption = hook line, blank line, 1–2 lines, blank line, 5 hashtags.
+  TikTok: handheld phone-style POV, jump cuts, natural light, whip pans, slightly imperfect framing, direct to camera, ends on a choice ("1 or 2?"), bottom captions, 8–15 s 9:16; caption one line ending on a question, 3–4 hashtags inline.
+  YouTube: explainer Short, title card, three points, studio product shots on white seamless with a slow turntable and macro on fabric and seams, narration with no music under the voice, 20–45 s 9:16; title = a search query under 100 characters with 3 hashtags at the end; description = one line + www.rshsports.com.
+  Threads: the text is the post (1–3 lines, the sentence a coach would say out loud, one topic tag, no hashtags); optional proof frame, a 3-second loop or still, 4:5; then reply to the post with the question.
+  Bluesky: one still image, an editorial photo in natural light with the product clearly visible, 4:5; 1–2 lines under 300 characters with rshsports.com spelled out.
+  Pinterest: a catalog-clean product still, 2:3 1000×1500 (or a 3–5 slide 9:16 Idea Pin), keyword title overlay, one pin per colour; title = the search term, description = 2 sentences that repeat the keyword, link to the product page.
+`;
   }
   async function writeScript(p) {
     const sample = await use('sample'); if (!sample) { sageNote = 'Asking Claude is not available in this view, so Sage could not write production packs.'; return false; }
@@ -761,6 +866,7 @@ ${isDyk(p) ? 'This is a Tuesday Did You Know post.\n' : ''}${productBlock(p) ? p
     const free = (it, t) => !used.has(`${it.date}|${t}|${it.channel}`) && !busyM.has(`${it.date}|${t}|${it.channel}`);
     for (const it of items) {
       if (it.edited && it.time) { used.add(`${it.date}|${it.time}|${it.channel}`); continue; }
+      if (it.rb && it.rbTimes && it.rbTimes.length) { it.time = it.rbTimes.find(t => free(it, t)) || it.rbTimes[0]; it.why = it.rbWhy; used.add(`${it.date}|${it.time}|${it.channel}`); continue; }   // Posting Rulebook slots win over learned hours
       const L = learned[it.channel];
       if (L && free(it, L.time)) { it.time = L.time; it.why = `Best hour in your own ${NAME[it.channel]} posts: ${L.n} posts around ${clockTxt(L.time)} averaged ${L.avg.toLocaleString('en-US')} ${L.metric}${L.tried === 1 ? ' (all recent posts went out at this hour, so other hours are untested)' : ` (best of ${L.tried} hours tried)`}.`; }
       else {
@@ -773,6 +879,39 @@ ${isDyk(p) ? 'This is a Tuesday Did You Know post.\n' : ''}${productBlock(p) ? p
     return learned;
   }
   function clockTxt(t) { const [h, m] = t.split(':').map(Number); return `${(h % 12) || 12}${m ? ':' + String(m).padStart(2, '0') : ''} ${h < 12 ? 'AM' : 'PM'}`; }
+
+  // Posting Rulebook rule 1: one file per platform. A file belongs to a platform when its name says so
+  // (e.g. "singlet-tiktok.mp4", "pin-2x3.jpg" for Pinterest); the home platform may also use the untagged file.
+  const RB_TAG = { facebook: /(^|[^a-z])(facebook|fb)([^a-z]|$)/i, instagram: /(^|[^a-z])(instagram|insta|ig)([^a-z]|$)/i, tiktok: /(^|[^a-z])(tiktok|tt)([^a-z]|$)/i, youtube: /(^|[^a-z])(youtube|yt|short)([^a-z]|$)/i, threads: /(^|[^a-z])threads([^a-z]|$)/i, bluesky: /(^|[^a-z])(bluesky|bsky)([^a-z]|$)/i, pinterest: /(^|[^a-z])(pinterest|pin)([^a-z]|$)/i };
+  const tagOfFile = a => Object.keys(RB_TAG).filter(ch => RB_TAG[ch].test(String(a && a.name || '')));
+  function rbFileFor(it, p) {
+    const all = [p.creativeAsset].concat(p.creativeAssets || []).filter(Boolean).filter((a, i, arr) => arr.findIndex(b => b.id === a.id) === i);
+    const still = it.channel === 'bluesky' || (it.channel === 'pinterest' && kindOf(p) !== 'video'), wantVid = !still && it.channel !== 'threads' && rbFormat(p, it.channel) !== 'image' && rbFormat(p, it.channel) !== 'carousel';
+    const okKind = a => still ? /^image\//.test(a.mime || '') : wantVid ? /^video\//.test(a.mime || '') : true;
+    const own = all.filter(a => tagOfFile(a).includes(it.channel) && okKind(a));
+    if (own.length) return own[own.length - 1];
+    if (it.home || (isDyk(p) && (it.channel === 'instagram' || it.channel === 'youtube'))) { const plain = all.filter(a => !tagOfFile(a).length && okKind(a)); if (plain.length) return plain[plain.length - 1]; }
+    return null;
+  }
+  // Was the media generated (Google Flow and similar)? From the file name, or Sage's pack choosing the AI-generated route.
+  const aiOf = (p, f) => /(^|[^a-z])(flow|veo|imagen|gemini|generated|ai)([^a-z]|$)/i.test(String(f && f.name || '')) || /READ THIS FIRST[\s\S]{0,600}AI-generated/i.test((scripts[p.id] && scripts[p.id].text) || '');
+  const RB_STYLE = { facebook: 'a story reel: cinematic three-beat narrative with a coach voiceover, 30–45 s', instagram: 'a quote reel: one hero shot, bold overlay from frame 1, 7–15 s', tiktok: 'handheld phone-style POV, jump cuts, ends on a choice, 8–15 s', youtube: 'an explainer Short: title card, three points, product b-roll, 20–45 s', threads: 'an optional proof frame: a 3-second loop or still, 4:5', bluesky: 'one still image: an editorial product or athlete photo, 4:5', pinterest: 'a catalog-clean 2:3 still (1000 × 1500) with a keyword title overlay' };
+  function rbChecks(it, items, p) {
+    const out = [], f = rbFileFor(it, p), dyk = isDyk(p);
+    if (it.channel !== 'threads' && !f && !(it.home && !(p.creativeAssets || []).length)) out.push(['stop', `Needs its own ${NAME[it.channel]} version: ${RB_STYLE[it.channel]}. Rulebook: never the same file on two platforms (name the file with “${it.channel}”).`]);
+    if (f) { const twin = items.find(o => o !== it && !(dyk && o.postId === it.postId) && (() => { const q = (app().data().posts || []).find(x => x.id === o.postId); return q && o.rb && (rbFileFor(o, q) || {}).id === f.id; })()); if (twin) out.push(['stop', `Same file as the ${NAME[twin.channel]} post; every platform needs its own video`]); }
+    const fmt = rbFormat(p, it.channel), slots = rbSlotsOn(it.channel, it.date, fmt);
+    if (it.time && !slots.includes(it.time)) out.push([it.edited ? 'warn' : 'stop', `${clockTxt(it.time)} is not a rulebook slot for ${NAME[it.channel]} on ${new Date(it.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long' })}${slots.length ? ` (use ${slots.map(clockTxt).join(' or ')})` : ''}`]);
+    if ((it.channel === 'facebook' || it.channel === 'instagram') && fmt !== 'image' && fmt !== 'carousel' && it.time === '18:00') out.push(['stop', 'A reel never goes out at 6 PM on Facebook or Instagram']);
+    if (!it.home && !dyk) { const h = items.find(o => o.postId === it.postId && o.home); if (h && `${h.date}T${h.time}` >= `${it.date}T${it.time}`) out.push(['stop', `Goes out before its home platform (${NAME[h.channel]}); the home post goes first`]); }
+    { const tl = /look fearless\.\s*(\w+) fearless/i.exec(it.caption), want = TAGLINE(p.sport); if (tl && want && !want.includes(tl[1])) out.push(['stop', `Tagline uses “${tl[1]}”; ${p.sport} is “${want}”`]); }
+    if (it.channel === 'threads') { const q = rbQuestion(p); out.push(['warn', q ? `After it posts, reply to it with the question: “${cut(q, 80)}”` : 'After it posts, reply to it with a question']); }
+    if (it.channel === 'youtube') out.push(['ok', `Title: ${cut(rbYouTubeTitle(p), 70)}`]);
+    if (f && aiOf(p, f) && ['instagram', 'tiktok', 'youtube'].includes(it.channel)) out.push(['ok', 'AI-generated flag on']);
+    if (['facebook', 'instagram', 'youtube'].includes(it.channel) && f && /^video\//.test(f.mime || '')) out.push(['warn', 'Add a custom thumbnail in Metricool before it goes live']);
+    if (it.time) out.push(['ok', `Reply window: ${manila(it.date, it.time)} Manila, 60 minutes`]);
+    return out;
+  }
 
   /* ---------- 3. Manager Bot ---------- */
   function check(items, posts) {
@@ -787,11 +926,13 @@ ${isDyk(p) ? 'This is a Tuesday Did You Know post.\n' : ''}${productBlock(p) ? p
       if (busyM.has(`${it.date}|${it.time}|${it.channel}`) && !(it.sent && /scheduled|draft/.test(it.sent.status))) out.push(['stop', 'Metricool already has a post at this time']);
       if (it.caption.length > LIMIT[it.channel]) out.push(['stop', `Caption is ${it.caption.length} characters; ${NAME[it.channel]} allows ${LIMIT[it.channel]}`]);
       if (!it.caption.trim()) out.push(['stop', 'No caption']);
-      const video = /reel|video|story/i.test(p.postType || '');
-      if ((it.channel === 'tiktok' || it.channel === 'youtube') && !video) out.push(['warn', `${NAME[it.channel]} needs a video; this campaign is a ${p.postType || 'photo'}`]);
-      if (/rshsports\.com/i.test(it.caption) && !/[?&]utm_/i.test(it.caption)) out.push(['warn', 'Store link has no tracking']);
+      const video = kindOf(p) === 'video' || kindOf(p) === 'story';
+      if (!it.rb && (it.channel === 'tiktok' || it.channel === 'youtube') && !video) out.push(['warn', `${NAME[it.channel]} needs a video; this campaign is a ${p.postType || 'photo'}`]);
+      if (/rshsports\.com/i.test(it.caption) && !/[?&]utm_/i.test(it.caption) && !(it.rb && ['youtube', 'threads', 'bluesky'].includes(it.channel))) out.push(['warn', 'Store link has no tracking']);
+      if (it.rb) out.push(...rbChecks(it, items, p));
       { const tags = (it.caption.match(/(^|\s)#[\p{L}\p{N}_]+/gu) || []).length, mx = MAXTAGS[it.channel];
-        if (mx != null && tags > mx) out.push([it.channel === 'instagram' || it.channel === 'tiktok' ? 'stop' : 'warn', mx === 0 ? `${NAME[it.channel]} works on keywords, not hashtags: remove the ${tags} hashtag${tags === 1 ? '' : 's'}` : `${tags} hashtags; ${NAME[it.channel]} allows ${mx}`]); }
+        if (it.rb) { const rmx = RB_MAXTAGS[it.channel]; if (tags > rmx) out.push(['stop', rmx === 0 ? `No hashtags on ${NAME[it.channel]} (rulebook)` : `${tags} hashtags; the rulebook allows ${rmx} on ${NAME[it.channel]}`]); }
+        else if (mx != null && tags > mx) out.push([it.channel === 'instagram' || it.channel === 'tiktok' ? 'stop' : 'warn', mx === 0 ? `${NAME[it.channel]} works on keywords, not hashtags: remove the ${tags} hashtag${tags === 1 ? '' : 's'}` : `${tags} hashtags; ${NAME[it.channel]} allows ${mx}`]); }
       if (/\b(comment (yes|below if)|like if|tag \d+ (friends|people)|share if you agree|type (yes|amen))\b/i.test(it.caption)) out.push(['warn', 'Engagement-bait wording: Meta cuts reach for it']);
       if (it.edited) out.push(['warn', 'Edited by hand']);
       if (it.moved) out.push(['warn', it.moved]);
@@ -812,6 +953,7 @@ ${isDyk(p) ? 'This is a Tuesday Did You Know post.\n' : ''}${productBlock(p) ? p
     return tue ? { date: shiftDay(p.date, 1), moved: `${dayName} is the DYK day, so this moved to the next day.` } : { date: p.date };
   }
   function targets(p) {            // the campaign's own channel first, then the extra channels chosen in setup
+    if (rbOn(p.date)) return rbTargets(p);   // Posting Rulebook (from Dec 1, 2026)
     const own = String(p.platform || '').toLowerCase().replace(/[^a-z]/g, ''), list = NAME[own] ? [own] : [];
     for (const c of settings.channels) if (!list.includes(c)) list.push(c);
     if (isDyk(p) && settings.dykDay != null && settings.dykDay !== '') for (const c of CHANNELS.map(x => x[0])) if (c !== 'pinterest' && !list.includes(c)) list.push(c);   // DYK goes everywhere but Pinterest
@@ -823,9 +965,10 @@ ${isDyk(p) ? 'This is a Tuesday Did You Know post.\n' : ''}${productBlock(p) ? p
     const old = new Map(((plan && plan.items) || []).map(i => [i.postId + '|' + i.channel, i])), items = [];
     for (const p of inRange) for (const ch of targets(p)) {
       const prev = old.get(p.id + '|' + ch);
-      const dd = dayFor(p, ch);
+      const dd = rbOn(p.date) ? rbPlace(p, ch) : dayFor(p, ch);
       const it = prev && prev.edited ? { ...prev, date: prev.placed ? prev.date : dd.date } : { postId: p.id, channel: ch, date: dd.date, time: '', caption: captionFor(p, ch), edited: false, ...(prev && prev.posted ? { posted: prev.posted } : {}), ...(prev && prev.sent ? { sent: prev.sent, placed: prev.placed } : {}), ...(prev && prev.mediaUrl ? { mediaUrl: prev.mediaUrl } : {}) };
       if (dd.moved) it.moved = dd.moved; else delete it.moved; if (dd.dykWarn) it.dykWarn = dd.dykWarn; else delete it.dykWarn;
+      if (rbOn(p.date)) { it.rb = true; it.rbTimes = dd.times || (dd.time ? [dd.time] : []); it.rbWhy = dd.why || ''; if (ch === targets(p)[0]) it.home = true; else delete it.home; } else { delete it.rb; delete it.rbTimes; delete it.rbWhy; delete it.home; }
       items.push(it);
     }
     const learned = schedule(items); check(items, posts);
@@ -1758,6 +1901,16 @@ ${isDyk(p) ? 'This is a Tuesday Did You Know post.\n' : ''}${productBlock(p) ? p
     app().save(); return true;
   }
   function seasonContext() { return 'SEASON CONTEXT (researched Nov 26, 2026): US high school and college wrestling season. State tournaments mid-February to mid-March; NCAA Division I Championships Mar 18–20, 2027 in St. Louis. Girls’ wrestling at record participation; NFHS 2026–27 focus on properly fitted uniforms for girls. Every Tuesday is a Did You Know post.'; }
+  function rulebookHtml() {
+    const days = [1, 2, 3, 4, 5, 6, 0], dn = d => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d], cell = (ch, d) => ((RB_SLOTS[ch] || {})[d] || []).map(([t, f]) => `${f === 'dyk' ? 'DYK ' : ''}${f === 'story' ? 'Story only' : f === 'test' ? 'test ' : ''}${f === 'story' ? '' : (f === 'reel' || f === 'dyk' ? 'Reel ' : f === 'image' ? 'image ' : f === 'carousel' ? 'carousel ' : f === 'pin' ? 'Pins ' : '') + clockTxt(t)}`.replace(/^DYK Reel/, ch === 'youtube' ? 'DYK Short' : 'DYK Reel')).join(', ') || '—';
+    const routes = ['DYK video → Instagram Reel 7 AM + YouTube Short 4 PM, every Tuesday, no other platform', 'Product reveal, uniform design, team-store or ordering news → Facebook Reel 10 AM (Pinterest gets the still the same weekend)', 'Spoken quote or motivational line with a text overlay → Instagram Reel 7 or 9 AM', 'A choice or comparison (“which side is your match-day look?”) → TikTok 10 AM', 'News, rule changes, explainers, anything searched → YouTube Short 4 PM', 'A question more than a picture (“what is your pre-match ritual?”) → Threads 9 AM as text, clip as proof', 'None of the above → Facebook Reel'];
+    return `<div class="card" style="margin-top:16px"><div class="eyebrow">POSTING RULEBOOK · IN FORCE DEC 1, 2026 – DEC 31, 2027</div><h2 style="margin-top:6px">One idea, a separate post for every platform, at that platform’s US Eastern slot</h2>
+      <p class="small" style="margin-top:6px">The bots follow this for every campaign dated from December 1, 2026: Tempo uses these slots, Quill writes each platform’s caption in its own format with one CTA, Ref holds a post that has no file of its own or is off-slot, and Sage writes a version for each platform. Posts dated before December 1 keep the earlier rules.</p>
+      <div style="overflow-x:auto;margin-top:10px"><table class="tbl" style="font-size:12px;min-width:720px"><thead><tr><th>Day (ET)</th>${RB_ORDER.map(c => `<th>${esc(NAME[c])}</th>`).join('')}</tr></thead><tbody>${days.map(d => `<tr><td><strong>${dn(d)}</strong></td>${RB_ORDER.map(c => `<td>${esc(cell(c, d))}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
+      <p class="small" style="margin-top:6px">Weekly volume: ${RB_ORDER.map(c => `${NAME[c]} ${RB_VOLUME[c]}`).join(' · ')}. Manila is 13 hours ahead of Eastern until US daylight time starts (March 14, 2027), then 12. Re-check Metricool’s best times on the first Monday of each month.</p>
+      <div class="grid cols2" style="margin-top:10px;gap:12px"><div><h3 style="font-size:15px">Which platform is home</h3><ol class="small" style="margin-top:6px;display:grid;gap:4px">${routes.map(r => `<li>${esc(r)}</li>`).join('')}</ol></div>
+      <div><h3 style="font-size:15px">Golden rules</h3><ul class="small" style="margin-top:6px;display:grid;gap:4px">${['The same video file never goes to two platforms (the Tuesday DYK is the one exception). At most three platforms besides the home touch the same idea in a week.', 'Weekdays for Facebook, Instagram, TikTok, YouTube, Threads and Bluesky; weekends are for Pinterest (Instagram Stories only; Bluesky Saturday 5 PM is a test).', 'One CTA, placed by platform: Facebook and Instagram link in the first comment, TikTok and YouTube the bio or channel link, Threads and Bluesky plain words, Pinterest the pin link.', 'Tagline follows the sport: wrestling Wrestle, soccer and basketball Play, hockey Skate, running Run, boxing and MMA Fight.', 'Reply to every comment within 60 minutes; nothing goes live when nobody can answer.', 'YouTube Shorts are never made for kids (category Sports). Declare AI-generated media on Instagram, TikTok and YouTube.', 'One network per Metricool post, RSH Sports brand only, never the anthonyflatt.com brand.'].map(r => `<li>${esc(r)}</li>`).join('')}</ul></div></div></div>`;
+  }
   function playbookHtml() {
     const link = u => /^https?:/.test(u) ? `<a href="${esc(u)}" target="_blank" rel="noopener noreferrer">source ↗</a>` : `<span class="small">${esc(u)}</span>`;
     const dfmt = d => new Date(d + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
@@ -1880,7 +2033,7 @@ ${isDyk(p) ? 'This is a Tuesday Did You Know post.\n' : ''}${productBlock(p) ? p
         </div>
       </div>
       <div data-bot-panel="channels" ${tab === 'channels' ? '' : 'hidden'}>${tab === 'channels' ? connectionsHtml(items) : ''}</div>
-      <div data-bot-panel="playbook" ${tab === 'playbook' ? '' : 'hidden'}>${tab === 'playbook' ? playbookHtml() : ''}</div>
+      <div data-bot-panel="playbook" ${tab === 'playbook' ? '' : 'hidden'}>${tab === 'playbook' ? rulebookHtml() + playbookHtml() : ''}</div>
       <div data-bot-panel="setup" ${tab === 'setup' ? '' : 'hidden'}>
         <div class="card" style="margin-top:16px">
         <h2 style="font-size:18px">Setup</h2><p class="small" style="margin-top:6px">Changes apply the next time the bots run.</p>
@@ -1888,7 +2041,7 @@ ${isDyk(p) ? 'This is a Tuesday Did You Know post.\n' : ''}${productBlock(p) ? p
           <div><label class="h">Also post each campaign to</label><div class="chs">${CHANNELS.map(c => `<label><input type="checkbox" data-bot-ch="${c[0]}" ${settings.channels.includes(c[0]) ? 'checked' : ''}> ${esc(c[1])}</label>`).join('')}</div><div class="small" style="margin-top:4px">A campaign always goes to its own channel as well.</div></div>
           <div><label class="h" for="rshBotTimes">Posting times, US Eastern</label><input type="text" id="rshBotTimes" value="${esc(settings.times.map(t => t + (settings.labels && settings.labels[t] ? ' ' + settings.labels[t] : '')).join(', '))}" size="38" placeholder="12:00 lunch break, 18:00 after practice"><div class="small" style="margin-top:4px">24-hour time, then an optional name. Separate slots with commas.</div></div>
           <div><label class="h" for="rshBotPin">Pinterest board</label><input type="text" id="rshBotPin" value="${esc(settings.pinBoard || '')}" size="24" placeholder="Board number or exact board name"><div class="small" style="margin-top:4px">Metricool needs a board for every Pin. This is the board your team’s Pins in Metricool already use; type another board’s exact name to change it.</div></div>
-          <div><label class="h" for="rshBotDyk">“Did You Know” video day</label><select id="rshBotDyk"><option value="" ${settings.dykDay == null || settings.dykDay === '' ? 'selected' : ''}>No weekly DYK day</option>${['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((d, i) => `<option value="${i}" ${String(settings.dykDay) === String(i) ? 'selected' : ''}>${d}</option>`).join('')}</select><div class="small" style="margin-top:4px">DYK campaigns go to every channel except Pinterest on this day; other posts move off it (Pinterest stays as planned).</div></div>
+          <div><label class="h" for="rshBotDyk">“Did You Know” video day</label><select id="rshBotDyk"><option value="" ${settings.dykDay == null || settings.dykDay === '' ? 'selected' : ''}>No weekly DYK day</option>${['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((d, i) => `<option value="${i}" ${String(settings.dykDay) === String(i) ? 'selected' : ''}>${d}</option>`).join('')}</select><div class="small" style="margin-top:4px">From December 1, 2026 (Posting Rulebook): the DYK goes to Instagram 7 AM and YouTube 4 PM every Tuesday, and to no other platform. Before then: every channel except Pinterest on this day.</div></div>
           <div><label class="h" for="rshBotDays">Look ahead</label><select id="rshBotDays">${[7, 14, 21, 30].map(n => `<option value="${n}" ${settings.days === n ? 'selected' : ''}>${n} days</option>`).join('')}</select></div>
         </div>
         <div style="margin-top:16px"><label style="display:inline-flex;gap:8px;align-items:flex-start;font-size:13px;cursor:pointer"><input type="checkbox" id="rshBotAlways" ${aoOn() ? 'checked' : ''} style="margin-top:2px"><span><strong>Run all bots 24/7 on this computer</strong><br><span class="small">Switch this on only on the computer that stays on, with this app left open in its own window. Every 30 minutes, day and night, the whole team runs: Pixel, Reel's queue, Quill, Tempo, Ref and Courier, plus fresh Metricool numbers. Only approved posts are ever scheduled. One computer runs at a time; the others stand by.</span></span></label></div>
@@ -1948,6 +2101,7 @@ ${isDyk(p) ? 'This is a Tuesday Did You Know post.\n' : ''}${productBlock(p) ? p
   }
   const hasCta = t => /\b(follow|subscribe)\b/i.test(t) && /\b(share|comment|save)\b/i.test(t);
   function withCta(it, text) {
+    if (it.rb) return text;   // Posting Rulebook: one CTA per post, already placed by the caption
     const cta = ctaFor(it); if (!cta || hasCta(text)) return text;
     const tagAt = text.search(/(\n\n|^)(#[\p{L}\p{N}_]+\s*)+$/u), body = tagAt > 0 ? text.slice(0, tagAt) : text, tail = tagAt > 0 ? text.slice(tagAt) : '';
     const next = body.replace(/\s+$/, '') + '\n\n' + cta + tail;
@@ -1957,6 +2111,7 @@ ${isDyk(p) ? 'This is a Tuesday Did You Know post.\n' : ''}${productBlock(p) ? p
   function sendTextBase(it) {
     const cap = String(it.caption || '').replace(/\s+$/, ''), so = seoFor(it.postId, it.channel);
     if (!so) return cap;
+    if (it.rb) return cap;   // Posting Rulebook captions already carry their hashtags
     const have = (cap.match(/(^|\s)#[\p{L}\p{N}_]+/gu) || []).length, room = Math.max(0, (MAXTAGS[it.channel] == null ? 5 : MAXTAGS[it.channel]) - have);
     let base = cap;
     if (it.channel === 'youtube' && so.ch.descriptionLead && !cap.toLowerCase().includes(so.ch.descriptionLead.toLowerCase().slice(0, 30))) base = so.ch.descriptionLead + '\n\n' + cap;
@@ -1971,11 +2126,15 @@ ${isDyk(p) ? 'This is a Tuesday Did You Know post.\n' : ''}${productBlock(p) ? p
     const vid = files.some(a => /^video\//.test(a.mime || '')), title = String(p.title || '').slice(0, 90), ch = it.channel;
     const info = { autoPublish: true, draft: mode === 'draft', providers: [{ network: ch }], text: sendText(it), firstCommentText: '', publicationDate: { dateTime: `${it.date}T${it.time}:00`, timezone: 'America/New_York' }, media: it.mediaUrl ? [it.mediaUrl] : [], mediaAltText: [], descendants: [], shortener: false, smartLinkData: { ids: [] }, hasNotReadNotes: false };
     const so = seoFor(it.postId, ch); if (so && so.altText && info.media.length) info.mediaAltText = [so.altText];
+    if (it.rb) {   // Posting Rulebook: website link in the first comment on Facebook and Instagram; alt text on every image and video
+      if (ch === 'facebook' || ch === 'instagram') info.firstCommentText = `More from RSH Sports: ${rbLink(p, ch)}`;
+      if (info.media.length && !info.mediaAltText.length) info.mediaAltText = [cut(`${p.title || 'RSH Sports post'}${p.sport ? ' · ' + p.sport : ''}`, 200)];
+    }
     if (ch === 'instagram') info.instagramData = { type: vid ? 'REEL' : 'POST', showReelOnFeed: true, isAiGenerated: !!ai };
     if (ch === 'facebook') info.facebookData = { type: vid ? 'REEL' : 'POST', title: vid ? title : '' };
     if (ch === 'tiktok') info.tiktokData = { privacyOption: 'PUBLIC_TO_EVERYONE', title: (so && so.ch.title) || title, isAigc: !!ai };
-    if (ch === 'youtube') info.youtubeData = { title: (so && so.ch.title) || title, tags: (so && so.ch.tags) || [], category: 'SPORTS', type: 'short', privacy: 'public', madeForKids: false, isAiGeneratedContent: !!ai };
-    if (ch === 'pinterest') info.pinterestData = { boardId: settings.pinBoard || '', pinTitle: (so && so.ch.title) || title, pinLink: (String(it.caption).match(/https:\/\/\S+/) || [''])[0], isAiGenerated: !!ai };
+    if (ch === 'youtube') info.youtubeData = { title: it.rb ? rbYouTubeTitle(p) : (so && so.ch.title) || title, tags: (so && so.ch.tags) || [], category: 'SPORTS', type: 'short', privacy: 'public', madeForKids: false, isAiGeneratedContent: !!ai };
+    if (ch === 'pinterest') info.pinterestData = { boardId: settings.pinBoard || '', pinTitle: (so && so.ch.title) || title, pinLink: (String(it.caption).match(/https:\/\/\S+/) || [it.rb ? rbLink(p, 'pinterest') : ''])[0], isAiGenerated: !!ai };
     if (ch === 'threads') info.threadsData = {};
     if (ch === 'bluesky') info.blueskyData = {};
     return { blogId: BRAND, date: `${it.date}T${it.time}:00${nyOffset(it.date, it.time)}`, info: JSON.stringify(info) };
@@ -1985,6 +2144,7 @@ ${isDyk(p) ? 'This is a Tuesday Did You Know post.\n' : ''}${productBlock(p) ? p
   const GD = 'Google Drive', DRIVE_MAX = 16 * 1024 * 1024;
   function fileFor(it) {
     const p = (app().data().posts || []).find(x => x.id === it.postId) || {};
+    if (it.rb) return rbFileFor(it, p);
     const all = [p.creativeAsset].concat(p.creativeAssets || []).filter(Boolean);
     const vid = all.filter(a => /^video\//.test(a.mime || '')), pic = all.filter(a => /^image\//.test(a.mime || ''));
     const pool = (it.channel === 'facebook' || it.channel === 'youtube') ? vid : (vid.length ? vid : pic);
@@ -2079,6 +2239,7 @@ ${isDyk(p) ? 'This is a Tuesday Did You Know post.\n' : ''}${productBlock(p) ? p
     if (`${it.date}T${it.time}` <= new Date(Date.now() + 10 * 60000).toISOString().slice(0, 16) && it.date <= todayIso()) return { ok: false, reason: 'That time has passed or is less than 10 minutes away. Pick a later time.' };
     if (!seo[it.postId]) { const q = (app().data().posts || []).find(x => x.id === it.postId); if (q) { step && step('Writing hashtags…'); if (await writeSeo(q) && db) { try { await db.doc('bots/seo').set({ json: JSON.stringify(seo).slice(0, 240000), updatedAt: new Date().toISOString() }); } catch (_) {} } } }
     if (!it.mediaUrl && fileFor(it)) { const l = await autoLink(it, step); if (!l.ok && needsFile(it)) return l; }
+    if (it.rb) { const p0 = (app().data().posts || []).find(x => x.id === it.postId) || {}; ai = ai || aiOf(p0, rbFileFor(it, p0)); }   // rulebook rule 9: declare AI media
     const args = metricoolPost(it, mode, ai);
     if (needsFile(it) && !it.mediaUrl) return { ok: false, reason: `${NAME[it.channel]}${it.channel === 'facebook' ? ' (a Reel)' : ''} needs the ${it.channel === 'facebook' || it.channel === 'youtube' ? 'video' : 'photo or video'}, even as a draft. Paste a public link to the file (Google Drive or Dropbox) in the box above, then send again.` };
     const mcp = await use('mcp'); let res = null, err = null;
@@ -2244,5 +2405,5 @@ ${isDyk(p) ? 'This is a Tuesday Did You Know post.\n' : ''}${productBlock(p) ? p
     }
     render();
   }
-  window.RSH_BOTS = { SPECS, sizePlan, sizeLines, specFor, kindOf, ratioOf, productJob, readyRefs, POST_SIZE, catalog: () => catalog, refs: () => refs, productsFor, productBlock, searchCatalog, requestPhotos, loadCatalog, scripts: () => scripts, scriptPrompt, writeScript, scriptRun, saveScript, packPart, packHtml, conns: () => conns, viaOf, engineFor, HOUSE, music: () => MUSIC, musicStart, musicStop, match: () => ISO.match, startMatch: (a, b) => startMatch(ISO.people[a], ISO.people[b], performance.now()), zoneAt, addIdea, IDEAS: () => IDEAS, postComment, loadAllComments, cmtCount, ctaFor, withCta, isoPeople: () => ISO.people, aoCycle, aoStart, aoBeat, aoAlive, reviseFromNotes, shrinkVideo, nightOwl, weeklyReport, learnedTags, resultsForPrompt, openRaw, addRaw, sendRaw, rawCount, loadRaw, dayFor, isDyk, targets, sendText, autoSend, seoFor, seoRun, learnedTimes, schedule, attachForPost, driveUpload, fileFor, autoLink, needsFile, readyItems, placedOn, place, unplace, setMediaUrl, sendToMetricool, metricoolPost, NAME, freshVideos, watch, onChange: f => listeners.push(f), handoff, collect, start, captionFor, assetNeeds, imagePrompt, videoBrief, editJob };
+  window.RSH_BOTS = { rbOn, rbHome, rbTargets, rbPlace, rbCaption, rbChecks, rbFileFor, rbYouTubeTitle, manila, TAGLINE, RB_SLOTS, aiOf, SPECS, sizePlan, sizeLines, specFor, kindOf, ratioOf, productJob, readyRefs, POST_SIZE, catalog: () => catalog, refs: () => refs, productsFor, productBlock, searchCatalog, requestPhotos, loadCatalog, scripts: () => scripts, scriptPrompt, writeScript, scriptRun, saveScript, packPart, packHtml, conns: () => conns, viaOf, engineFor, HOUSE, music: () => MUSIC, musicStart, musicStop, match: () => ISO.match, startMatch: (a, b) => startMatch(ISO.people[a], ISO.people[b], performance.now()), zoneAt, addIdea, IDEAS: () => IDEAS, postComment, loadAllComments, cmtCount, ctaFor, withCta, isoPeople: () => ISO.people, aoCycle, aoStart, aoBeat, aoAlive, reviseFromNotes, shrinkVideo, nightOwl, weeklyReport, learnedTags, resultsForPrompt, openRaw, addRaw, sendRaw, rawCount, loadRaw, dayFor, isDyk, targets, sendText, autoSend, seoFor, seoRun, learnedTimes, schedule, attachForPost, driveUpload, fileFor, autoLink, needsFile, readyItems, placedOn, place, unplace, setMediaUrl, sendToMetricool, metricoolPost, NAME, freshVideos, watch, onChange: f => listeners.push(f), handoff, collect, start, captionFor, assetNeeds, imagePrompt, videoBrief, editJob };
 })();
