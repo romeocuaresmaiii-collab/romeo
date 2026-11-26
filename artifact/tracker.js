@@ -75,6 +75,8 @@
     else if (t.stage === 'anthony') { next = 'Waiting for Anthony’s final approval.'; button = 'Open'; }
     else { next = p.published ? 'Published and linked to its results.' : p.status === 'Published' ? 'Marked as published. Link it to its post to see results.' : 'Approved. Schedule it in Metricool for this date.'; button = 'Open'; }
     const fs = window.RSH_BOTS && window.RSH_BOTS.factState ? window.RSH_BOTS.factState(p.id) : null;
+    const vo = window.RSH_BOTS && window.RSH_BOTS.voState ? window.RSH_BOTS.voState(p.id) : '';
+    if (vo === 'missing' && !t.assets) { next = 'Record the voiceover (Part 5 of Sage’s pack) in ElevenLabs and add the audio file to 📁 Assets: every Did You Know video has a voiceover.'; button = 'Open'; }
     if (fs && !fs.ok) next = fs.label + (/corrected|failed/.test(fs.s) ? '' : '. Sage writes the script once the facts pass.');
     return { t, done, next, button, group: t.stage };
   }
@@ -83,8 +85,9 @@
   function scriptChip(id) {
     const B = window.RSH_BOTS, st = B && B.sageState ? B.sageState(id) : '', fs = B && B.factState ? B.factState(id) : null;
     const fchip = !fs ? '' : fs.ok ? `<span class="step done" title="${esc(fs.label)}">✓ Facts</span>` : /checking|none|changed/.test(fs.s) ? `<span class="step now" title="${esc(fs.label)}">🔎 Facts being checked</span>` : `<span class="step now late" title="${esc(fs.label)}">⚠ Facts: ${fs.s === 'corrected' ? 'fix needed' : 'not confirmed'}</span>`;
-    if (fs && !fs.ok) return fchip + '<span class="step todo">Script (after facts)</span>';
-    return fchip + scriptBody(st);
+    const vo = B && B.voState ? B.voState(id) : '', vchip = vo === 'ok' ? '<span class="step done">✓ Voiceover</span>' : vo === 'missing' ? '<span class="step now">🎙 Voiceover needed</span>' : '';
+    if (fs && !fs.ok) return fchip + '<span class="step todo">Script (after facts)</span>' + vchip;
+    return fchip + scriptBody(st) + vchip;
   }
   function scriptBody(st) {
     if (!st) return '';
