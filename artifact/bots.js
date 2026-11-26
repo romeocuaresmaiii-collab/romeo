@@ -176,13 +176,46 @@
    * in the tool, checks it, and drops it into the office. The campaign's locked wording about
    * sport-correct gear and no third-party logos travels with every prompt.
    */
+  /* ---------- Exact sizes per channel and format (checked Nov 26, 2026) ----------
+   * Sources: Pinterest Help "Review Pin specs"; TechCrunch (Jun 17, 2025: every Facebook video is now a Reel); 2026 size
+   * guides from Sprout Social, Buffer, Metricool. Instagram's profile grid shows a 3:4 crop, so feed photos are 1080×1350
+   * (4:5) with the subject kept inside the centre 3:4 area. Videos everywhere are 1080×1920 (9:16), 30 fps, H.264 + AAC. */
+  const V916 = [1080, 1920, '9:16'];
+  const SPECS = {
+    instagram: { video: [...V916, 'Reel'], story: [...V916, 'Story'], image: [1080, 1350, '4:5', 'feed photo (keep the subject inside the centre 3:4 area; the profile grid crops to 3:4)'], carousel: [1080, 1350, '4:5', 'carousel, every slide the same size'] },
+    facebook: { video: [...V916, 'Reel (every Facebook video is now a Reel)'], story: [...V916, 'Story'], image: [1080, 1350, '4:5', 'feed photo'], carousel: [1080, 1080, '1:1', 'carousel (Meta crops carousel cards to 1:1)'] },
+    tiktok: { video: [...V916, 'video'], story: [...V916, 'video'], image: [...V916, 'photo post (other sizes get black bars)'], carousel: [...V916, 'photo carousel, every slide the same size'] },
+    youtube: { video: [...V916, 'Short (up to 3 minutes)'], story: [...V916, 'Short'], image: [...V916, 'Short made from the photo'], carousel: [...V916, 'Short made from the photos'] },
+    pinterest: { video: [...V916, 'video pin (Pinterest recommends 9:16 for full-screen video)'], story: [...V916, 'video pin'], image: [1000, 1500, '2:3', 'standard pin'], carousel: [1000, 1500, '2:3', 'carousel pin, every slide the same size'] },
+    threads: { video: [...V916, 'video'], story: [...V916, 'video'], image: [1080, 1350, '4:5', 'photo'], carousel: [1080, 1350, '4:5', 'carousel'] },
+    bluesky: { video: [...V916, 'video (up to 3 minutes; photos and video cannot be mixed)'], story: [...V916, 'video'], image: [1080, 1350, '4:5', 'photo (Bluesky compresses to about 1 MB: export a JPEG)'], carousel: [1080, 1350, '4:5', 'up to 4 photos'] }
+  };
+  const kindOf = p => { const t = String(p.postType || '').toLowerCase(); if (!t.trim() && String(p.video || '').trim()) return 'video';   // no post type but a video brief: a video campaign
+    return /story/.test(t) ? 'story' : /reel|video|short/.test(t) ? 'video' : /carousel/.test(t) ? 'carousel' : 'image'; };
+  const specFor = (ch, kind) => { const s = SPECS[ch] || SPECS.instagram; return s[kind] || s.image; };
+  // Every size this campaign needs, grouped: [{w, h, ratio, uses: ['Instagram feed photo', …], channels: [...] }], the main channel's size first.
+  function sizePlan(p) {
+    const kind = kindOf(p), out = [];
+    for (const ch of targets(p)) { const [w, h, ratio, use] = specFor(ch, kind); let g = out.find(x => x.w === w && x.h === h); if (!g) out.push(g = { w, h, ratio, uses: [], channels: [] }); g.uses.push(`${NAME[ch]} ${use}`); g.channels.push(ch); }
+    if (!out.length) { const [w, h, ratio, use] = specFor('instagram', kind); out.push({ w, h, ratio, uses: [`Instagram ${use}`], channels: ['instagram'] }); }
+    return out;
+  }
+  function sizeLines(p) {
+    const plan = sizePlan(p), kind = kindOf(p);
+    return `EXACT SIZES FOR THIS CAMPAIGN (checked with the platforms, Nov 2026)\n` + plan.map((g, n) => `- ${n === 0 ? 'Main' : 'Also'}: ${g.w}×${g.h} (${g.ratio}) for ${g.uses.join('; ')}`).join('\n') +
+      `\n${kind === 'video' || kind === 'story' ? 'Every video: 1080×1920 (9:16), 30 fps, H.264 + AAC; keep text and faces inside the centre safe area (not in the top 8% or bottom 12%, nor under the right-side buttons).' : plan.length > 1 ? 'Deliver one file per size: the same scene re-framed for each ratio (not stretched, not letterboxed), nothing important near the edges. Name each file with its ratio, e.g. "-4x5", "-2x3", "-9x16".' : 'Nothing important near the edges.'}`;
+  }
+  // Which attached file fits a channel best: the one whose shape matches the channel's size (from its width and height, or the ratio in its name).
+  const ratioOf = a => { if (a && a.width && a.height) return a.width / a.height; const m = /(\d+)x(\d+)(?=\D*$)/.exec(String(a && a.name || '')); if (m) { const x = +m[1], y = +m[2]; if (x && y && x < 50 && y < 50) return x / y; } return 0; };
   function assetNeeds(p) {
     const files = [p.creativeAsset].concat(Array.isArray(p.creativeAssets) ? p.creativeAssets : []).filter(Boolean).filter((a, i, all) => all.findIndex(x => x.id === a.id) === i);
     const vids = files.filter(a => /^video\//.test(a.mime || '')).length, imgs = files.length - vids, type = String(p.postType || '').toLowerCase(), ratio = p.aspectRatio || '4:5', needs = [];
-    if (/reel|video/.test(type)) needs.push({ label: 'a vertical 9:16 video, 8–20 seconds', state: vids ? 'have' : 'miss' });
-    else if (/carousel/.test(type)) needs.push({ label: `3 to 5 matching ${ratio} photos`, state: imgs >= 3 ? 'have' : 'miss', detail: imgs ? `${imgs} so far` : '' });
-    else if (/story/.test(type)) needs.push({ label: 'one vertical 9:16 photo or short video', state: files.length ? 'have' : 'miss' });
-    else needs.push({ label: `one ${ratio} photo`, state: imgs ? 'have' : 'miss' });
+    const plan = sizePlan(p), main = plan[0], sz = g => `${g.w}×${g.h}`, k = kindOf(p);
+    if (k === 'video') needs.push({ label: `a vertical 9:16 video, 8–20 seconds (${sz(main)})`, state: vids ? 'have' : 'miss' });
+    else if (k === 'carousel') needs.push({ label: `3 to 5 matching ${main.ratio} photos (${sz(main)})`, state: imgs >= 3 ? 'have' : 'miss', detail: imgs ? `${imgs} so far` : '' });
+    else if (k === 'story') needs.push({ label: `one vertical 9:16 photo or short video (${sz(main)})`, state: files.length ? 'have' : 'miss' });
+    else needs.push({ label: `one ${main.ratio} photo (${sz(main)})`, state: imgs ? 'have' : 'miss' });
+    if (k === 'image' || k === 'carousel') for (const g of plan.slice(1)) { const r = g.w / g.h, ok = files.some(a => /^image\//.test(a.mime || '') && Math.abs(ratioOf(a) - r) < 0.03); needs.push({ label: `a ${g.ratio} version (${sz(g)}) for ${g.channels.map(c => NAME[c]).join(', ')}`, state: ok ? 'have' : 'opt' }); }
     const chans = targets(p);
     if (!vids && chans.some(c => c === 'tiktok' || c === 'youtube')) needs.push({ label: 'optional: a vertical video so it can also go to ' + chans.filter(c => c === 'tiktok' || c === 'youtube').map(c => NAME[c]).join(' and '), state: 'opt' });
     if (chans.includes('pinterest') && ratio !== '2:3') needs.push({ label: 'optional: a 2:3 version for Pinterest', state: 'opt' });
@@ -197,6 +230,7 @@
     return [`EDIT JOB — ${p.title}`,
       `Campaign for ${p.platform || 'social media'}, planned ${p.date || 'no date yet'}. Sport: ${p.sport || 'not set'}. Audience: ${p.audience || 'not set'}. Goal: ${p.goal || 'not set'}.`,
       `Make one vertical 9:16 video, 1080×1920, ${secs} seconds, MP4 (H.264), under 15 MB (the app sends files up to 16 MB to Metricool through Google Drive).`,
+      sizeLines({ ...p, postType: /reel|video|story|short/i.test(p.postType || '') ? p.postType : 'video' }),
       seoEditLine(p),
       `SCRIPT\nHook (first 2 seconds, on screen): ${sentence(p.hook)}\n${p.onImageText ? 'On-screen text: ' + sentence(p.onImageText) + '\n' : ''}Closing line: ${String(p.cta || '').trim() || 'Follow RSH Sports'}`,
       p.visualConcept ? `VISUAL DIRECTION\n${String(p.visualConcept).trim()}` : '',
@@ -221,7 +255,7 @@
   // Which Video Studio Kit engine fits the campaign (studio/video/engines).
   function engineFor(p) {
     const t = `${p.title || ''} ${p.postType || ''} ${p.hook || ''} ${p.visualConcept || ''}`.toLowerCase();
-    if (/did you know|\bdyk\b/.test(t)) return '01 Did You Know (16:9 for YouTube/Facebook; 9:16 for Reels/TikTok)';
+    if (/did you know|\bdyk\b/.test(t)) return '01 Did You Know, rendered 9:16 1080×1920 for every channel (16:9 only for a separate YouTube long video)';
     if (/quiz| a or b|which one/.test(t)) return '09 quiz explainer (current house style)';
     if (/quote/.test(t)) return /kit|uniform|reveal/.test(t) ? '05 Quote of the Day kit reveal' : '04 Quote of the Day (calm)';
     if (/singlet|product|colorway|colourway|reversible|photo/.test(t)) return '07 product photos (real photos only)';
@@ -236,7 +270,7 @@
     const type = String(p.postType || '').toLowerCase(), base = String(p.visualPrompt || p.visualConcept || '').trim();
     return [base || `A premium, photorealistic ${p.sport || 'sports'} photo for ${p.platform || 'social media'}: ${sentence(p.hook)}`,
       /carousel/.test(type) ? 'Make this a matching set of 3 to 5 images with the same athlete, setting and light: 1) a cover with clear space for the headline, 2 to 4) supporting moments, last) a calm closing frame.' : '',
-      productBlock(p), `Aspect ratio ${p.aspectRatio || '4:5'}. Leave clean space for text; do not put any text in the image.`, base ? '' : RULES, app().logoRule ? 'RSH logo rule: ' + app().logoRule() : '', app().negativePrompt ? 'Negative prompt: ' + app().negativePrompt() + (kitNeg(p.sport) ? '; ' + kitNeg(p.sport) : '') : '', NO_NUMBER.test(p.sport || '') ? 'Wrestling singlets have no player number: show the team or school name and crest only.' : ''].filter(Boolean).join('\n\n');
+      productBlock(p), sizeLines(p), `Leave clean space for text; do not put any text in the image.`, base ? '' : RULES, app().logoRule ? 'RSH logo rule: ' + app().logoRule() : '', app().negativePrompt ? 'Negative prompt: ' + app().negativePrompt() + (kitNeg(p.sport) ? '; ' + kitNeg(p.sport) : '') : '', NO_NUMBER.test(p.sport || '') ? 'Wrestling singlets have no player number: show the team or school name and crest only.' : ''].filter(Boolean).join('\n\n');
   }
   function videoBrief(p) {
     { const part = packPart(packFor(p.id), 4), pb = productBlock(p); if (part) return pb ? part + '\n\n' + pb : part; }
@@ -294,7 +328,8 @@
     for (const j of Object.values(jobs)) {
       if (j.status !== 'done' || !j.assetId) continue;
       const prev = j.attachedAssetId && j.attachedAssetId !== j.assetId ? j.attachedAssetId : undefined;   // a revision replaces the cut attached before
-      const ok = app().attachAsset(j.postId, { id: j.assetId, mime: j.mime || 'video/mp4', bytes: j.bytes, name: j.name, parts: Array.isArray(j.parts) && j.parts.length > 1 ? j.parts : undefined, replaces: prev });
+      const ok = app().attachAsset(j.postId, { id: j.assetId, mime: j.mime || 'video/mp4', bytes: j.bytes, name: j.name, width: j.width, height: j.height, parts: Array.isArray(j.parts) && j.parts.length > 1 ? j.parts : undefined, replaces: prev });
+      if (ok && Array.isArray(j.extra)) for (const x of j.extra.slice(0, 4)) { if (x && /^[0-9a-f]{32}$/.test(String(x.assetId || ''))) app().attachAsset(j.postId, { id: x.assetId, mime: x.mime || 'image/jpeg', bytes: x.bytes, name: x.name, width: x.width, height: x.height }); }
       if (ok) { j.attachedAssetId = j.assetId; if (prev) j.revision = (Number(j.revision) || 1) + 1; }
       j.status = ok ? 'attached' : 'failed'; if (ok) { j.readyAt = new Date().toISOString(); j.reviewed = false; } if (!ok) j.reason = 'The returned file could not be attached (wrong type, or the campaign already has 10 files).'; j.attachedAt = new Date().toISOString(); changed = true;
       try { await db.doc('editJobs/' + j.postId).set(j); } catch (_) {}
@@ -502,7 +537,9 @@ SCRIPT RULES
 - Music: one continuous free, no-copyright track, 0.5 s fade-in, 1.5 s fade-out, ducked under the voice, never cut.
 - Quote of the Day, Motivational and Did You Know videos without a storyboard get a 2–3 s mid-roll soft sell at the midpoint: "Custom teamwear · RSH Sports" over a uniform shot.
 - Did You Know: evergreen facts only, and list each key fact with its source at the end of Part 1.
-- Length: 9:16 1080×1920, about 15–20 s unless the campaign says otherwise (Did You Know may be 16:9 1920×1080 for YouTube and Facebook).
+- Length: about 15–20 s unless the campaign says otherwise. Every video, Did You Know included, is 9:16 1080×1920 (Facebook now shows every video as a Reel; YouTube takes it as a Short). Only a separate YouTube long video is 16:9 1920×1080.
+${sizeLines(p)}
+Write every image prompt for the main size above, and say in each scene how to re-frame it for the other sizes listed (same scene, nothing important near the edges).
 
 PRODUCTION PACK LAYOUT (each part under a line of ===== and its heading)
 Title block: "RSH SPORTS — PRODUCTION PACK", the campaign title, then channel · ratio · size · length · planned date · owner.
@@ -634,7 +671,7 @@ ${isDyk(p) ? 'This is a Tuesday Did You Know post.\n' : ''}${productBlock(p) ? p
   }
   const openProds = new Set();
   // Store photos straight into a post: the editor makes a brand-safe post image (or the whole video) from them.
-  const POST_SIZE = p => { const pl = String(p.platform || '').toLowerCase(), r = String(p.aspectRatio || ''), ty = String(p.postType || '').toLowerCase(); if (/pinterest/.test(pl) || r === '2:3') return [1000, 1500, '2:3']; if (/story|reel|video/.test(ty) || r === '9:16') return [1080, 1920, '9:16']; if (r === '1:1') return [1080, 1080, '1:1']; if (r === '16:9') return [1920, 1080, '16:9']; return [1080, 1350, '4:5']; };
+  const POST_SIZE = p => { const g = sizePlan(p)[0]; return [g.w, g.h, g.ratio]; };
   const readyRefs = p => productsFor(p).filter(c => refs[c.h] && refs[c.h].status === 'ready' && refs[c.h].assets && refs[c.h].assets.length);
   async function productJob(pid, kind, picks) {
     const p = (app().data().posts || []).find(x => x.id === pid); if (!p || !db) return 'The campaign could not be found.';
@@ -643,7 +680,7 @@ ${isDyk(p) ? 'This is a Tuesday Did You Know post.\n' : ''}${productBlock(p) ? p
     const files = picks.map(([h, k]) => { const a = refs[h] && refs[h].assets && refs[h].assets[k]; return a ? { name: a.name, mime: a.mime || 'image/webp', bytes: a.bytes || 0, encoding: 'raw', parts: [{ id: a.id, start: 0, end: a.bytes || 0 }] } : null; }).filter(Boolean);
     if (!files.length) return 'Get the store photos first.';
     const [w, h, ratio] = kind === 'video' ? [1080, 1920, '9:16'] : POST_SIZE(p);
-    const job = { postId: pid, title: String(p.title || '').slice(0, 120), status: 'queued', queuedAt: new Date().toISOString(), source: kind === 'video' ? 'product-video' : 'product-image', files: files.length, manifest: JSON.stringify(files), size: `${w}x${h}`, ratio, products: [...new Set(picks.map(x => x[0]))].join(','), ...(cur && cur.status ? { revisionOf: cur.assetId || '' } : {}) };
+    const job = { postId: pid, title: String(p.title || '').slice(0, 120), status: 'queued', queuedAt: new Date().toISOString(), source: kind === 'video' ? 'product-video' : 'product-image', files: files.length, manifest: JSON.stringify(files), size: `${w}x${h}`, ratio, sizes: kind === 'video' ? `${w}x${h} (${ratio})` : sizePlan(p).map(g => `${g.w}x${g.h} (${g.ratio}) for ${g.channels.map(c => NAME[c]).join(', ')}`).join('; '), products: [...new Set(picks.map(x => x[0]))].join(','), ...(cur && cur.status ? { revisionOf: cur.assetId || '' } : {}) };
     jobs[pid] = job; try { await db.doc('editJobs/' + pid).set(job); } catch (_) { return 'The job could not be saved.'; }
     wake = kind === 'video' ? `Reel sent “${cut(p.title, 40)}” to the editor: a video made from the real store photos.` : `Reel sent a store photo of “${cut(p.title, 40)}” to the editor for a brand-safe ${ratio} post image.`;
     dispatch(); return '';
@@ -654,7 +691,7 @@ ${isDyk(p) ? 'This is a Tuesday Did You Know post.\n' : ''}${productBlock(p) ? p
     const get = `GET THE FILES: for each asset id below, use the Artifact tool with action read, url ${APP_URL}, and path set to the asset id; it saves the file locally.\n${list}`;
     const safe = 'BRAND SAFETY: these are rshsports.com store photos. Keep the garment exactly as it is (cut, colours, panels, piping, graphics; no colour filters). Remove the vendor’s logo or wordmark (for example the print on the leg) by patching or cropping, and remove any text panels or size charts. If a photo shows a person, crop to the garment so no face shows (store photos can show youth models) or leave that photo out. Small RSH watermark bottom-right only; no price, stock or delivery claims.';
     if (j.source === 'product-image') {
-      return `[RSH Sports Marketing OS: automatic product image job. Sent by the app on behalf of the team.]\n\nPRODUCT POST IMAGE — ${p.title}\nCampaign for ${p.platform || 'social media'}, planned ${p.date || 'no date yet'}. Sport: ${p.sport || 'not set'}.\n\nMake ONE post image, ${j.size} (${j.ratio}), from the store photo below, so the post shows the exact real garment. Use studio/tools/product_post_image.py (see studio/WORKFLOW.md, "Product photos"). Garment centred on a clean light background, nothing in the top 8% or bottom 12% except the watermark.${p.onImageText ? `\nOn-image text (optional, large and short, from the campaign): "${sentence(p.onImageText)}"` : ''}${/pinterest/i.test(p.platform || '') ? '\nPinterest: a vertical 2:3 pin; a short keyword title overlay is fine when the campaign has on-image text.' : ''}\n${safe}\nReturn a JPEG under 5 MB.\n\n${get}\n\n${productBlock(p)}\n\n${RETURN_STEPS(p.id).replace('WHEN THE VIDEO IS FINISHED', 'WHEN THE IMAGE IS FINISHED').replace(/the MP4/g, 'the JPEG').replace('"mime":"video/mp4"', '"mime":"image/jpeg"').replace('<file name>.mp4', '<file name>.jpg')}`;
+      return `[RSH Sports Marketing OS: automatic product image job. Sent by the app on behalf of the team.]\n\nPRODUCT POST IMAGE — ${p.title}\nCampaign for ${p.platform || 'social media'}, planned ${p.date || 'no date yet'}. Sport: ${p.sport || 'not set'}.\n\nMake the post image from the store photo below, so the post shows the exact real garment, in EVERY size this campaign needs: ${j.sizes || j.size + ' (' + j.ratio + ')'}. One file per size, same garment re-framed (never stretched); name each with its ratio (e.g. -4x5, -2x3, -9x16). Return the main size (${j.size}) as assetId and every other size in "extra": [{"assetId","mime","bytes","name","width","height"}], and give width and height for the main file too. Use studio/tools/product_post_image.py (see studio/WORKFLOW.md, "Product photos"). Garment centred on a clean light background, nothing in the top 8% or bottom 12% except the watermark.${p.onImageText ? `\nOn-image text (optional, large and short, from the campaign): "${sentence(p.onImageText)}"` : ''}${/pinterest/i.test(p.platform || '') ? '\nPinterest: a vertical 2:3 pin; a short keyword title overlay is fine when the campaign has on-image text.' : ''}\n${safe}\nReturn a JPEG under 5 MB.\n\n${get}\n\n${productBlock(p)}\n\n${RETURN_STEPS(p.id).replace('WHEN THE VIDEO IS FINISHED', 'WHEN THE IMAGE IS FINISHED').replace(/the MP4/g, 'the JPEG').replace('"mime":"video/mp4"', '"mime":"image/jpeg"').replace('<file name>.mp4', '<file name>.jpg')}`;
     }
     return `[RSH Sports Marketing OS: automatic product video job. Sent by the app on behalf of the team.]\n\nPRODUCT VIDEO — ${p.title}\nNo footage was needed: build the campaign video from the real rshsports.com store photos below (Video Studio Kit engine 07, product photos: cut-outs, slow push-ins, soft flips between colorways). 1080×1920, 30 fps, MP4 (H.264 + AAC), under 15 MB.\n${safe}\n\n${get}\n\n${editJob(p)}\n\n${RETURN_STEPS(p.id)}`;
   }
@@ -1950,7 +1987,10 @@ ${isDyk(p) ? 'This is a Tuesday Did You Know post.\n' : ''}${productBlock(p) ? p
     const all = [p.creativeAsset].concat(p.creativeAssets || []).filter(Boolean);
     const vid = all.filter(a => /^video\//.test(a.mime || '')), pic = all.filter(a => /^image\//.test(a.mime || ''));
     const pool = (it.channel === 'facebook' || it.channel === 'youtube') ? vid : (vid.length ? vid : pic);
-    return pool.length ? pool[pool.length - 1] : null;   // the latest one attached (a revision replaces the older cut)
+    if (!pool.length) return null;
+    const want = specFor(it.channel, vid.length && pool === vid ? 'video' : kindOf(p)), r = want[0] / want[1];
+    const fit = pool.filter(a => Math.abs(ratioOf(a) - r) < 0.03);
+    return fit.length ? fit[fit.length - 1] : pool[pool.length - 1];   // the exact size for this channel if attached; else the latest one (a revision replaces the older cut)
   }
   // Shrink a video that is over 16 MB in the browser (plays it once, silently, and re-records it as MP4 at a bitrate
   // that lands near 14.5 MB). Needs a browser that records MP4 (Chrome or Edge) and runs from a click.
@@ -2203,5 +2243,5 @@ ${isDyk(p) ? 'This is a Tuesday Did You Know post.\n' : ''}${productBlock(p) ? p
     }
     render();
   }
-  window.RSH_BOTS = { productJob, readyRefs, POST_SIZE, catalog: () => catalog, refs: () => refs, productsFor, productBlock, searchCatalog, requestPhotos, loadCatalog, scripts: () => scripts, scriptPrompt, writeScript, scriptRun, saveScript, packPart, packHtml, conns: () => conns, viaOf, engineFor, HOUSE, music: () => MUSIC, musicStart, musicStop, match: () => ISO.match, startMatch: (a, b) => startMatch(ISO.people[a], ISO.people[b], performance.now()), zoneAt, addIdea, IDEAS: () => IDEAS, postComment, loadAllComments, cmtCount, ctaFor, withCta, isoPeople: () => ISO.people, aoCycle, aoStart, aoBeat, aoAlive, reviseFromNotes, shrinkVideo, nightOwl, weeklyReport, learnedTags, resultsForPrompt, openRaw, addRaw, sendRaw, rawCount, loadRaw, dayFor, isDyk, targets, sendText, autoSend, seoFor, seoRun, learnedTimes, schedule, attachForPost, driveUpload, fileFor, autoLink, needsFile, readyItems, placedOn, place, unplace, setMediaUrl, sendToMetricool, metricoolPost, NAME, freshVideos, watch, onChange: f => listeners.push(f), handoff, collect, start, captionFor, assetNeeds, imagePrompt, videoBrief, editJob };
+  window.RSH_BOTS = { SPECS, sizePlan, sizeLines, specFor, kindOf, ratioOf, productJob, readyRefs, POST_SIZE, catalog: () => catalog, refs: () => refs, productsFor, productBlock, searchCatalog, requestPhotos, loadCatalog, scripts: () => scripts, scriptPrompt, writeScript, scriptRun, saveScript, packPart, packHtml, conns: () => conns, viaOf, engineFor, HOUSE, music: () => MUSIC, musicStart, musicStop, match: () => ISO.match, startMatch: (a, b) => startMatch(ISO.people[a], ISO.people[b], performance.now()), zoneAt, addIdea, IDEAS: () => IDEAS, postComment, loadAllComments, cmtCount, ctaFor, withCta, isoPeople: () => ISO.people, aoCycle, aoStart, aoBeat, aoAlive, reviseFromNotes, shrinkVideo, nightOwl, weeklyReport, learnedTags, resultsForPrompt, openRaw, addRaw, sendRaw, rawCount, loadRaw, dayFor, isDyk, targets, sendText, autoSend, seoFor, seoRun, learnedTimes, schedule, attachForPost, driveUpload, fileFor, autoLink, needsFile, readyItems, placedOn, place, unplace, setMediaUrl, sendToMetricool, metricoolPost, NAME, freshVideos, watch, onChange: f => listeners.push(f), handoff, collect, start, captionFor, assetNeeds, imagePrompt, videoBrief, editJob };
 })();
