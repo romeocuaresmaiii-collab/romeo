@@ -394,6 +394,7 @@ Caption: ${p.captionBody || p.caption || ''}
 Call to action: ${p.cta || ''}
 Existing hashtags: ${p.hashtags || ''}
 On-image text: ${p.onImageText || ''}
+${seasonContext()}
 ${resultsForPrompt()}
 
 Answer with JSON only, exactly these keys:
@@ -868,7 +869,7 @@ Answer with JSON only, exactly these keys:
       host.addEventListener('drop', async e => { if (!e.target.closest('[data-raw-drop]')) return; e.preventDefault(); await rawAdd([...(e.dataTransfer.files || [])]); });
       document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.getElementById('rshRaw') && document.getElementById('rshRaw').style.display !== 'none') closeRaw(); });
     }
-    host.style.display = 'flex'; paintRaw(); await loadRaw(id); paintRaw();
+    host.style.display = 'flex'; cmtMsg = ''; paintRaw(); await Promise.all([loadRaw(id), loadAllComments()]); await whoIs((comments[id] || []).map(c => c.by)); paintRaw();
   }
   function closeRaw() { const h = document.getElementById('rshRaw'); if (h) h.style.display = 'none'; rawOpen = null; render(); if (window.RSH_TRACKER && window.RSH_TRACKER.render) try { window.RSH_TRACKER.render(); } catch (_) {} }
   function paintRaw() {
@@ -878,7 +879,7 @@ Answer with JSON only, exactly these keys:
     const hasScript = (box.files || []).some(f => /^text\//.test(f.mime)) || !!(p.script || p.voiceover);
     const jobTxt = !j ? '' : j.status === 'queued' ? 'Waiting to be picked up by the editor.' : j.status === 'sent' ? 'With the RSH SPORTS editor now.' : j.status === 'attached' ? 'The edited video came back and is attached to the campaign for review.' : j.status === 'done' ? 'The video is ready; attaching it to the campaign…' : j.status === 'failed' ? 'The editor could not finish: ' + (j.note || 'see the 24/7 Bots tab.') : '';
     host.innerHTML = `<div class="card" style="max-width:720px;width:100%;background:var(--card,#fff);border-radius:18px;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.25)">
-      <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start"><div><div class="eyebrow">CAMPAIGN ASSETS</div><h2 style="margin-top:6px;font-size:20px">${esc(p.title || '')}</h2><div class="small">${esc(p.platform || '')} · ${esc(p.date || 'no date')} · raw files for the edit: clips, photos, music, logo and the script (.txt or .md)</div></div><button type="button" class="btn ghost smallbtn" data-raw-close aria-label="Close">Close</button></div>
+      <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start"><div><div class="eyebrow">CAMPAIGN ASSETS & REVIEW</div><h2 style="margin-top:6px;font-size:20px">${esc(p.title || '')}</h2><div class="small">${esc(p.platform || '')} · ${esc(p.date || 'no date')} · raw files for the edit: clips, photos, music, logo and the script (.txt or .md)</div></div><button type="button" class="btn ghost smallbtn" data-raw-close aria-label="Close">Close</button></div>
       <div data-raw-drop style="margin-top:14px;border:2px dashed #c7c7cc;border-radius:14px;padding:18px;text-align:center"><strong>Drop files here</strong> or <button type="button" class="btn smallbtn" data-raw-choose ${rawBusy ? 'disabled' : ''}>Upload assets</button><input type="file" multiple hidden data-raw-file><div class="small" style="margin-top:6px">Any number of files, up to 400 MB in total. A .zip is unpacked. Files are kept with this campaign for the whole team.</div></div>
       ${rawMsg ? `<div class="hint" role="status" style="margin-top:10px">${esc(rawMsg)}</div>` : ''}
       <h3 style="margin-top:16px;font-size:15px">${(box.files || []).length} file${(box.files || []).length === 1 ? '' : 's'} gathered</h3>
@@ -886,7 +887,15 @@ Answer with JSON only, exactly these keys:
       <div class="small" style="margin-top:10px">${hasScript ? '✓ Script found' : '⚠ No script yet: add a .txt or .md file, or write the script in the campaign’s details. Without one Reel follows the campaign brief.'}</div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:16px;border-top:1px solid #e5e5ea;padding-top:14px">
         <button type="button" class="btn" data-raw-send ${rawBusy || !(box.files || []).length || (j && (j.status === 'queued' || j.status === 'sent')) ? 'disabled' : ''}>${j && j.status === 'attached' ? 'Send again for a new edit' : 'Assets ready: start editing'}</button>
-        <span class="small">${esc(jobTxt || 'Reel sends every file and the script to the RSH SPORTS editor; the finished video is attached to this campaign for manager and Anthony review.')}</span></div></div>`;
+        <span class="small">${esc(jobTxt || 'Reel sends every file and the script to the RSH SPORTS editor; the finished video is attached to this campaign for manager and Anthony review.')}</span></div>
+      ${commentsHtml(p)}</div>`;
+  }
+  function commentsHtml(p) {
+    const list = comments[p.id] || [], hasVideo = (() => { const f = fileFor({ postId: p.id, channel: 'tiktok' }); return !!(f && /^video\//.test(f.mime || '')); })();
+    return `<div style="margin-top:18px;border-top:1px solid #e5e5ea;padding-top:14px"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline"><h3 style="font-size:15px">💬 Team review · ${list.length} comment${list.length === 1 ? '' : 's'}</h3><span class="small">Status: <strong>${esc(p.id ? stageName(p) : '')}</strong></span></div>
+      <div style="display:grid;gap:8px;margin-top:10px;max-height:260px;overflow:auto">${list.map(c => `<div style="border:1px solid #e5e5ea;border-radius:10px;padding:8px 10px${c.change ? ';border-left:4px solid #d9480f' : ''}"><div class="small"><strong>${esc(names[c.by] || 'Teammate')}</strong> · ${esc(new Date(c.at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }))}${c.change ? ' · <strong style="color:#d9480f">Video change request</strong>' : ''}</div><div style="margin-top:3px;white-space:pre-wrap">${esc(c.text)}</div></div>`).join('') || '<div class="small">No comments yet. Anyone on the team can leave feedback here before the campaign is approved and posted.</div>'}</div>
+      <textarea data-cmt-text rows="3" style="width:100%;margin-top:10px;box-sizing:border-box" placeholder="Write feedback for the team: caption, visuals, timing…" aria-label="Comment"></textarea>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:8px"><button type="button" class="btn smallbtn" data-cmt-post>Post comment</button>${hasVideo ? '<label class="small" style="display:inline-flex;gap:6px;align-items:center"><input type="checkbox" data-cmt-change> This is a change request for the video (Reel makes a new cut)</label>' : ''}${cmtMsg ? `<span class="small" role="status">${esc(cmtMsg)}</span>` : ''}</div></div>`;
   }
   async function rawAdd(files) {
     if (!files.length || rawBusy || !rawOpen) return; rawBusy = true; rawMsg = 'Storing…'; paintRaw();
@@ -894,6 +903,7 @@ Answer with JSON only, exactly these keys:
     rawBusy = false; paintRaw();
   }
   async function onRawClick(e) {
+    if (e.target.closest('[data-cmt-post]')) { const ta = document.querySelector('#rshRaw [data-cmt-text]'), ch = document.querySelector('#rshRaw [data-cmt-change]'); try { await postComment(rawOpen, ta && ta.value, ch && ch.checked); await whoIs((comments[rawOpen] || []).map(c => c.by)); cmtMsg = ch && ch.checked ? 'Comment posted and sent to Reel as a revision.' : 'Comment posted.'; } catch (err) { cmtMsg = (err && err.message) || String(err); } paintRaw(); return; }
     if (e.target.id === 'rshRaw' || e.target.closest('[data-raw-close]')) return closeRaw();
     if (e.target.closest('[data-raw-choose]')) { const f = document.querySelector('#rshRaw [data-raw-file]'); if (f) f.click(); return; }
     const rm = e.target.closest('[data-raw-remove]'); if (rm && !rawBusy) { rawBusy = true; try { await removeRaw(rawOpen, Number(rm.dataset.rawRemove)); rawMsg = 'Removed.'; } catch (err) { rawMsg = 'Could not remove: ' + err.message; } rawBusy = false; return paintRaw(); }
@@ -902,6 +912,34 @@ Answer with JSON only, exactly these keys:
   async function onRawChange(e) { if (e.target.matches('[data-raw-file]')) { const fs = [...e.target.files]; e.target.value = ''; await rawAdd(fs); } }
   async function rawCounts() { if (!db) return; try { const q = await db.collection('rawAssets').get(); for (const d of q.docs) { try { raw[d.id] = JSON.parse(d.data().json); } catch (_) {} } } catch (_) {} }
   const rawCount = id => ((raw[id] && raw[id].files) || []).length;
+
+  /* ---------- Review comments ----------
+   * Anyone on the team who can use the app can comment on a campaign before it is posted. Comments are kept in
+   * reviewComments (one document per comment, so two people commenting at once never overwrite each other).
+   * A comment marked as a video change request starts a revision job for Reel with that comment as the note. */
+  let comments = {}, names = {}, cmtMsg = '';
+  async function loadAllComments() { if (!db) return; try { const q = await db.collection('reviewComments').get(), all = {}; for (const d of q.docs) { const c = d.data() || {}; if (!c.postId) continue; (all[c.postId] = all[c.postId] || []).push({ id: d.id, ...c }); } for (const k of Object.keys(all)) all[k].sort((a, b) => String(a.at).localeCompare(String(b.at))); comments = all; } catch (_) {} }
+  const cmtCount = id => (comments[id] || []).length;
+  async function whoIs(ids) { const need = ids.filter(i => i && !names[i]); if (!need.length) return; try { const u = await use('user'); if (u && u.profiles) { const ps = await u.profiles(need); for (const i of need) names[i] = (ps && ps[i] && ps[i].name) || 'Teammate'; } } catch (_) {} }
+  function queueRevision(id, notes) {
+    const p = (app().data().posts || []).find(x => x.id === id), prev = jobs[id], vid = fileFor({ postId: id, channel: 'tiktok' });
+    if (!p || !vid || !/^video\//.test(vid.mime || '')) throw new Error('This campaign has no video yet, so there is nothing to revise.');
+    if (prev && (prev.status === 'queued' || prev.status === 'sent')) throw new Error('Reel is already working on this video. Your comment is saved; add it again after the new cut arrives.');
+    const job = { postId: id, title: String(p.title || '').slice(0, 120), status: 'queued', queuedAt: new Date().toISOString(), source: 'revision', notes: String(notes).slice(0, 3000), baseAssetId: vid.id, revision: (Number(prev && prev.revision) || 1) + 1, manifest: (prev && prev.manifest) || '', script: (prev && prev.script) || '', attachedAssetId: (prev && prev.attachedAssetId) || vid.id };
+    jobs[id] = job; if (db) db.doc('editJobs/' + id).set(job).catch(() => {}); dispatch(); return job;
+  }
+  async function postComment(id, text, change) {
+    text = String(text || '').trim().slice(0, 2000); if (!text) throw new Error('Write a comment first.');
+    if (!db) throw new Error('Comments need the team database; open the app from claude.ai.');
+    let by = ''; try { const u = await use('user'); if (u && u.id) by = await u.id(); } catch (_) {}
+    const c = { postId: id, text, by, at: new Date().toISOString(), change: !!change };
+    const docId = id + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    await db.doc('reviewComments/' + docId).set(c);
+    (comments[id] = comments[id] || []).push({ id: docId, ...c });
+    if (change) queueRevision(id, text);
+    return c;
+  }
+  const stageName = p => { const st = app().track(p).stage; return { brief: 'Brief in progress', media: 'Waiting for files and visual checks', manager: 'Ready for manager review', anthony: 'Waiting for Anthony’s final approval', final: 'Waiting for Anthony’s final approval', ready: 'Approved and ready to post' }[st] || st; };
 
 
   /* ---------- The live office (isometric, drawn on a canvas; no images or SVG) ----------
@@ -916,14 +954,19 @@ Answer with JSON only, exactly these keys:
     pixel: ['#e8b48a', '#3b2a20', 'bun', '#334155'], reel: ['#c68642', '#1f1a17', 'cap', '#1f2937'], quill: ['#f1c27d', '#7c4a1e', 'side', '#3f3f46'],
     tempo: ['#8d5524', '#111111', 'short', '#1e293b'], ref: ['#e0ac69', '#9ca3af', 'short', '#27272a'], courier: ['#d9a066', '#2d2117', 'messy', '#374151'], owl: ['#f3cfa6', '#4b5563', 'long', '#1f2937']
   };
-  const DESKS = { pixel: [3.2, 4.2], reel: [5.9, 4.2], quill: [8.6, 4.2], tempo: [3.2, 8.4], ref: [5.9, 8.4], courier: [8.6, 8.4], owl: [12.2, 8.4] };
-  const TABLES = [[17.6, 5.2], [20.9, 6.6], [18.4, 9.0]];
+  // private offices: 5 along the back wall, 2 along the left wall (x, y of the room's back-left corner; rooms are 3 × 3)
+  const ROOMS = { pixel: [0.3, 0.3, 'b'], reel: [3.3, 0.3, 'b'], quill: [6.3, 0.3, 'b'], tempo: [9.3, 0.3, 'b'], ref: [12.3, 0.3, 'b'], courier: [0.3, 3.9, 'l'], owl: [0.3, 6.9, 'l'] };
+  const DESKS = Object.fromEntries(Object.entries(ROOMS).map(([id, [rx, ry, side]]) => [id, side === 'b' ? [rx + 1.4, ry + 1.3] : [rx + 1.3, ry + 1.2]]));
+  const DOORS = Object.fromEntries(Object.entries(ROOMS).map(([id, [rx, ry, side]]) => [id, side === 'b' ? [[rx + 2.4, ry + 2.55], [rx + 2.4, ry + 3.45]] : [[rx + 2.55, ry + 2.3], [rx + 3.45, ry + 2.3]]]));
+  DOORS.patio = [[15.9, 11.0], [15.9, 9.9]];
+  const COURT = { x0: 16.4, x1: 23.2, y0: 10.9, y1: 13.9, net: 19.8 };
+  const TABLES = [[17.6, 5.2], [20.9, 6.4], [18.4, 8.6]];
   const SEATS = t => [[t[0] - 0.95, t[1]], [t[0] + 0.95, t[1]], [t[0], t[1] + 0.95], [t[0], t[1] - 0.95]];
-  const SPOTS = [[17.2, 2.1], [19.2, 2.1], [22.6, 3.4], [17.8, 12.0], [18.9, 12.0], [15.2, 7.8], [21.0, 9.4]];   // coffee machine, counter, water cooler, sofa, sofa, window, standing
+  const SPOTS = [[17.2, 2.1], [19.2, 2.1], [22.6, 3.4], [22.3, 8.9], [23.2, 8.9], [15.6, 7.2], [20.3, 9.6]];   // coffee machine, counter, water cooler, sofa, sofa, window, standing
   const COFFEE = [[17.2, 2.1], [17.8, 2.2], [19.2, 2.1], [22.6, 3.4]];
   const CANTEEN = [[9.6, 10.75], [10.8, 10.75], [12.0, 10.75], [13.2, 10.75], [9.6, 12.35], [10.8, 12.35], [12.0, 12.35], [13.2, 12.35]];
-  const CR_DOOR = [22.55, 14.25];
-  const WANDER = [[11.0, 5.8], [5.6, 11.0], [13.6, 6.2], [15.6, 4.2], [16.0, 10.6], [2.0, 6.3], [3.4, 12.2], [20.0, 8.4], [9.6, 2.2], [15.4, 9.4]];
+  const CR_DOOR = [5.25, 13.85];
+  const WANDER = [[5.0, 4.3], [10.2, 4.6], [13.8, 4.4], [11.0, 9.2], [4.4, 10.2], [15.6, 7.2], [20.0, 8.0], [8.0, 9.9], [14.4, 9.4], [4.3, 8.8]];
   const mealNow = () => { const d = new Date(), m = d.getHours() * 60 + d.getMinutes(); return m >= 720 && m < 780 ? 'Lunch' : (m >= 600 && m < 620) || (m >= 900 && m < 920) ? 'Snack time' : ''; };
   const shade = (hex, f) => { const n = parseInt(String(hex).slice(1), 16); const r = n >> 16, g = (n >> 8) & 255, b = n & 255; const m = c => Math.max(0, Math.min(255, Math.round(f < 0 ? c * (1 + f) : c + (255 - c) * f))); return `rgb(${m(r)},${m(g)},${m(b)})`; };
   function isoPt(x, y, z) { return [ISO.ox + (x - y) * TW / 2, ISO.oy + (x + y) * TH / 2 - (z || 0) * ZH]; }
@@ -963,6 +1006,12 @@ Answer with JSON only, exactly these keys:
     else { box(X - 0.17, Y - 0.17 + lean, hz + 0.32, 0.34, 0.34, 0.09, L[1]); if (L[2] === 'bun') box(X - 0.07, Y - 0.12 + lean, hz + 0.41, 0.14, 0.14, 0.1, L[1]); if (L[2] === 'long') box(X - 0.17, Y - 0.19 + lean, hz + 0.05, 0.34, 0.06, 0.32, L[1]); if (L[2] === 'side') box(X + 0.12, Y - 0.17 + lean, hz + 0.2, 0.05, 0.34, 0.15, L[1]); if (L[2] === 'messy') box(X - 0.1, Y - 0.05 + lean, hz + 0.41, 0.2, 0.1, 0.05, L[1]); }
     if (id === 'owl' && !asleep) { const [gx, gy] = isoPt(X - 0.04, Y + 0.17, hz + 0.25), c = ISO.ctx; c.strokeStyle = '#111827'; c.lineWidth = 1.2; c.strokeRect(gx - 6, gy - 2, 5, 4); c.strokeRect(gx + 1, gy - 3.5, 5, 4); }
     if (p.mug && !p.moving && !sit) box(X + 0.22, Y + 0.02, hip + 0.1, 0.1, 0.1, 0.12, '#f8fafc');
+    if (p.act && p.act.type === 'badminton') {                                   // racket: grip at the hand, raised high when swinging
+      const c = ISO.ctx, sw = Math.max(0, 1 - (now - (p.swing || 0)) / 280), face = p.side === 'r' ? -1 : 1;
+      const [hx, hy] = isoPt(X + 0.23, Y + 0.02, hip + 0.1 + sw * 0.9), [tx, ty] = isoPt(X + 0.23 + face * 0.15 * (1 - sw), Y + 0.02, hip + 0.75 + sw * 1.1);
+      c.strokeStyle = '#334155'; c.lineWidth = 1.6; c.beginPath(); c.moveTo(hx, hy); c.lineTo(tx, ty); c.stroke();
+      c.save(); c.translate(tx, ty - 5); c.rotate(face * (0.35 - sw * 0.6)); c.beginPath(); c.ellipse(0, 0, 4.2, 6.2, 0, 0, Math.PI * 2); c.fillStyle = 'rgba(255,255,255,.55)'; c.fill(); c.strokeStyle = TEAM.find(t => t[0] === p.id)[3]; c.lineWidth = 1.5; c.stroke(); c.restore();
+    }
     if (p.act && p.act.type === 'canteen' && p.act.start && sit) { const ty = Y < 11.5 ? Y + 0.45 : Y - 0.65; box(X - 0.25, ty, 0.78, 0.5, 0.32, 0.03, '#94a3b8'); disc(X - 0.05, ty + 0.16, 0.82, 0.12, '#fef3c7'); box(X + 0.08, ty + 0.06, 0.82, 0.1, 0.1, 0.12, '#f97316'); }
     if (asleep) { const [cx, cy] = isoPt(X + 0.3, Y - 0.2, hz + 0.5), c = ISO.ctx, k = (now / 350) % 6; c.fillStyle = '#94a3b8'; c.font = '700 12px system-ui'; c.fillText('z', cx, cy - k); c.font = '700 9px system-ui'; c.fillText('z', cx + 8, cy - 9 - k); }
     p.head = isoPt(X, Y, hz + 0.6); p.hit = isoPt(X, Y, hip + 0.3);
@@ -976,7 +1025,15 @@ Answer with JSON only, exactly these keys:
     for (let x = 0; x < 15; x++) for (let y = 0; y < EY; y++) if ((x + y) % 2) poly([P(x, y, 0), P(x + 1, y, 0), P(x + 1, y + 1, 0), P(x, y + 1, 0)], 'rgba(0,0,0,.035)');
     poly([P(15, 0, 0), P(EX, 0, 0), P(EX, EY, 0), P(15, EY, 0)], '#c8996a');
     for (let x = 15; x < EX; x += 0.5) poly([P(x, 0, 0), P(x + 0.02, 0, 0), P(x + 0.02, EY, 0), P(x, EY, 0)], 'rgba(90,55,25,.18)');
-    poly([P(2.2, 3, 0), P(10, 3, 0), P(10, 10, 0), P(2.2, 10, 0)], 'rgba(40,60,90,.08)');   // rug under the desks
+    for (const [id, [rx, ry]] of Object.entries(ROOMS)) poly([P(rx, ry, 0), P(rx + 3, ry, 0), P(rx + 3, ry + 3, 0), P(rx, ry + 3, 0)], '#d9c4a5');   // wooden floors in the private offices
+    poly([P(15, 10.4, 0), P(EX, 10.4, 0), P(EX, EY, 0), P(15, EY, 0)], '#5f9e5a');                                     // patio: artificial turf
+    for (let y = 10.4; y < EY; y += 0.6) poly([P(15, y, 0), P(EX, y, 0), P(EX, y + 0.3, 0), P(15, y + 0.3, 0)], 'rgba(255,255,255,.05)');
+    { const { x0, x1, y0, y1, net } = COURT, line = (a, b, d, e) => poly([P(a, b, 0.01), P(d, b, 0.01), P(d, e, 0.01), P(a, e, 0.01)], '#ffffff');
+      poly([P(x0, y0, 0.005), P(x1, y0, 0.005), P(x1, y1, 0.005), P(x0, y1, 0.005)], '#2f7d4f');
+      line(x0, y0, x1, y0 + 0.05); line(x0, y1 - 0.05, x1, y1); line(x0, y0, x0 + 0.05, y1); line(x1 - 0.05, y0, x1, y1);
+      line(x0, y0 + 0.23, x1, y0 + 0.27); line(x0, y1 - 0.27, x1, y1 - 0.23);                                           // doubles side lines
+      line(net - 1.02, y0, net - 0.98, y1); line(net + 0.98, y0, net + 1.02, y1);                                         // short service lines
+      line(x0, (y0 + y1) / 2 - 0.02, net - 1.0, (y0 + y1) / 2 + 0.02); line(net + 1.0, (y0 + y1) / 2 - 0.02, x1, (y0 + y1) / 2 + 0.02); }
     // walls
     poly([P(0, 0, 0), P(EX, 0, 0), P(EX, 0, 12), P(0, 0, 12)], '#eef0f2'); poly([P(0, 0, 0), P(0, EY, 0), P(0, EY, 12), P(0, 0, 12)], '#dde1e5');
     poly([P(0, 0, 0), P(EX, 0, 0), P(EX, 0, 0.12), P(0, 0, 0.12)], '#9aa1a9'); poly([P(0, 0, 0), P(0, EY, 0), P(0, EY, 0.12), P(0, 0, 0.12)], '#8c939b');
@@ -1009,29 +1066,52 @@ Answer with JSON only, exactly these keys:
       if (id === 'owl') { box(dx + 0.5, dy - 0.5, 0.78, 0.06, 0.06, 0.5, '#111827'); box(dx + 0.38, dy - 0.58, 1.26, 0.28, 0.2, 0.08, '#fbbf24'); }
     });
     for (const [id, [dx, dy]] of Object.entries(DESKS)) add(dx + dy + 0.5, () => chair(dx, dy + 0.75, 'up', '#334155'));
-    // glass meeting room with a whiteboard
-    add(11 + 0.4, () => {
-      onBack(11.2, 14.2, 0.7, 1.9, '#ffffff', '#94a3b8');
-      for (let r = 0; r < 3; r++) onBack(11.5, 13.0 - r * 0.5, 1.6 - r * 0.25, 1.64 - r * 0.25, ['#2563eb', '#dc2626', '#16a34a'][r]);
-      box(11.6, 1.2, 0, 2.2, 1.0, 0.7, '#9a7b5c'); for (const [cx, cy] of [[12.1, 2.55], [13.2, 2.55]]) chair(cx, cy, 'up', '#475569');
-    });
-    add(11 + 3.6 + 0.6, () => { const P2 = isoPt; poly([P2(11, 3.6, 0), P2(14.6, 3.6, 0), P2(14.6, 3.6, 2.1), P2(11, 3.6, 2.1)], '#bfe0f5', '#7dd3fc', 0.28); poly([P2(14.6, 0, 0), P2(14.6, 3.6, 0), P2(14.6, 3.6, 2.1), P2(14.6, 0, 2.1)], '#bfe0f5', '#7dd3fc', 0.22); { const [tx, ty] = P2(12.8, 3.6, 2.25); c.fillStyle = '#475569'; c.font = '700 10px system-ui'; c.textAlign = 'center'; c.fillText('MEETING ROOM', tx, ty); } });
+    // private offices: glass fronts with a door gap and a name plate, glass walls between rooms
+    const glass = (pts) => poly(pts, '#cfe8f7', '#7fb3d5', 0.26), frame = (a, b, c2, d) => poly([isoPt(a, b, 0), isoPt(c2, d, 0), isoPt(c2, d, 2.1), isoPt(a, b, 2.1)], 'rgba(0,0,0,0)', '#8fb4cc');
+    for (const [id, [rx, ry, side]] of Object.entries(ROOMS)) {
+      const [name, role, col] = (m => [m[1], m[2], m[3]])(TEAM.find(t => t[0] === id));
+      if (side === 'b') {
+        add(rx + 1 + ry + 3.2, () => { glass([isoPt(rx, ry + 3, 0), isoPt(rx + 2.0, ry + 3, 0), isoPt(rx + 2.0, ry + 3, 2.1), isoPt(rx, ry + 3, 2.1)]); frame(rx, ry + 3, rx + 2.0, ry + 3); box(rx, ry + 2.98, 2.1, 3, 0.04, 0.08, '#94a3b8');
+          const [tx, ty] = isoPt(rx + 1.0, ry + 3, 1.55), c2 = ISO.ctx; c2.save(); c2.translate(tx, ty); c2.transform(1, 0.5, 0, 1, 0, 0); c2.fillStyle = col; rr(c2, -30, -9, 60, 18, 4); c2.fill(); c2.fillStyle = '#fff'; c2.font = '800 8px system-ui, sans-serif'; c2.textAlign = 'center'; c2.textBaseline = 'middle'; c2.fillText(name.toUpperCase(), 0, -2); c2.font = '600 6px system-ui, sans-serif'; c2.fillText(role, 0, 5); c2.restore(); });
+        add(rx + 2.9 + ry + 3.2, () => { glass([isoPt(rx + 2.8, ry + 3, 0), isoPt(rx + 3, ry + 3, 0), isoPt(rx + 3, ry + 3, 2.1), isoPt(rx + 2.8, ry + 3, 2.1)]); });
+        add(rx + 3 + ry + 1.6, () => { glass([isoPt(rx + 3, ry, 0), isoPt(rx + 3, ry + 3, 0), isoPt(rx + 3, ry + 3, 2.1), isoPt(rx + 3, ry, 2.1)]); frame(rx + 3, ry, rx + 3, ry + 3); });
+      } else {
+        add(rx + 3.2 + ry + 1, () => { glass([isoPt(rx + 3, ry, 0), isoPt(rx + 3, ry + 1.9, 0), isoPt(rx + 3, ry + 1.9, 2.1), isoPt(rx + 3, ry, 2.1)]); frame(rx + 3, ry, rx + 3, ry + 1.9); box(rx + 2.98, ry, 2.1, 0.04, 3, 0.08, '#94a3b8');
+          const [tx, ty] = isoPt(rx + 3, ry + 0.95, 1.55), c2 = ISO.ctx; c2.save(); c2.translate(tx, ty); c2.transform(1, -0.5, 0, 1, 0, 0); c2.fillStyle = col; rr(c2, -30, -9, 60, 18, 4); c2.fill(); c2.fillStyle = '#fff'; c2.font = '800 8px system-ui, sans-serif'; c2.textAlign = 'center'; c2.textBaseline = 'middle'; c2.fillText(name.toUpperCase(), 0, -2); c2.font = '600 6px system-ui, sans-serif'; c2.fillText(role, 0, 5); c2.restore(); });
+        add(rx + 3.2 + ry + 2.9, () => { glass([isoPt(rx + 3, ry + 2.7, 0), isoPt(rx + 3, ry + 3, 0), isoPt(rx + 3, ry + 3, 2.1), isoPt(rx + 3, ry + 2.7, 2.1)]); });
+        add(rx + 1.5 + ry + 3.2, () => { glass([isoPt(rx, ry + 3, 0), isoPt(rx + 3, ry + 3, 0), isoPt(rx + 3, ry + 3, 2.1), isoPt(rx, ry + 3, 2.1)]); frame(rx, ry + 3, rx + 3, ry + 3); });
+      }
+      add(rx + ry + 0.8, () => { box(rx + 0.25, ry + 0.25, 0, 0.5, 0.35, 1.5, '#a16207'); for (let k = 0; k < 3; k++) box(rx + 0.27, ry + 0.27, 0.35 + k * 0.4, 0.46, 0.33, 0.04, '#78350f'); box(rx + 0.3, ry + 0.3, 0.4, 0.14, 0.2, 0.25, col); box(rx + 0.48, ry + 0.3, 0.8, 0.18, 0.2, 0.22, '#e5e7eb'); });   // bookshelf
+      add(rx + 2.5 + ry + 0.5, () => { box(rx + 2.35, ry + 0.3, 0, 0.38, 0.38, 0.35, '#78350f'); box(rx + 2.3, ry + 0.25, 0.35, 0.48, 0.48, 0.5, '#16a34a'); });   // plant
+    }
+    // central glass meeting room with a table, chairs, a TV and a whiteboard
+    add(5.2 + 5.0 + 1, () => { box(5.35, 5.2, 0, 0.12, 2.4, 1.7, '#ffffff'); for (let r = 0; r < 3; r++) poly([isoPt(5.48, 5.5 + r * 0.6, 1.25 - r * 0.2), isoPt(5.48, 6.2 + r * 0.5, 1.25 - r * 0.2), isoPt(5.48, 6.2 + r * 0.5, 1.29 - r * 0.2), isoPt(5.48, 5.5 + r * 0.6, 1.29 - r * 0.2)], ['#2563eb', '#dc2626', '#16a34a'][r]); box(7.0, 5.15, 0.9, 1.4, 0.06, 0.8, '#111827'); });
+    add(7.3 + 6.7, () => { for (const [cx, cy] of [[6.6, 5.9], [7.6, 5.9], [8.6, 5.9]]) chair(cx, cy, 'down', '#475569'); box(6.2, 6.2, 0, 2.8, 1.1, 0.72, '#8a6a4c'); for (const [cx, cy] of [[6.6, 7.7], [7.6, 7.7], [8.6, 7.7]]) chair(cx, cy, 'up', '#475569'); });
+    add(7.3 + 8.4 + 0.6, () => { glass([isoPt(5.2, 8.4, 0), isoPt(8.4, 8.4, 0), isoPt(8.4, 8.4, 2.1), isoPt(5.2, 8.4, 2.1)]); glass([isoPt(9.1, 8.4, 0), isoPt(9.4, 8.4, 0), isoPt(9.4, 8.4, 2.1), isoPt(9.1, 8.4, 2.1)]); box(5.2, 8.38, 2.1, 4.2, 0.04, 0.08, '#94a3b8'); const [tx, ty] = isoPt(6.8, 8.4, 2.3), c2 = ISO.ctx; c2.fillStyle = '#475569'; c2.font = '700 9px system-ui'; c2.textAlign = 'center'; c2.fillText('MEETING ROOM', tx, ty); });
+    add(9.4 + 6.7 + 0.6, () => { glass([isoPt(9.4, 5.0, 0), isoPt(9.4, 8.4, 0), isoPt(9.4, 8.4, 2.1), isoPt(9.4, 5.0, 2.1)]); });
+    add(5.2 + 5.0 - 0.4, () => { glass([isoPt(5.2, 5.0, 0), isoPt(9.4, 5.0, 0), isoPt(9.4, 5.0, 2.1), isoPt(5.2, 5.0, 2.1)]); glass([isoPt(5.2, 5.0, 0), isoPt(5.2, 8.4, 0), isoPt(5.2, 8.4, 2.1), isoPt(5.2, 5.0, 2.1)]); });
     // break room: counter with coffee machine and sink, fridge, water cooler, tables, sofa
     add(16 + 0.9, () => { box(15.8, 0.15, 0, 5.2, 0.9, 0.9, '#e7e5e4'); box(15.8, 0.15, 0.9, 5.2, 0.9, 0.06, '#57534e'); box(16.6, 0.3, 0.96, 0.55, 0.45, 0.6, '#1f2937'); box(16.75, 0.72, 1.05, 0.2, 0.1, 0.08, '#ef4444'); box(18.2, 0.3, 0.96, 0.8, 0.5, 0.04, '#a8a29e'); for (let m = 0; m < 3; m++) box(19.6 + m * 0.3, 0.45, 0.96, 0.14, 0.14, 0.16, ['#ffffff', '#fde68a', '#bfdbfe'][m]); });
     add(22 + 1.2, () => { box(21.4, 0.2, 0, 1.1, 0.95, 2.1, '#d6d3d1'); box(21.42, 1.16, 1.25, 0.06, 0.02, 0.5, '#78716c'); });
     add(23 + 2.3, () => { box(22.7, 2.0, 0, 0.6, 0.6, 1.0, '#e2e8f0'); box(22.75, 2.05, 1.0, 0.5, 0.5, 0.55, '#7dd3fc', 0.85); });
     for (const t of TABLES) { add(t[0] + t[1], () => { box(t[0] - 0.06, t[1] - 0.06, 0, 0.12, 0.12, 0.7, '#57534e'); disc(t[0], t[1], 0.72, 0.62, '#f5f5f4'); disc(t[0], t[1], 0.7, 0.62, '#d6d3d1'); }); SEATS(t).forEach(([sx, sy], n) => add(sx + sy - 0.2, () => { box(sx - 0.2, sy - 0.2, 0, 0.4, 0.4, 0.42, '#a8a29e'); box(sx - 0.22, sy - 0.22, 0.42, 0.44, 0.44, 0.06, ['#0ea5e9', '#f97316', '#10b981', '#8b5cf6'][n]); })); }
-    add(17.2 + 12.6, () => { box(17.2, 12.4, 0, 2.4, 0.9, 0.42, '#475569'); box(17.2, 13.1, 0.42, 2.4, 0.22, 0.5, '#475569'); box(17.6, 11.2, 0, 1.6, 0.6, 0.3, '#a16207'); });
+    add(21.6 + 9.2, () => { box(21.6, 8.9, 0, 2.4, 0.9, 0.42, '#475569'); box(21.6, 9.6, 0.42, 2.4, 0.22, 0.5, '#475569'); box(21.9, 7.8, 0, 1.6, 0.6, 0.3, '#a16207'); });
     // CR (comfort room): a tiled cubicle with a door and a sign
-    add(21.6 + 11.6 + 2.6, () => { box(21.6, 11.6, 0, 2.3, 2.3, 2.0, '#e0f2fe'); poly([isoPt(22.2, 13.92, 0), isoPt(22.9, 13.92, 0), isoPt(22.9, 13.92, 1.6), isoPt(22.2, 13.92, 1.6)], ISO.crBusy ? '#0369a1' : '#64748b'); { const [tx, ty] = isoPt(22.55, 13.92, 1.82), c2 = ISO.ctx; c2.fillStyle = '#0f172a'; c2.font = '800 10px system-ui'; c2.textAlign = 'center'; c2.fillText(ISO.crBusy ? 'CR · occupied' : 'CR', tx, ty); } });
+    add(4.2 + 11.2 + 2.6, () => { box(4.2, 11.2, 0, 2.2, 2.2, 2.0, '#e0f2fe'); poly([isoPt(4.9, 13.42, 0), isoPt(5.6, 13.42, 0), isoPt(5.6, 13.42, 1.6), isoPt(4.9, 13.42, 1.6)], ISO.crBusy ? '#0369a1' : '#64748b'); { const [tx, ty] = isoPt(5.25, 13.42, 1.82), c2 = ISO.ctx; c2.fillStyle = '#0f172a'; c2.font = '800 10px system-ui'; c2.textAlign = 'center'; c2.fillText(ISO.crBusy ? 'CR · occupied' : 'CR', tx, ty); } });
+    // patio: glass wall with a door, the badminton net, benches and plants
+    add(15 + 10.4 + 6, () => { for (const [a, b] of [[15.0, 15.5], [16.3, 24.6], [24.6, 30]]) { glass([isoPt(a, 10.4, 0), isoPt(b, 10.4, 0), isoPt(b, 10.4, 2.1), isoPt(a, 10.4, 2.1)]); } box(15.0, 10.38, 2.1, 15, 0.04, 0.08, '#94a3b8'); const [tx, ty] = isoPt(21.5, 10.4, 2.35), c2 = ISO.ctx; c2.fillStyle = '#14532d'; c2.font = '800 9px system-ui'; c2.textAlign = 'center'; c2.fillText('🏸 PATIO · BADMINTON COURT', tx, ty); });
+    add(COURT.net + (COURT.y0 + COURT.y1) / 2, () => { const { net, y0, y1 } = COURT; box(net - 0.04, y0 - 0.1, 0, 0.08, 0.08, 1.75, '#e5e7eb'); box(net - 0.04, y1 + 0.02, 0, 0.08, 0.08, 1.75, '#e5e7eb'); poly([isoPt(net, y0, 1.05), isoPt(net, y1, 1.05), isoPt(net, y1, 1.68), isoPt(net, y0, 1.68)], 'rgba(15,23,42,.35)'); for (let k = 0; k < 14; k++) { const yy = y0 + (y1 - y0) * k / 14; poly([isoPt(net, yy, 1.05), isoPt(net, yy + 0.01, 1.05), isoPt(net, yy + 0.01, 1.68), isoPt(net, yy, 1.68)], 'rgba(255,255,255,.25)'); } poly([isoPt(net, y0, 1.66), isoPt(net, y1, 1.66), isoPt(net, y1, 1.72), isoPt(net, y0, 1.72)], '#ffffff'); });
+    add(16.6 + 14.4, () => { box(16.6, 14.2, 0, 2.2, 0.5, 0.45, '#92400e'); box(20.2, 14.2, 0, 2.2, 0.5, 0.45, '#92400e'); });
     // canteen: food counter on the left wall, a long table with stools, a menu sign
     add(14.5 + 12, () => { box(14.2, 10.5, 0, 0.9, 3.0, 0.9, '#d6d3d1'); box(14.2, 10.5, 0.9, 0.9, 3.0, 0.06, '#78716c'); [['#f59e0b', 10.7], ['#16a34a', 11.4], ['#dc2626', 12.1], ['#eab308', 12.8]].forEach(([col, y]) => { box(14.35, y, 0.96, 0.6, 0.5, 0.06, '#e5e7eb'); box(14.47, y + 0.1, 1.02, 0.36, 0.3, 0.08, col); });
       box(14.6, 11.95, 0.96, 0.06, 0.06, 1.4, '#6b7280'); box(14.1, 11.6, 2.36, 1.1, 0.8, 0.32, '#14532d'); { const [sx, sy] = isoPt(14.65, 12.0, 2.55), c2 = ISO.ctx; c2.fillStyle = '#fef9c3'; c2.textAlign = 'center'; c2.textBaseline = 'middle'; c2.font = '800 10px system-ui, sans-serif'; c2.fillText('🍽 CANTEEN', sx, sy - 5); c2.font = '600 8px system-ui, sans-serif'; c2.fillText(mealNow() ? mealNow() + ' now!' : 'Lunch 12–1 · Snacks 10 & 3', sx, sy + 7); } });
     add(9 + 11.5, () => { for (const lx of [9.2, 13.6]) for (const ly of [11.25, 11.8]) box(lx, ly, 0, 0.08, 0.08, 0.72, '#6b7280'); box(9.1, 11.15, 0.72, 4.7, 0.8, 0.06, '#f5f5f4'); });
     CANTEEN.forEach(([sx, sy]) => add(sx + sy - 0.1, () => { box(sx - 0.18, sy - 0.18, 0, 0.36, 0.36, 0.44, '#9ca3af'); box(sx - 0.2, sy - 0.2, 0.44, 0.4, 0.4, 0.05, '#f97316'); }));
-    for (const [px, py] of [[0.6, 0.6], [0.6, 13.0], [8.4, 13.4], [24.4, 13.2]]) add(px + py, () => { box(px - 0.22, py - 0.22, 0, 0.44, 0.44, 0.42, '#78350f'); box(px - 0.3, py - 0.3, 0.42, 0.6, 0.6, 0.55, '#16a34a'); box(px - 0.18, py - 0.18, 0.97, 0.36, 0.36, 0.3, '#22c55e'); });
+    for (const [px, py] of [[0.6, 13.0], [8.4, 13.4], [15.4, 13.8], [24.0, 13.6]]) add(px + py, () => { box(px - 0.22, py - 0.22, 0, 0.44, 0.44, 0.42, '#78350f'); box(px - 0.3, py - 0.3, 0.42, 0.6, 0.6, 0.55, '#16a34a'); box(px - 0.18, py - 0.18, 0.97, 0.36, 0.36, 0.3, '#22c55e'); });
     for (const p of Object.values(ISO.people)) add(p.x + p.y + 0.3, () => person(p, now));
     items.sort((a, b) => a.k - b.k).forEach(i => i.draw());
+    // the shuttlecock in flight, with its shadow on the court
+    if (ISO.shuttle) { const { x, y, z } = ISO.shuttle; disc(x, y, 0.01, 0.07, 'rgba(0,0,0,.22)'); const [sx, sy] = isoPt(x, y, z); c.save(); c.translate(sx, sy); c.rotate(ISO.shuttle.dir * 0.6); c.fillStyle = '#ffffff'; c.strokeStyle = '#94a3b8'; c.lineWidth = 0.8; c.beginPath(); c.moveTo(-1.6, 0); c.lineTo(-4.5, -6); c.lineTo(4.5, -6); c.lineTo(1.6, 0); c.closePath(); c.fill(); c.stroke(); c.beginPath(); c.arc(0, 1.2, 2, 0, Math.PI * 2); c.fillStyle = '#f59e0b'; c.fill(); c.restore(); }
     // holograms: what each working bot is doing, floating over its screen
     for (const p of Object.values(ISO.people)) if (p.state === 'working' && p.sit) {
       const [dx, dy] = DESKS[p.id], col = TEAM.find(t => t[0] === p.id)[3], [hx, hy] = isoPt(dx, dy - 0.5, 2.25 + Math.sin(now / 500 + dx) * 0.04), txt = cut(String((team()[p.id] || [])[3] || 'Working…'), 34);
@@ -1128,10 +1208,103 @@ Answer with JSON only, exactly these keys:
     canteen: ['Lunch is served!', 'What’s on the menu today?', 'Snack break, finally.']
   };
   const pick = a => a[Math.floor(Math.random() * a.length)];
+  ACT_LINES.badminton = ['Badminton? Loser buys coffee.', 'Rematch from yesterday. I’m ready.', 'Warm-up rally, then we play for real.'];
+  /* badminton: two free bots play rallies on the patio court. The shuttle flies in an arc from racket to racket; the
+     receiver moves to where it will land; now and then it drops and someone scores. */
+  function startMatch(a, b, now) {
+    if (!a || !b || a === b) return; if (ISO.match) endMatch();
+    const y = (COURT.y0 + COURT.y1) / 2, la = COURT.net - 2.0, lb = COURT.net + 2.0;
+    a.act = { type: 'badminton', target: [la, y], dur: 32000 + Math.random() * 16000 }; a.side = 'l'; a.goal = null; a.mug = false;
+    b.act = { type: 'badminton', target: [lb, y], dur: a.act.dur }; b.side = 'r'; b.goal = null; b.mug = false;
+    ISO.match = { a: a.id, b: b.id, hitter: a.id, t0: 0, dur: 1300, land: y, score: [0, 0], pause: now + 1500 };
+    sayLine(a, pick(ACT_LINES.badminton));
+  }
+  function endMatch() { const m = ISO.match; if (!m) return; for (const id of [m.a, m.b]) { const q = ISO.people[id]; if (q) { q.goal = null; if (q.act && q.act.type === 'badminton') q.act.start = 1; } } ISO.match = null; ISO.shuttle = null; }
+  function matchTick(now) {
+    const m = ISO.match; if (!m) return;
+    const A = ISO.people[m.a], B = ISO.people[m.b];
+    if (!A || !B || !A.act || !B.act || A.act.type !== 'badminton' || B.act.type !== 'badminton') { const winner = A && B ? null : null; endMatch(); return; }
+    if (A.moving && !A.goal || B.moving && !B.goal || !A.act.start || !B.act.start) { ISO.shuttle = null; return; }   // still walking out to the court
+    if (now < m.pause) { ISO.shuttle = null; return; }
+    const H = m.hitter === m.a ? A : B, R = H === A ? B : A;
+    if (!m.t0) { m.t0 = now; m.dur = 1100 + Math.random() * 600; m.land = COURT.y0 + 0.5 + Math.random() * (COURT.y1 - COURT.y0 - 1.0); R.goal = [R.side === 'l' ? COURT.net - 2.0 - Math.random() * 0.6 : COURT.net + 2.0 + Math.random() * 0.6, m.land]; H.swing = now; m.miss = Math.random() < 0.12; }
+    const u = (now - m.t0) / m.dur, fromX = H.x + (H.side === 'l' ? 0.3 : -0.3), toX = R.goal[0] + (R.side === 'l' ? 0.3 : -0.3);
+    if (u < 1) { ISO.shuttle = { x: fromX + (toX - fromX) * u, y: H.y + (m.land - H.y) * u, z: (m.miss && u > 0.75 ? 1.9 * (1 - (u - 0.75) * 4) + 0.6 * (1 - u) : 1.9 + 2.0 * Math.sin(Math.PI * u)), dir: H.side === 'l' ? 1 : -1 }; return; }
+    if (m.miss) { const w = H === A ? 0 : 1; m.score[w]++; if (Math.random() < 0.5) sayLine(H, pick(['Point!', 'Got you!', 'That one counts.', 'Too fast?'])); else sayLine(R, pick(['Out! …Fine, it was in.', 'Lucky shot.', 'Next one is mine.'])); m.pause = now + 1800; m.t0 = 0; m.hitter = H.id; ISO.shuttle = null; return; }
+    R.swing = now; sfxTock(); m.hitter = R.id; m.t0 = 0;
+  }
+  function zoneAt(x, y) { for (const [id, [rx, ry]] of Object.entries(ROOMS)) if (x > rx && x < rx + 3 && y > ry && y < ry + 3) return id; if (x > 15 && y > 10.4) return 'patio'; return ''; }
+  // walls people walk around (x0, y0, x1, y1): the back offices, the left offices, the meeting room, the CR, the canteen table, the patio wall
+  const BLOCKS = [[0, 0, 15.45, 3.35], [0, 3.8, 3.35, 10.0], [5.05, 4.85, 9.55, 8.55], [4.05, 11.05, 6.55, 13.5], [9.0, 11.05, 13.9, 12.05], [14.1, 10.4, 30, 10.5]];
+  function hits(a, b, r) {                         // does segment a→b pass through rectangle r?
+    if (Math.max(a[0], b[0]) < r[0] || Math.min(a[0], b[0]) > r[2] || Math.max(a[1], b[1]) < r[1] || Math.min(a[1], b[1]) > r[3]) return false;
+    for (let k = 1; k < 24; k++) { const t = k / 24, x = a[0] + (b[0] - a[0]) * t, y = a[1] + (b[1] - a[1]) * t; if (x > r[0] && x < r[2] && y > r[1] && y < r[3]) return true; }
+    return false;
+  }
+  function detour(a, b, depth) {
+    if (depth > 3) return [b];
+    const r = BLOCKS.find(q => hits(a, b, q)); if (!r) return [b];
+    const m = 0.35, C = [[r[0] - m, r[1] - m], [r[2] + m, r[1] - m], [r[2] + m, r[3] + m], [r[0] - m, r[3] + m]], len = (pts) => pts.reduce((s2, q, i) => s2 + Math.hypot(q[0] - (i ? pts[i - 1][0] : a[0]), q[1] - (i ? pts[i - 1][1] : a[1])), 0);
+    let best = null;
+    for (const path of [[C[0]], [C[1]], [C[2]], [C[3]], [C[0], C[1]], [C[1], C[0]], [C[1], C[2]], [C[2], C[1]], [C[2], C[3]], [C[3], C[2]], [C[3], C[0]], [C[0], C[3]]]) {
+      const full = path.concat([b]); let prev = a, ok = true; for (const q of full) { if (hits(prev, q, r)) { ok = false; break; } prev = q; }
+      if (ok && (!best || len(full) < len(best))) best = full;
+    }
+    if (!best) return [b];
+    const out = []; let prev = a; for (const q of best) { out.push(...detour(prev, q, depth + 1)); prev = q; } return out;
+  }
+  function routeTo(p, tx, ty) {                    // through the doors, around the walls, never through the glass
+    const za = zoneAt(p.x, p.y), zb = zoneAt(tx, ty), stops = [];
+    if (za !== zb) { if (za && DOORS[za]) stops.push(DOORS[za][0], DOORS[za][1]); if (zb && DOORS[zb]) stops.push(DOORS[zb][1], DOORS[zb][0]); }
+    stops.push([tx, ty]);
+    const pts = []; let prev = [p.x, p.y], inside = za;
+    for (const q of stops) { const free = !zoneAt(prev[0], prev[1]) && !zoneAt(q[0], q[1]); pts.push(...(free ? detour(prev, q, 0) : [q])); prev = q; }
+    return pts;
+  }
+  const DOING = p => p.state === 'working' ? '💻 ' + cut(String((team()[p.id] || [])[3] || 'Working'), 60) : p.state === 'asleep' ? '💤 Switched off' : p.convo ? '💬 Chatting' : !p.act ? '🚶 Walking' :
+    ({ coffee: '☕ Coffee break', nap: '😴 Power nap at the desk', cr: '🚻 CR break', game: '🎮 Playing a game', wander: '🚶 Stretching legs', canteen: '🍽 ' + (mealNow() || 'Eating'), badminton: '🏸 Playing badminton' })[p.act.type] || '🚶 Walking';
+  function paintStatus() {
+    if (!ISO.status) return; const html = TEAM.map(([id, name, role, col]) => { const q = ISO.people[id]; return q ? `<div style="display:flex;gap:8px;align-items:flex-start;padding:6px 8px;border:1px solid #e5e7eb;border-radius:10px;background:#fff"><span style="width:8px;height:8px;border-radius:50%;margin-top:5px;flex:none;background:${q.state === 'working' ? '#22c55e' : q.state === 'asleep' ? '#94a3b8' : '#f59e0b'}"></span><div style="min-width:0"><div style="font-weight:700;font-size:12px"><span style="color:${col}">${esc(name)}</span> <span class="small" style="font-weight:500">· ${esc(role)}</span></div><div class="small" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(DOING(q))}</div></div></div>` : ''; }).join('');
+    if (html !== ISO.statusHtml) { ISO.status.innerHTML = html; ISO.statusHtml = html; }
+  }
+
+  /* ---------- office music: a smooth, original lo-fi loop made live with the Web Audio API (no files) ---------- */
+  const MUSIC = { ctx: null, out: null, on: false, vol: 0.5, timer: 0, bar: 0, next: 0 };
+  try { const m = JSON.parse(localStorage.getItem('rsh_office_music') || '{}'); if (typeof m.vol === 'number') MUSIC.vol = m.vol; MUSIC.want = !!m.on; } catch (_) {}
+  const musicSave = () => { try { localStorage.setItem('rsh_office_music', JSON.stringify({ on: MUSIC.on, vol: MUSIC.vol })); } catch (_) {} };
+  const hz = n => 440 * Math.pow(2, (n - 69) / 12);
+  const CHORDS = [[62, 65, 69, 72, 76], [55, 59, 62, 65, 69], [60, 64, 67, 71, 74], [57, 60, 64, 67, 71]];   // Dm9 · G9 · Cmaj9 · Am9
+  function tone(f, t, dur, type, gain, dest) { const c = MUSIC.ctx, o = c.createOscillator(), g = c.createGain(); o.type = type; o.frequency.value = f; g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(gain, t + 0.03); g.gain.exponentialRampToValueAtTime(0.0008, t + dur); o.connect(g); g.connect(dest || MUSIC.out); o.start(t); o.stop(t + dur + 0.05); }
+  function hat(t, gain) { const c = MUSIC.ctx, n = c.createBufferSource(), b = c.createBuffer(1, c.sampleRate * 0.05, c.sampleRate), d = b.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length); n.buffer = b; const f = c.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = 7000; const g = c.createGain(); g.gain.value = gain; n.connect(f); f.connect(g); g.connect(MUSIC.out); n.start(t); }
+  function scheduleBar() {
+    const c = MUSIC.ctx; if (!c || !MUSIC.on) return;
+    const audible = ISO.canvas && ISO.canvas.isConnected && !document.hidden && tab === 'office';
+    while (MUSIC.next < c.currentTime + 1.5) {
+      const t = MUSIC.next, beat = 0.75, ch = CHORDS[MUSIC.bar % 4];
+      if (audible) {
+        ch.forEach((n, k) => { tone(hz(n), t + k * 0.015, 2.8, 'sine', 0.05); tone(hz(n) * 2, t + k * 0.015, 1.2, 'sine', 0.012); });          // soft electric-piano chord
+        tone(hz(ch[0] - 24), t, 1.3, 'triangle', 0.09); tone(hz(ch[0] - 17), t + 2 * beat, 1.2, 'triangle', 0.07);                              // bass
+        for (let k = 0; k < 8; k++) hat(t + k * beat / 2 + (k % 2 ? 0.05 : 0), k % 2 ? 0.035 : 0.02);                                             // brushed hi-hat, a little swing
+        if (MUSIC.bar % 2) { const scale = [74, 76, 79, 81, 84]; for (let k = 0; k < 3; k++) if (Math.random() < 0.7) tone(hz(scale[Math.floor(Math.random() * scale.length)]), t + (1 + k) * beat + Math.random() * 0.1, 0.9, 'sine', 0.035); }
+      }
+      MUSIC.next += 4 * 0.75; MUSIC.bar++;
+    }
+  }
+  function musicStart() {
+    try {
+      if (!MUSIC.ctx) { MUSIC.ctx = new (window.AudioContext || window.webkitAudioContext)(); const lp = MUSIC.ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 3200; MUSIC.out = MUSIC.ctx.createGain(); MUSIC.out.connect(lp); lp.connect(MUSIC.ctx.destination); }
+      MUSIC.ctx.resume(); MUSIC.out.gain.value = MUSIC.vol * 0.9; MUSIC.on = true; MUSIC.next = MUSIC.ctx.currentTime + 0.1; clearInterval(MUSIC.timer); MUSIC.timer = setInterval(scheduleBar, 400); scheduleBar();
+    } catch (_) { MUSIC.on = false; }
+    musicSave(); paintMusic();
+  }
+  function musicStop() { MUSIC.on = false; clearInterval(MUSIC.timer); if (MUSIC.ctx) MUSIC.ctx.suspend(); musicSave(); paintMusic(); }
+  function sfxTock() { if (!MUSIC.on || !MUSIC.ctx || tab !== 'office') return; const t = MUSIC.ctx.currentTime; tone(1300, t, 0.07, 'square', 0.03); tone(650, t, 0.09, 'sine', 0.05); }
+  function paintMusic() { if (!ISO.musicBar) return; const b = ISO.musicBar.querySelector('[data-music-toggle]'), v = ISO.musicBar.querySelector('[data-music-vol]'), n = ISO.musicBar.querySelector('[data-music-note]'); if (b) { b.textContent = MUSIC.on ? '⏸ Music on' : '▶ Music off'; b.setAttribute('aria-pressed', MUSIC.on ? 'true' : 'false'); } if (v) v.value = Math.round(MUSIC.vol * 100); if (n) n.textContent = MUSIC.on ? 'Smooth office lo-fi, made live in your browser' : (MUSIC.want ? 'Press play to resume the office music' : 'Smooth background music for the office'); }
   function nextAct(p, now) {
     const meal = mealNow();
     if (meal) { const taken = new Set(Object.values(ISO.people).filter(q => q !== p && q.act && q.act.type === 'canteen').map(q => q.act.seat)); const seat = CANTEEN.findIndex((_, i) => !taken.has(i)); p.act = { type: 'canteen', target: CANTEEN[seat < 0 ? 0 : seat], seat, dur: 60000 }; if (Math.random() < 0.5) sayLine(p, pick(ACT_LINES.canteen)); return; }
     const after = p.act && p.act.type;
+    if (!ISO.match && after !== 'badminton' && Math.random() < 0.3) { const mate = Object.values(ISO.people).find(q => q !== p && q.state === 'idle' && !q.convo && !q.hidden && (!q.act || ['coffee', 'wander', 'game', 'nap'].includes(q.act.type))); if (mate) { startMatch(p, mate, now); return; } }
     const w = [['coffee', after === 'coffee' ? 4 : 22], ['nap', after === 'coffee' ? 34 : 10], ['cr', ISO.crBusy || after === 'cr' ? 0 : 9], ['game', 16], ['wander', 20]];
     let r = Math.random() * w.reduce((a, b) => a + b[1], 0), type = 'wander'; for (const [t, n] of w) { if ((r -= n) < 0) { type = t; break; } }
     const [dx, dy] = DESKS[p.id];
@@ -1142,13 +1315,14 @@ Answer with JSON only, exactly these keys:
     if (Math.random() < 0.45) sayLine(p, pick(ACT_LINES[type]));
   }
   function actTick(p, now) {
-    if (p.state !== 'idle') { if (p.act && p.act.type === 'cr' && ISO.crBusy === p.id) ISO.crBusy = null; p.act = null; p.hidden = false; return; }
-    if (mealNow() && (!p.act || p.act.type !== 'canteen') && !p.convo) { if (p.act && p.act.type === 'cr' && ISO.crBusy === p.id) ISO.crBusy = null; p.hidden = false; nextAct(p, now); return; }
+    if (p.state !== 'idle') { if (p.act && p.act.type === 'cr' && ISO.crBusy === p.id) ISO.crBusy = null; if (ISO.match && (ISO.match.a === p.id || ISO.match.b === p.id)) endMatch(); p.act = null; p.hidden = false; p.goal = null; return; }
+    if (mealNow() && (!p.act || p.act.type !== 'canteen') && !p.convo) { if (p.act && p.act.type === 'cr' && ISO.crBusy === p.id) ISO.crBusy = null; if (ISO.match && (ISO.match.a === p.id || ISO.match.b === p.id)) endMatch(); p.hidden = false; p.goal = null; nextAct(p, now); return; }
     if (!mealNow() && p.act && p.act.type === 'canteen' && !p.convo) { p.act = null; }
     if (!p.act) return nextAct(p, now);
+    if (p.act.type === 'badminton' && (!ISO.match || (ISO.match.a !== p.id && ISO.match.b !== p.id))) { p.goal = null; return nextAct(p, now); }   // the match ended or was replaced
     if (p.convo) { if (p.act.start) p.act.start = now - 1; return; }
     if (!p.moving && !p.act.start) { p.act.start = now; if (p.act.type === 'cr') p.hidden = true; }
-    if (p.act.start && now - p.act.start > p.act.dur) { if (p.act.type === 'cr') { p.hidden = false; if (ISO.crBusy === p.id) ISO.crBusy = null; } nextAct(p, now); }
+    if (p.act.start && now - p.act.start > p.act.dur) { if (p.act.type === 'cr') { p.hidden = false; if (ISO.crBusy === p.id) ISO.crBusy = null; } if (p.act.type === 'badminton') { const m = ISO.match; if (m) { const [a, b] = m.score; const me = ISO.people[m.a === p.id ? m.a : m.b], other = ISO.people[m.a === p.id ? m.b : m.a]; sayLine(me, a === b ? 'Good game. Call it a draw.' : `Good game! ${Math.max(a, b)}–${Math.min(a, b)}.`); endMatch(); if (other) nextAct(other, now); } } nextAct(p, now); }
   }
   const chatty = p => p.state === 'idle' && !p.convo && !p.moving && !p.hidden && p.act && ['coffee', 'wander', 'canteen', 'game'].includes(p.act.type) && p.act.start;
   function startConvo(now) {
@@ -1181,12 +1355,16 @@ Answer with JSON only, exactly these keys:
     const still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     for (const p of Object.values(ISO.people)) {
       actTick(p, now);
-      const [tx, ty] = isoTarget(p), ddx = tx - p.x, ddy = ty - p.y, dist = Math.hypot(ddx, ddy), sp = 2.0 * dt;
-      if (still || dist < Math.max(sp, 0.001) || !isFinite(dist)) { p.x = tx; p.y = ty; p.moving = false; } else { p.x += ddx / dist * sp; p.y += ddy / dist * sp; p.moving = true; }
+      const T = isoTarget(p), key = T[0].toFixed(2) + ',' + T[1].toFixed(2);
+      if (p.routeKey !== key) { p.route = routeTo(p, T[0], T[1]); p.routeKey = key; }
+      if (still) { p.x = T[0]; p.y = T[1]; p.route = [T]; }
+      const [tx, ty] = p.route[0] || T, ddx = tx - p.x, ddy = ty - p.y, dist = Math.hypot(ddx, ddy), sp = (p.act && p.act.type === 'badminton' && p.goal ? 3.0 : 2.0) * dt;
+      if (dist < Math.max(sp, 0.001) || !isFinite(dist)) { p.x = tx; p.y = ty; if (p.route.length > 1) { p.route.shift(); p.moving = true; } else p.moving = false; } else { p.x += ddx / dist * sp; p.y += ddy / dist * sp; p.moving = true; }
       p.sit = !p.moving && (p.state !== 'idle' || (p.act && !p.goal && ['nap', 'game', 'canteen'].includes(p.act.type)));
     }
     if (!ISO.convo && now > ISO.nextConvo) startConvo(now);
-    stepConvo(now);
+    stepConvo(now); matchTick(now);
+    if (now > (ISO.statusAt || 0)) { ISO.statusAt = now + 700; paintStatus(); }
     scene(now); ISO.raf = requestAnimationFrame(isoTick);
   }
   function isoMount() {
@@ -1195,7 +1373,12 @@ Answer with JSON only, exactly these keys:
       ISO.wrap = document.createElement('div'); ISO.wrap.style.cssText = 'margin-bottom:14px';
       ISO.canvas = document.createElement('canvas'); ISO.canvas.setAttribute('role', 'img'); ISO.canvas.style.cssText = 'width:100%;display:block;border-radius:16px;background:#eef0f2;cursor:pointer';
       ISO.log = document.createElement('div'); ISO.log.className = 'small'; ISO.log.setAttribute('aria-live', 'polite'); ISO.log.style.cssText = 'margin-top:8px;padding:8px 12px;border-radius:12px;background:var(--soft,#f5f5f7);display:grid;gap:2px';
-      ISO.wrap.appendChild(ISO.canvas); ISO.wrap.appendChild(ISO.log); paintLog();
+      ISO.musicBar = document.createElement('div'); ISO.musicBar.style.cssText = 'display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px';
+      ISO.musicBar.innerHTML = '<button type="button" class="btn ghost smallbtn" data-music-toggle aria-pressed="false">▶ Music off</button><label class="small" style="display:inline-flex;gap:6px;align-items:center">🔊 Volume <input type="range" min="0" max="100" step="1" data-music-vol aria-label="Music volume" style="width:120px"></label><span class="small" data-music-note></span>';
+      ISO.musicBar.addEventListener('click', e => { if (e.target.closest('[data-music-toggle]')) { if (MUSIC.on) musicStop(); else musicStart(); } });
+      ISO.musicBar.addEventListener('input', e => { if (e.target.matches('[data-music-vol]')) { MUSIC.vol = Number(e.target.value) / 100; if (MUSIC.out) MUSIC.out.gain.value = MUSIC.vol * 0.9; musicSave(); } });
+      ISO.status = document.createElement('div'); ISO.status.style.cssText = 'display:grid;gap:6px;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));margin-top:8px'; ISO.status.setAttribute('aria-label', 'What each bot is doing now');
+      ISO.wrap.appendChild(ISO.musicBar); ISO.wrap.appendChild(ISO.canvas); ISO.wrap.appendChild(ISO.status); ISO.wrap.appendChild(ISO.log); paintLog(); paintMusic();
       ISO.canvas.addEventListener('click', e => { const r = ISO.canvas.getBoundingClientRect(), mx = (e.clientX - r.left) * (ISO.w / r.width), my = (e.clientY - r.top) * (ISO.h / r.height); let best = null, bd = 36;
         for (const p of Object.values(ISO.people)) { if (!p.hit) continue; const d = Math.hypot(p.hit[0] - mx, p.hit[1] - my); if (d < bd) { bd = d; best = p; } }
         if (best) { const t = team()[best.id]; sayLine(best, t[3], 6500); } });
@@ -1214,6 +1397,98 @@ Answer with JSON only, exactly these keys:
       summary.push(`${name}: ${state}`); });
     ISO.canvas.setAttribute('aria-label', 'Live office: ' + summary.join(', ') + '. Idle bots chat in the break room; the latest lines are shown below. Click a bot to hear its status.');
     if (!ISO.raf) ISO.raf = requestAnimationFrame(isoTick);
+  }
+
+  /* ---------- Season Playbook (researched on the web, Nov 26, 2026) ----------
+   * The research that every new campaign starts from: the 2026–27 wrestling calendar, sourced rule facts for
+   * Did You Know Tuesdays, what is working on social now, competitor gaps, and the comment rules. Ideas can be
+   * added as draft campaigns; they still go through files, checks, manager review and Anthony's approval. */
+  const PB_SRC = 'Season Playbook · researched Nov 26, 2026 (sources in 24/7 Bots → Playbook)';
+  const PLAYBOOK = {
+    calendar: [
+      ['Dec (mid)', 'Walsh Jesuit Ironman (OH), high school', 'usually mid-December; 2026 date not confirmed', 'https://delbartonathletics.org/news/2025/12/16/varsity-wrestling-delbarton-wrestling-earns-third-at-nationally-loaded-ironman-invitational.aspx'],
+      ['Dec (late)', 'Beast of the East (DE), high school', 'late December; 2026 date not confirmed', 'https://bluehens.com/news/2024/12/18/delaware-athletics-daccr-set-to-host-beast-of-the-east-wrestling-tournament'],
+      ['Dec 29 – Jan 4', 'Midlands and Southern Scuffle, college', 'holiday college tournaments; 2026–27 dates not yet published', 'https://nusports.com/news/2025/12/28/wrestling-set-for-61st-annual-ken-kraft-midlands-championships'],
+      ['Jan 15 – Feb 19', 'ACC Friday Night Duals (ACC Network)', 'ACC Championship Sun Mar 7', 'https://espnpressroom.com/press-release/acc-friday-night-duals-ncaa-championships-anchor-espns-expansive-2026-27-wrestling-slate/'],
+      ['Jan 22', 'Iowa girls’ first-ever state duals (tentative)', 'girls’ wrestling growth story', 'https://ighsau.org/news/state-dual-meet-tournament-coming-to-girls-wrestling-in-2027'],
+      ['Feb 12–13', 'Texas UIL state, Berry Center', 'state tournament season starts', 'https://www.uiltexas.org/wrestling/state'],
+      ['Feb 17–20', 'Iowa IHSAA boys’ state, Casey’s Center', '', 'https://www.iahsaa.org/wp-content/uploads/2026/04/2027-IHSAA-Traditional-State-Wrestling-Tournament-Schedule-Weigh-Ins.pdf'],
+      ['Feb 19–20', 'Tennessee TSSAA Division I and girls’ state', '', 'https://tssaa.org/article/division-i-and-girls-individual-wrestling-tournament-to-be-held-in-chattanooga'],
+      ['Mar 12–13', 'NCAA Division II Championships, Cedar Rapids', '', 'https://uiupeacocks.com/news/2024/10/2/uiu-athletics-upper-iowa-and-cedar-rapids-tourism-to-host-ncaa-dii-wrestling-championships-in-2027'],
+      ['Mar 12–14', 'Ohio OHSAA state, Schottenstein Center', 'secondary source; confirm before posting', 'https://www.yahoo.com/news/ohsaa-announces-future-wrestling-state-223338638.html'],
+      ['Mar 18–20', 'NCAA Division I Championships, St. Louis (ESPN)', 'the biggest week of the season', 'https://www.themat.com/news/2024/october/02/st-louis-2027-minneapolis-2028-to-host-ncaa-div-i-wrestling-championships-div-ii-and-iii-sites-also-set']
+    ],
+    facts: [
+      ['A takedown is worth 3 points in high school wrestling (since 2024–25), and near-fall points equal the seconds held: 2, 3 or 4.', 'https://nfhs.org/resources/sports/wrestling-rules-changes-2024-25'],
+      ['NFHS approved 18 rule changes for 2026–27: referees count 5 seconds out loud, teams may weigh in as a group, and out-of-bounds calls must say whether stalling was called.', 'https://www.miaa.net/sites/default/files/2026-04/2026-27-wrestling-rules-changes-press-release.pdf'],
+      ['For 2026–27, NFHS made properly fitted, sport-appropriate uniforms for female wrestlers a Point of Emphasis.', 'https://www.nfhs.org/resources/sports/wrestling-points-of-emphasis-2026-27'],
+      ['Green ankle band = home, red = visitor, matching the referee’s wristbands.', 'https://cdn1.sportngin.com/attachments/document/387f-3091189/Questions_Most_Asked_by_Wrestling_Parents.pdf'],
+      ['A one-piece singlet or a two-piece uniform is legal in high school; compression shorts need at least a 4-inch inseam above the knee.', 'https://nfhs.org/stories/alternate-two-piece-uniform-approved-for-high-school-wrestling'],
+      ['Each state picks a 12-, 13- or 14-weight-class set; the 14-class boys set runs 106 to 285.', 'https://www.nfhs.org/stories/separate-weight-classes-for-girls-choice-of-weight-classes-established-in-high-school-wrestling'],
+      ['High school varsity matches are three 2-minute periods.', 'https://www.ohsaa.org/Sports/News/a-basic-understanding-of-hs-wrestling'],
+      ['74,064 girls wrestled in high school in 2024–25 (up 15% in a year), and 40 states now hold girls’ state championships.', 'https://www.themat.com/news/2025/august/18/nfhs-reports-new-records-for-high-school-wrestling-participation-for-both-girls-and-boys-in-2024-25'],
+      ['Wrestling entered the ancient Olympics in 708 BCE and was in the first modern Olympics in 1896.', 'https://www.olympedia.org/sports/WRE']
+    ],
+    working: [
+      'Team reveal and “drip” clips: new singlet reveals set off big fan reactions (e.g. Oklahoma State’s reveal).',
+      'Coach and athlete clips shot at the mat: original footage from real programs travels far.',
+      'Posts people send to friends: Instagram counts “sends per reach” as a top signal. Make things parents and teammates DM each other.',
+      'Original footage only: since spring 2026 Instagram stops recommending accounts that repost others’ clips, even with credit. Don’t repost Flo or match broadcasts.'
+    ],
+    gaps: [
+      'Big brands (Cliff Keen, Rudis, Adidas) lead with elite athletes. RSH can own everyday high school and youth teams, and the coaches and parents who order.',
+      'Reversible singlets explained simply: home and away in one uniform.',
+      'Girls’ fit, tied to the NFHS 2026–27 Point of Emphasis.',
+      'Team stores as something families and fans buy from all season.',
+      'Design walkthroughs and “pick our colorway” posts.'
+    ],
+    rules: [
+      'Ask a real, open question tied to the post (“Which new rule will show up most in your duals?”). Meta explicitly allows asking for advice or recommendations.',
+      'Give a reason to follow (“Every Tuesday we break down a rule”), not a demand.',
+      'Never: “comment 🔥 for part 2”, “like = Navy/Gold, share = Black/Red”, “tag 3 wrestlers”, “share if you agree”. Meta demotes it and TikTok keeps it out of For You.',
+      'Use the Instagram poll sticker for votes instead of “like to vote”.',
+      'Shoot original footage; get the athlete’s, parent’s and school’s OK before showing minors. Never promise stock, price or delivery time.'
+    ]
+  };
+  const IDEAS = [
+    { date: '2026-12-01', title: 'DYK: The 3-Point Takedown', platform: 'Instagram', postType: 'Reel', hook: 'YOUR TAKEDOWN IS WORTH MORE THAN YOUR DAD’S WAS.', caption: 'Did you know? Since the 2024–25 season, a takedown in high school wrestling is worth 3 points, not 2. Did the 3-point takedown change how your team wrestles?', video: '0–2s: hook on screen over a clean takedown on your own team’s mat (original footage only). 2–8s: “2 points then, 3 points now” graphic. 8–13s: quick near-fall reminder: 2, 3 or 4 points for 2, 3 or 4 seconds held. 13–16s: question on screen + RSH end card.', source: 'https://nfhs.org/resources/sports/wrestling-rules-changes-2024-25' },
+    { date: '2026-12-08', title: 'DYK: What the Green Ankle Band Means', platform: 'Instagram', postType: 'Reel', hook: 'THIS LITTLE BAND TELLS THE REF WHO YOU ARE.', caption: 'Did you know? In high school wrestling, the green ankle band means home and red means visitor, matching the referee’s wristbands. Parents, which rule confused you most in your first season?', video: '0–2s: close-up of a green ankle band going on. 2–7s: ref wristbands green and red. 7–12s: “Green = home · Red = visitor”. 12–15s: question + RSH end card.', source: 'https://cdn1.sportngin.com/attachments/document/387f-3091189/Questions_Most_Asked_by_Wrestling_Parents.pdf' },
+    { date: '2026-12-15', title: 'DYK: 3 Rule Changes You’ll Notice This Season', platform: 'Instagram', postType: 'Reel', hook: '18 RULE CHANGES THIS YEAR. HERE ARE 3 YOU’LL NOTICE.', caption: 'Did you know? NFHS approved 18 rule changes for the 2026–27 high school wrestling season. Three you’ll notice: referees now count 5 seconds out loud, teams may weigh in as a group, and out-of-bounds calls must say whether stalling was called. Which new rule will show up most in your duals?', video: '0–2s: hook on screen. 2–6s: 5-second count, out loud. 6–10s: team weigh-in. 10–14s: out-of-bounds + stalling call. 14–17s: question + end card.', source: 'https://www.miaa.net/sites/default/files/2026-04/2026-27-wrestling-rules-changes-press-release.pdf' },
+    { date: '2026-12-16', title: 'Weight Class Roll Call', platform: 'TikTok', postType: 'Reel', hook: '106 TO 285. WHICH ONE IS STACKED IN YOUR STATE?', caption: 'High school wrestling has up to 14 weight classes, from 106 to 285, and every state picks its own set. Which weight class is stacked in your state this year?', video: '0–2s: numbers 106 → 285 flash on screen to the beat. 2–10s: one quick shot per weight group (original team footage). 10–14s: question on screen + end card.', source: 'https://www.nfhs.org/stories/separate-weight-classes-for-girls-choice-of-weight-classes-established-in-high-school-wrestling' },
+    { date: '2026-12-22', title: 'DYK: Wrestling at the 708 BCE Olympics', platform: 'Instagram', postType: 'Reel', hook: 'WRESTLING IS OLDER THAN YOU THINK.', caption: 'Did you know? Wrestling was added to the ancient Olympic Games in 708 BCE and was part of the first modern Olympics in 1896. What’s the oldest tradition your team still keeps?', video: '0–2s: hook over an ancient-style illustration (made in-house, no copyrighted art). 2–8s: 708 BCE → 1896 timeline. 8–13s: today’s team in their singlets. 13–16s: question + end card.', source: 'https://www.olympedia.org/sports/WRE' },
+    { date: '2026-12-30', title: 'New Year, New Team Look', platform: 'TikTok', postType: 'Reel', hook: 'IF YOU COULD DESIGN YOUR TEAM’S SINGLET FROM SCRATCH…', caption: 'New year, new team look. If you could design your team’s singlet from scratch, what would it look like? Colors, logo, reversible or not: tell us.', video: '0–2s: hook on screen. 2–9s: a design mockup building up color by color (RSH design only, no other brands). 9–13s: reversible flip. 13–16s: question + end card.', source: 'Holiday college tournaments (Midlands, Southern Scuffle) keep wrestling in the news this week.' },
+    { date: '2027-01-12', title: 'DYK: Girls’ Uniform Fit Is a 2026–27 Focus', platform: 'Instagram', postType: 'Reel', hook: 'NFHS MADE THIS A FOCUS FOR 2026–27. HERE’S WHY.', caption: 'Did you know? For 2026–27, NFHS made properly fitted, sport-appropriate uniforms for female wrestlers a Point of Emphasis, as girls’ wrestling reaches record numbers. Coaches of girls’ programs: what fit problem do you see most?', video: '0–2s: hook on screen. 2–8s: “74,064 girls wrestled in 2024–25” + “40 states hold girls’ state championships”. 8–13s: a well-fitted team singlet (with the athlete’s and parent’s OK). 13–16s: question + end card.', source: 'https://www.nfhs.org/resources/sports/wrestling-points-of-emphasis-2026-27' },
+    { date: '2027-01-14', title: 'Team Store Spotlight', platform: 'Facebook', postType: 'Reel', hook: 'EVERYTHING YOUR TEAM WEARS, IN ONE PLACE.', caption: 'Team stores let players, parents and fans order team gear online in one place. What should every team store carry: hoodie, beanie or warm-ups?', video: '0–2s: hook on screen. 2–9s: a parent opening a team hoodie (their own words). 9–13s: the store page on a phone. 13–16s: question + end card. No prices or delivery times.', source: 'Parents and coaches are the buyers; team stores are an RSH strength (rshsports.com “Start a team store”).' },
+    { date: '2027-02-03', title: 'Pick Our Colorway: Black/Red or Red/Royal', platform: 'Instagram', postType: 'Reel', hook: 'ONE RIVAL. TWO COLORWAYS. YOUR CALL.', caption: 'Black/Red or Red/Royal Blue: which one would you wrestle a rival in, and why?', video: '0–2s: both reversible singlets side by side. 2–9s: each one flipping. 9–13s: question on screen. Add an Instagram poll sticker on the Story version, never “like to vote”.', source: 'Rivalry week in college wrestling; poll stickers keep votes clear of Meta’s vote-baiting rule.' },
+    { date: '2027-02-10', title: 'State Tournament Season: Who’s Your Pick?', platform: 'Instagram', postType: 'Reel', hook: 'STATE TOURNAMENT SEASON IS HERE.', caption: 'State tournament season is here, from Texas (Feb 12–13) to Iowa (Feb 17–20) and Tennessee (Feb 19–20). Who’s your pick in your state’s toughest bracket?', video: '0–2s: map pins dropping on Texas, Iowa and Tennessee. 2–10s: dates on screen. 10–14s: question + end card. Mention events factually; no implied sponsorship.', source: 'https://www.uiltexas.org/wrestling/state' }
+  ];
+  const pbAdded = t => (app().data().posts || []).some(q => String(q.title || '').trim() === t);
+  function addIdea(n) {
+    const idea = IDEAS[n]; if (!idea || pbAdded(idea.title)) return false;
+    const d = app().data(); d.posts = d.posts || [];
+    d.posts.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 9), title: idea.title, date: idea.date, sport: 'Wrestling', platform: idea.platform, postType: idea.postType, audience: 'Athletes, coaches and parents', goal: 'Grow followers and comments', owner: 'Project Manager', hook: idea.hook, video: idea.video, caption: idea.caption, angle: 'season-playbook', status: 'Draft', source: PB_SRC + (idea.source ? ' · ' + idea.source : ''), created: new Date().toISOString() });
+    app().save(); return true;
+  }
+  function seasonContext() { return 'SEASON CONTEXT (researched Nov 26, 2026): US high school and college wrestling season. State tournaments mid-February to mid-March; NCAA Division I Championships Mar 18–20, 2027 in St. Louis. Girls’ wrestling at record participation; NFHS 2026–27 focus on properly fitted uniforms for girls. Every Tuesday is a Did You Know post.'; }
+  function playbookHtml() {
+    const link = u => /^https?:/.test(u) ? `<a href="${esc(u)}" target="_blank" rel="noopener noreferrer">source ↗</a>` : `<span class="small">${esc(u)}</span>`;
+    const dfmt = d => new Date(d + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    return `<div class="card" style="margin-top:16px">
+      <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start"><div><h2 style="font-size:18px">Season Playbook: 2026–27 wrestling</h2><p class="small" style="margin-top:6px;max-width:680px">Every new campaign starts here. Researched on the web on Nov 26, 2026: the season calendar, sourced facts for Did You Know Tuesdays, what is working on social now, competitor gaps, and the comment rules. Dates marked “not confirmed” must be checked before posting.</p></div></div>
+      <h3 style="margin-top:16px;font-size:15px">💡 Campaign ideas, ready to add</h3>
+      <p class="small" style="margin-top:4px">Each one has a hook, a real question that earns comments, a shot outline and its source. “Add as draft” puts it on the Checklist; it then needs files, the five visual checks, manager review and Anthony’s approval like every campaign.</p>
+      <div style="display:grid;gap:10px;margin-top:10px">${IDEAS.map((i, n) => `<div class="acc" style="display:grid;gap:6px"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline"><strong>${esc(i.title)}</strong><span class="small">${esc(dfmt(i.date))} · ${esc(i.platform)} ${esc(i.postType)}${/^DYK/.test(i.title) ? ' · Did You Know Tuesday' : ''}</span></div>
+        <div class="small"><strong>Hook:</strong> ${esc(i.hook)}</div><div>${esc(i.caption)}</div><div class="small"><strong>Shots:</strong> ${esc(i.video)}</div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">${pbAdded(i.title) ? '<span class="chk ok">✓ Added to campaigns</span>' : `<button type="button" class="btn smallbtn" data-pb-add="${n}">Add as draft campaign</button>`}${link(i.source)}</div></div>`).join('')}</div>
+      <h3 style="margin-top:18px;font-size:15px">📅 Season calendar</h3>
+      <div style="overflow:auto"><table class="small" style="border-collapse:collapse;width:100%;margin-top:6px">${PLAYBOOK.calendar.map(([d, e, note, u]) => `<tr style="border-top:1px solid #eee"><td style="padding:6px;white-space:nowrap"><strong>${esc(d)}</strong></td><td style="padding:6px">${esc(e)}${note ? `<div class="small">${esc(note)}</div>` : ''}</td><td style="padding:6px">${link(u)}</td></tr>`).join('')}</table></div>
+      <h3 style="margin-top:18px;font-size:15px">✅ Facts for Did You Know Tuesdays (official sources)</h3>
+      <ul class="small" style="margin-top:6px;display:grid;gap:4px">${PLAYBOOK.facts.map(([f, u]) => `<li>${esc(f)} ${link(u)}</li>`).join('')}</ul>
+      <div style="display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));margin-top:16px">
+        <div><h3 style="font-size:15px">🔥 What’s working now</h3><ul class="small" style="margin-top:6px;display:grid;gap:4px">${PLAYBOOK.working.map(w => `<li>${esc(w)}</li>`).join('')}</ul></div>
+        <div><h3 style="font-size:15px">🎯 Gaps RSH can own</h3><ul class="small" style="margin-top:6px;display:grid;gap:4px">${PLAYBOOK.gaps.map(w => `<li>${esc(w)}</li>`).join('')}</ul></div>
+        <div><h3 style="font-size:15px">💬 Getting comments the right way</h3><ul class="small" style="margin-top:6px;display:grid;gap:4px">${PLAYBOOK.rules.map(w => `<li>${esc(w)}</li>`).join('')}</ul></div>
+      </div></div>`;
   }
 
   /* ---------- rendering ---------- */
@@ -1239,7 +1514,7 @@ Answer with JSON only, exactly these keys:
         const p = c.p, an = c.an;
         if (p.date !== lastDay) { lastDay = p.date; list += `<div class="day">${esc(new Date(p.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }))}</div>`; }
         const badge = c.state === 'files' ? '<span class="chk stop">Needs files</span>' : c.state === 'ready' ? '<span class="chk ok">✓ Ready</span>' : '<span class="chk warn">Held back</span>';
-        list += `<details class="camp" data-bot-camp="${esc(p.id)}" ${openCamps.has(p.id) ? 'open' : ''}><summary><span><strong>${esc(p.title)}</strong><span class="small"> · ${esc(p.platform || '')} · ${c.mine.length} channel post${c.mine.length === 1 ? '' : 's'}</span></span><span class="sumr">${badge}<span class="small">${c.ok} of ${c.mine.length} ready</span><span class="nav-caret">⌄</span></span></summary>` + `<div style="margin:8px 0"><button type="button" class="btn ghost smallbtn" data-bot-raw="${esc(p.id)}">📁 Campaign assets (${rawCount(p.id)})</button></div>` + nextStep(p, c) + `<div class="assetrow"><div><strong>Files needed</strong> <span class="small">· ${an.files} attached</span><div>${an.needs.map(n => `<span class="need ${n.state}">${n.state === 'have' ? '✓ ' : ''}${esc(n.label)}${n.detail ? ' (' + esc(n.detail) + ')' : ''}</span>`).join('')}</div></div><div style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="btn ghost smallbtn" data-bot-brief="${esc(p.id)}">Copy full brief for AI</button><button type="button" class="btn ghost smallbtn" data-bot-prompt="image" data-bot-post="${esc(p.id)}">Copy image prompt</button><button type="button" class="btn ghost smallbtn" data-bot-prompt="video" data-bot-post="${esc(p.id)}">Copy video brief</button>${jobs[p.id] ? '' : `<button type="button" class="btn smallbtn" data-bot-askvideo="${esc(p.id)}">Have Reel make a video</button>`}<button type="button" class="btn ghost smallbtn" data-bot-editor="${esc(p.id)}">Copy edit job</button></div>${(() => { const j = jobs[p.id]; return j ? `<div class="small" style="flex-basis:100%"><strong>Video editor${j.source === 'zip' ? ` (from “${esc(j.zipName)}”, ${j.files} files)` : ''}:</strong> ${j.status === 'queued' ? 'job waiting to be sent to RSH SPORTS.' : j.status === 'sent' ? 'job sent to RSH SPORTS ' + esc(new Date(j.sentAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })) + '. The video is attached here when it comes back.' : j.status === 'attached' ? `edited video${j.revision > 1 ? ' (revision ' + j.revision + ')' : ''} came back and is attached. <button type="button" class="btn smallbtn" data-bot-watch="${esc(p.id)}" style="padding:3px 10px;margin-left:4px">Watch and review</button>` : j.status === 'failed' ? 'the edit did not finish. ' + esc(j.reason || '') : 'video received, attaching…'}</div>` : needsVideo(p) && settings.autoEdit ? '<div class="small" style="flex-basis:100%"><strong>Video editor:</strong> this campaign needs a video; Reel sends the job on the next run.</div>' : ''; })()}${kitSport(p) ? `<div class="small" style="flex-basis:100%">Kit clip: open your RSH Kit Animator artifact, choose <strong>${esc(kitSport(p).replace(/^./, c => c.toUpperCase()))}</strong>, set the team and colours, record the 4-second clip, then drop the saved MP4 on the Office tab with this campaign selected.</div>` : ''}</div>`;
+        list += `<details class="camp" data-bot-camp="${esc(p.id)}" ${openCamps.has(p.id) ? 'open' : ''}><summary><span><strong>${esc(p.title)}</strong><span class="small"> · ${esc(p.platform || '')} · ${c.mine.length} channel post${c.mine.length === 1 ? '' : 's'}</span></span><span class="sumr">${badge}<span class="small">${c.ok} of ${c.mine.length} ready</span><span class="nav-caret">⌄</span></span></summary>` + `<div style="margin:8px 0"><button type="button" class="btn ghost smallbtn" data-bot-raw="${esc(p.id)}">📁 Assets & comments (${rawCount(p.id)} · 💬 ${cmtCount(p.id)})</button></div>` + nextStep(p, c) + `<div class="assetrow"><div><strong>Files needed</strong> <span class="small">· ${an.files} attached</span><div>${an.needs.map(n => `<span class="need ${n.state}">${n.state === 'have' ? '✓ ' : ''}${esc(n.label)}${n.detail ? ' (' + esc(n.detail) + ')' : ''}</span>`).join('')}</div></div><div style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="btn ghost smallbtn" data-bot-brief="${esc(p.id)}">Copy full brief for AI</button><button type="button" class="btn ghost smallbtn" data-bot-prompt="image" data-bot-post="${esc(p.id)}">Copy image prompt</button><button type="button" class="btn ghost smallbtn" data-bot-prompt="video" data-bot-post="${esc(p.id)}">Copy video brief</button>${jobs[p.id] ? '' : `<button type="button" class="btn smallbtn" data-bot-askvideo="${esc(p.id)}">Have Reel make a video</button>`}<button type="button" class="btn ghost smallbtn" data-bot-editor="${esc(p.id)}">Copy edit job</button></div>${(() => { const j = jobs[p.id]; return j ? `<div class="small" style="flex-basis:100%"><strong>Video editor${j.source === 'zip' ? ` (from “${esc(j.zipName)}”, ${j.files} files)` : ''}:</strong> ${j.status === 'queued' ? 'job waiting to be sent to RSH SPORTS.' : j.status === 'sent' ? 'job sent to RSH SPORTS ' + esc(new Date(j.sentAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })) + '. The video is attached here when it comes back.' : j.status === 'attached' ? `edited video${j.revision > 1 ? ' (revision ' + j.revision + ')' : ''} came back and is attached. <button type="button" class="btn smallbtn" data-bot-watch="${esc(p.id)}" style="padding:3px 10px;margin-left:4px">Watch and review</button>` : j.status === 'failed' ? 'the edit did not finish. ' + esc(j.reason || '') : 'video received, attaching…'}</div>` : needsVideo(p) && settings.autoEdit ? '<div class="small" style="flex-basis:100%"><strong>Video editor:</strong> this campaign needs a video; Reel sends the job on the next run.</div>' : ''; })()}${kitSport(p) ? `<div class="small" style="flex-basis:100%">Kit clip: open your RSH Kit Animator artifact, choose <strong>${esc(kitSport(p).replace(/^./, c => c.toUpperCase()))}</strong>, set the team and colours, record the 4-second clip, then drop the saved MP4 on the Office tab with this campaign selected.</div>` : ''}</div>`;
         for (const it of c.mine) {
           const key = it.postId + '|' + it.channel, open = openItem === key;
           list += `<div class="item" data-bot-item="${esc(key)}"><div style="display:flex;gap:8px;align-items:flex-start">${chBadge(it.channel)}<div><strong>${esc(NAME[it.channel])}</strong><div class="small">${it.caption.length} characters</div>${it.posted ? `<div class="posted">✓ Posted ${esc(new Date(it.posted.at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }))}</div>` : ''}</div></div>
@@ -1258,7 +1533,7 @@ Answer with JSON only, exactly these keys:
           <p style="margin-top:6px">The bots read your campaigns and prepare a caption and a time for every channel. They change nothing in your campaigns, calendar or Metricool.</p></div>
           <button type="button" class="btn" data-bot-run ${busy ? 'disabled' : ''}>${busy ? 'Running…' : '▶ Run everything'}</button>
         </div>
-        <div class="tabs" role="tablist">${tabBtn('office', 'Office')}${tabBtn('plan', `Plan${ran && items.length ? ` <span class="tcount">${ready} of ${items.length} ready</span>` : ''}`)}${tabBtn('channels', 'Channels')}${tabBtn('setup', 'Setup')}</div>
+        <div class="tabs" role="tablist">${tabBtn('office', 'Office')}${tabBtn('plan', `Plan${ran && items.length ? ` <span class="tcount">${ready} of ${items.length} ready</span>` : ''}`)}${tabBtn('playbook', 'Playbook')}${tabBtn('channels', 'Channels')}${tabBtn('setup', 'Setup')}</div>
         ${note ? `<div class="hint" role="status" style="margin-top:12px">${esc(note)}</div>` : ''}
         ${aoHtml()}
       </div>
@@ -1290,6 +1565,7 @@ Answer with JSON only, exactly these keys:
             <div style="display:flex;gap:6px;flex-wrap:wrap"><a class="btn ghost smallbtn" href="${esc(url)}" target="_blank" rel="noopener noreferrer">Open ${esc(NAME[ch])} ↗</a><button type="button" class="btn ghost smallbtn" disabled title="Comes with direct posting">Connect directly</button></div></div>`; }).join('')}</div>
         </div>
       </div>
+      <div data-bot-panel="playbook" ${tab === 'playbook' ? '' : 'hidden'}>${tab === 'playbook' ? playbookHtml() : ''}</div>
       <div data-bot-panel="setup" ${tab === 'setup' ? '' : 'hidden'}>
         <div class="card" style="margin-top:16px">
         <h2 style="font-size:18px">Setup</h2><p class="small" style="margin-top:6px">Changes apply the next time the bots run.</p>
@@ -1339,7 +1615,32 @@ Answer with JSON only, exactly these keys:
   }
   // The text that goes to Metricool: the caption plus Quill's hashtags for that channel when the caption has none of its own,
   // kept within the channel's length limit.
-  function sendText(it) {
+  // The follow / comment / share line every post ends with. Written to stay within Meta's and TikTok's rules (researched
+  // Nov 26, 2026): Meta demotes posts that ask for likes, comments or shares only to boost reach ("comment YES", "share if…",
+  // "like if…"), and TikTok keeps engagement bait out of For You. Asking a real question and giving a reason to follow is
+  // allowed, so the line invites people to follow, answer the post's own question and send it to a teammate.
+  // "Like and subscribe" stays on YouTube only, where it is standard.
+  function ctaFor(it) {
+    const p = (app().data().posts || []).find(x => x.id === it.postId) || {}, sport = String(p.sport || 'wrestling').toLowerCase().replace(/[^a-z ]/g, '').trim() || 'wrestling';
+    const topic = `${sport} stories, tips and team ideas`;
+    const ask = /\?/.test(String(it.caption || '')) ? 'Drop your answer in the comments' : 'Tell us what you think in the comments';
+    return ({ instagram: `Follow @team.rshsports for more ${topic}. ${ask}, and send this to a teammate who needs it.`,
+      facebook: `Follow RSH Sports for more ${topic}. ${ask}, and share this with your team.`,
+      tiktok: `Follow @rsh_sports for more ${topic}. ${ask}, and share it with your team.`,
+      youtube: `Like and subscribe for more ${topic}, and ${ask.charAt(0).toLowerCase() + ask.slice(1)}.`,
+      threads: `Follow @team.rshsports for more ${topic}. Reply with your answer.`,
+      bluesky: `Follow for more ${sport} tips. Reply with your answer.`,
+      pinterest: `Save this pin for later and follow RSH Sports for more ${topic}.` })[it.channel] || '';
+  }
+  const hasCta = t => /\b(follow|subscribe)\b/i.test(t) && /\b(share|comment|save)\b/i.test(t);
+  function withCta(it, text) {
+    const cta = ctaFor(it); if (!cta || hasCta(text)) return text;
+    const tagAt = text.search(/(\n\n|^)(#[\p{L}\p{N}_]+\s*)+$/u), body = tagAt > 0 ? text.slice(0, tagAt) : text, tail = tagAt > 0 ? text.slice(tagAt) : '';
+    const next = body.replace(/\s+$/, '') + '\n\n' + cta + tail;
+    return next.length <= (LIMIT[it.channel] || 2200) ? next : text;
+  }
+  function sendText(it) { return withCta(it, sendTextBase(it)); }
+  function sendTextBase(it) {
     const cap = String(it.caption || '').replace(/\s+$/, ''), so = seoFor(it.postId, it.channel);
     if (!so) return cap;
     const have = (cap.match(/(^|\s)#[\p{L}\p{N}_]+/gu) || []).length, room = Math.max(0, (MAXTAGS[it.channel] == null ? 5 : MAXTAGS[it.channel]) - have);
@@ -1514,6 +1815,7 @@ Answer with JSON only, exactly these keys:
     const at = e.target.closest('[data-bot-addtags]');
     if (at) { const it = find(at.dataset.botAddtags), so = it && seoFor(it.postId, it.channel); if (it && so) { const add = (so.ch.hashtags || []).filter(t => !it.caption.toLowerCase().includes(t.toLowerCase())); if (add.length) { it.caption = it.caption.replace(/\s+$/, '') + (/(#[\p{L}\p{N}_]+)\s*$/u.test(it.caption) ? ' ' : '\n\n') + add.join(' '); it.edited = true; await save(); render(); } } return; }
     if (e.target.closest('[data-bot-weekly]')) { const pre = document.querySelector('#rshBots [data-bot-weeklytext]'), text = weeklyReport(); if (pre) { pre.hidden = false; pre.textContent = text; } const b = e.target.closest('[data-bot-weekly]'); try { navigator.clipboard.writeText(text).then(() => { b.textContent = 'Copied: paste it to Anthony'; setTimeout(() => { b.textContent = 'Weekly report for Anthony'; }, 2500); }, () => {}); } catch (_) {} return; }
+    const pba = e.target.closest('[data-pb-add]'); if (pba) { if (addIdea(Number(pba.dataset.pbAdd))) { note = `Added “${IDEAS[Number(pba.dataset.pbAdd)].title}” as a draft campaign. Find it on the Checklist.`; } return render(); }
     const rb = e.target.closest('[data-bot-raw]'); if (rb) { e.preventDefault(); return openRaw(rb.dataset.botRaw); }
     const fln = e.target.closest('[data-bot-firstline]');
     if (fln) { const it = find(fln.dataset.botFirstline), so = it && seoFor(it.postId, it.channel); if (it && so && so.firstLine) { it.caption = so.firstLine + '\n\n' + it.caption; it.edited = true; await save(); render(); } return; }
@@ -1581,7 +1883,7 @@ Answer with JSON only, exactly these keys:
     setInterval(() => { if (document.visibilityState === 'visible' && Object.values(jobs).some(j => j.status === 'sent' || j.status === 'queued' || j.status === 'done')) collect(); }, 60000);   // check for finished videos while the screen is open
     document.querySelectorAll('[data-view="bots"]').forEach(b => b.addEventListener('click', () => collect()));   // fires after every saved change to the campaigns
     db = await use('db');
-    rawCounts().then(() => { render(); if (window.RSH_TRACKER && window.RSH_TRACKER.render) try { window.RSH_TRACKER.render(); } catch (_) {} });
+    Promise.all([rawCounts(), loadAllComments()]).then(() => { render(); if (window.RSH_TRACKER && window.RSH_TRACKER.render) try { window.RSH_TRACKER.render(); } catch (_) {} });
     if (db) {
       try { const s = await db.doc('bots/settings').get(); if (s.exists) settings = { ...DEFAULTS, ...JSON.parse(s.data().json) }; } catch (_) {}
       try { const s = await db.doc('bots/seo').get(); if (s.exists) seo = JSON.parse(s.data().json) || {}; } catch (_) {}
@@ -1596,5 +1898,5 @@ Answer with JSON only, exactly these keys:
     }
     render();
   }
-  window.RSH_BOTS = { isoPeople: () => ISO.people, aoCycle, aoStart, aoBeat, aoAlive, reviseFromNotes, shrinkVideo, nightOwl, weeklyReport, learnedTags, resultsForPrompt, openRaw, addRaw, sendRaw, rawCount, loadRaw, dayFor, isDyk, targets, sendText, autoSend, seoFor, seoRun, learnedTimes, schedule, attachForPost, driveUpload, fileFor, autoLink, needsFile, readyItems, placedOn, place, unplace, setMediaUrl, sendToMetricool, metricoolPost, NAME, freshVideos, watch, onChange: f => listeners.push(f), handoff, collect, start, captionFor, assetNeeds, imagePrompt, videoBrief, editJob };
+  window.RSH_BOTS = { music: () => MUSIC, musicStart, musicStop, match: () => ISO.match, startMatch: (a, b) => startMatch(ISO.people[a], ISO.people[b], performance.now()), zoneAt, addIdea, IDEAS: () => IDEAS, postComment, loadAllComments, cmtCount, ctaFor, withCta, isoPeople: () => ISO.people, aoCycle, aoStart, aoBeat, aoAlive, reviseFromNotes, shrinkVideo, nightOwl, weeklyReport, learnedTags, resultsForPrompt, openRaw, addRaw, sendRaw, rawCount, loadRaw, dayFor, isDyk, targets, sendText, autoSend, seoFor, seoRun, learnedTimes, schedule, attachForPost, driveUpload, fileFor, autoLink, needsFile, readyItems, placedOn, place, unplace, setMediaUrl, sendToMetricool, metricoolPost, NAME, freshVideos, watch, onChange: f => listeners.push(f), handoff, collect, start, captionFor, assetNeeds, imagePrompt, videoBrief, editJob };
 })();
