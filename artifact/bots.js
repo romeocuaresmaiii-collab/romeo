@@ -434,6 +434,7 @@
     const t = [p.title, p.hook, p.angle, p.visualConcept, p.captionBody || p.caption, p.onImageText].join(' ').toLowerCase();
     if (isDyk(p)) return ['instagram', 'Did You Know: Instagram Reel 7 AM and YouTube Short 4 PM every Tuesday'];
     const own = String(p.platform || '').toLowerCase().replace(/[^a-z]/g, '');
+    if (p.rbHome && p.rbHome === own && NAME[own]) return [own, p.rbHomeWhy || 'Home platform set by the Posting Rulebook routing'];   // confirmed when the campaigns were routed
     if (own === 'pinterest') return ['pinterest', 'A Pinterest product or design pin: weekend evening slot'];
     if ((kindOf(p) === 'image' || kindOf(p) === 'carousel') && NAME[own]) return [own, `A ${kindOf(p) === 'carousel' ? 'carousel' : 'photo'} post keeps its own platform (the routing rules are for reels)`];
     if (/team[- ]store|always open store|order(ing)? (now|window|deadline|news)|custom [a-z ]*uniforms?\b|uniform (reveal|design)|product reveal|new (colou?rway|design|uniform)|now available|pre-?order/.test(t)) return ['facebook', 'Product reveal, uniform design or team-store news: Facebook Reel 10 AM'];
@@ -448,10 +449,10 @@
   // TikTok first (the furthest from the Facebook look), Pinterest only for product and design ideas.
   function rbTargets(p) {
     if (isDyk(p)) return ['instagram', 'youtube'];
-    const home = rbHome(p)[0], pref = ['tiktok', 'instagram', 'facebook', 'youtube', 'threads', 'bluesky'].concat(rbProduct(p) ? ['pinterest'] : []);
-    const allowed = new Set([home].concat(settings.channels || []));
-    if (rbProduct(p)) allowed.add('pinterest');
-    return [home].concat(pref.filter(c => c !== home && allowed.has(c)).slice(0, 3));
+    // Each campaign posts only on its home platform. Another platform is added only when a file made for it
+    // (named with that platform) is attached: never the same file twice, at most three besides the home.
+    const home = rbHome(p)[0], files = [p.creativeAsset].concat(p.creativeAssets || []).filter(Boolean), own = new Set(files.flatMap(tagOfFile));
+    return [home].concat(['tiktok', 'instagram', 'facebook', 'youtube', 'threads', 'bluesky', 'pinterest'].filter(c => c !== home && own.has(c)).slice(0, 3));
   }
   // Day and time for one platform's post: its home goes first; the others follow later in the same week, each on its own slot.
   function rbPlace(p, ch) {
@@ -2405,5 +2406,5 @@ Add PART 8 — PLATFORM VERSIONS: one block for each of ${t.map(c => NAME[c]).jo
     }
     render();
   }
-  window.RSH_BOTS = { rbOn, rbHome, rbTargets, rbPlace, rbCaption, rbChecks, rbFileFor, rbYouTubeTitle, manila, TAGLINE, RB_SLOTS, aiOf, SPECS, sizePlan, sizeLines, specFor, kindOf, ratioOf, productJob, readyRefs, POST_SIZE, catalog: () => catalog, refs: () => refs, productsFor, productBlock, searchCatalog, requestPhotos, loadCatalog, scripts: () => scripts, scriptPrompt, writeScript, scriptRun, saveScript, packPart, packHtml, conns: () => conns, viaOf, engineFor, HOUSE, music: () => MUSIC, musicStart, musicStop, match: () => ISO.match, startMatch: (a, b) => startMatch(ISO.people[a], ISO.people[b], performance.now()), zoneAt, addIdea, IDEAS: () => IDEAS, postComment, loadAllComments, cmtCount, ctaFor, withCta, isoPeople: () => ISO.people, aoCycle, aoStart, aoBeat, aoAlive, reviseFromNotes, shrinkVideo, nightOwl, weeklyReport, learnedTags, resultsForPrompt, openRaw, addRaw, sendRaw, rawCount, loadRaw, dayFor, isDyk, targets, sendText, autoSend, seoFor, seoRun, learnedTimes, schedule, attachForPost, driveUpload, fileFor, autoLink, needsFile, readyItems, placedOn, place, unplace, setMediaUrl, sendToMetricool, metricoolPost, NAME, freshVideos, watch, onChange: f => listeners.push(f), handoff, collect, start, captionFor, assetNeeds, imagePrompt, videoBrief, editJob };
+  window.RSH_BOTS = { mealNow, rbOn, rbHome, rbTargets, rbPlace, rbCaption, rbChecks, rbFileFor, rbYouTubeTitle, manila, TAGLINE, RB_SLOTS, aiOf, SPECS, sizePlan, sizeLines, specFor, kindOf, ratioOf, productJob, readyRefs, POST_SIZE, catalog: () => catalog, refs: () => refs, productsFor, productBlock, searchCatalog, requestPhotos, loadCatalog, scripts: () => scripts, scriptPrompt, writeScript, scriptRun, saveScript, packPart, packHtml, conns: () => conns, viaOf, engineFor, HOUSE, music: () => MUSIC, musicStart, musicStop, match: () => ISO.match, startMatch: (a, b) => startMatch(ISO.people[a], ISO.people[b], performance.now()), zoneAt, addIdea, IDEAS: () => IDEAS, postComment, loadAllComments, cmtCount, ctaFor, withCta, isoPeople: () => ISO.people, aoCycle, aoStart, aoBeat, aoAlive, reviseFromNotes, shrinkVideo, nightOwl, weeklyReport, learnedTags, resultsForPrompt, openRaw, addRaw, sendRaw, rawCount, loadRaw, dayFor, isDyk, targets, sendText, autoSend, seoFor, seoRun, learnedTimes, schedule, attachForPost, driveUpload, fileFor, autoLink, needsFile, readyItems, placedOn, place, unplace, setMediaUrl, sendToMetricool, metricoolPost, NAME, freshVideos, watch, onChange: f => listeners.push(f), handoff, collect, start, captionFor, assetNeeds, imagePrompt, videoBrief, editJob };
 })();
