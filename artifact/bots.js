@@ -202,6 +202,7 @@
       p.visualConcept ? `VISUAL DIRECTION\n${String(p.visualConcept).trim()}` : '',
       `RULES\n${RULES} RSH branding only in the corner watermark and the end card.`,
       `HOUSE STYLE\n${HOUSE}\n${endCardLine(p)}\nStart from Video Studio Kit engine ${engineFor(p)}.`,
+      packFor(p.id) ? `PRODUCTION PACK (written by Sage, the team’s script writer; follow it shot by shot)\n${packFor(p.id)}` : '',
       `DELIVER\nThe finished MP4 named ${slug(p.title) || 'campaign'}.mp4, plus a one-line note of anything you could not do.`].filter(Boolean).join('\n\n');
   }
   function seoEditLine(p) { const x = seo && seo[p.id]; return x && (x.onScreen || x.spoken) ? `SEARCH (TikTok, YouTube and Instagram read on-screen text and speech)\nShow on screen in the first 3 seconds: “${x.onScreen}”\nSay in the first 3 seconds: “${x.spoken}”\nBurn in captions for the spoken words.` : ''; }
@@ -226,12 +227,14 @@
   }
   const RULES = 'Realistic, natural light. Sport-correct gear and setting. No third-party logos, brand marks or wordmarks on shoes, socks, apparel, bags or equipment. No real, identifiable people. Suitable for parents, coaches and athletes.';
   function imagePrompt(p) {
+    { const part = packPart(packFor(p.id), 2); if (part) return part; }
     const type = String(p.postType || '').toLowerCase(), base = String(p.visualPrompt || p.visualConcept || '').trim();
     return [base || `A premium, photorealistic ${p.sport || 'sports'} photo for ${p.platform || 'social media'}: ${sentence(p.hook)}`,
       /carousel/.test(type) ? 'Make this a matching set of 3 to 5 images with the same athlete, setting and light: 1) a cover with clear space for the headline, 2 to 4) supporting moments, last) a calm closing frame.' : '',
       `Aspect ratio ${p.aspectRatio || '4:5'}. Leave clean space for text; do not put any text in the image.`, base ? '' : RULES, app().logoRule ? 'RSH logo rule: ' + app().logoRule() : '', app().negativePrompt ? 'Negative prompt: ' + app().negativePrompt() : ''].filter(Boolean).join('\n\n');
   }
   function videoBrief(p) {
+    { const part = packPart(packFor(p.id), 4); if (part) return part; }
     return [`Create a 10 to 15 second vertical 9:16 video for ${p.platform || 'social media'} about ${p.sport || 'the sport'}.`,
       p.visualConcept ? `Scene: ${String(p.visualConcept).trim()}` : '',
       `Shots: 1) Opening, first 2 seconds: the moment that matches the hook “${sentence(p.hook)}”. 2) Middle: the main action, one clear movement, steady framing. 3) Ending, last 2 seconds: hold on a clean frame with room for the call to action.`,
@@ -257,7 +260,7 @@
     if (j && (j.source === 'zip' || j.source === 'campaign')) {
       let files = []; try { files = JSON.parse(j.manifest || '[]'); } catch (_) {}
       const list = files.map((f, n) => `${n + 1}. ${f.name} (${f.mime}, ${Math.round(f.bytes / 1024)} KB${f.encoding === 'base64' ? ', stored base64-encoded: decode after joining' : ''}) asset${f.parts.length > 1 ? 's in order' : ''}: ${f.parts.map(x => x.id).join(' + ')}`).join('\n');
-      return `[RSH Sports Marketing OS: automatic edit job${j.source === 'zip' ? ' from a zip' : ' from the campaign’s asset box'}. Sent by the app on behalf of the team.]\n\nEDIT JOB — ${p.title}\nCampaign for ${p.platform || 'social media'}, planned ${p.date || 'no date yet'}. Sport: ${p.sport || 'not set'}.\n\n${j.source === 'zip' ? `The team uploaded a zip, "${j.zipName}", with every file for this video.` : `The manager gathered ${j.files} file${j.files === 1 ? '' : 's'} in the campaign’s asset box and marked them ready.`} Edit the full video exactly as the script says, using these files. Keep the finished MP4 1080×1920 and under 15 MB.${seoEditLine(p) ? '\n\n' + seoEditLine(p) : ''}\n\nGET THE FILES: for each asset id below, use the Artifact tool with action read, url ${APP_URL}, and path set to the asset id; it saves the file locally. Where a file has several asset ids, fetch them in order and join them (cat). Where it says base64, decode after joining (base64 -d).\n${list}\n\nSCRIPT${j.scriptName ? ' (' + j.scriptName + ')' : ''}:\n${j.script || 'No script file was found in the zip. Follow the campaign: hook "' + sentence(p.hook) + '".'}${j.scriptCut ? '\n[The script is longer than shown; the full file is in the list above.]' : ''}\n\nOUTPUT unless the script says otherwise: one vertical 9:16 video, 1080×1920, MP4 (H.264). RULES: ${RULES} RSH branding only in the corner watermark and the end card.\n\nHOUSE STYLE (follow the script where it says otherwise): ${HOUSE}\n${endCardLine(p)}\nStart from Video Studio Kit engine ${engineFor(p)}. Check stills of every beat before the full render, and list anything in the images that breaks the brand rules.\n\n${RETURN_STEPS(p.id)}`;
+      return `[RSH Sports Marketing OS: automatic edit job${j.source === 'zip' ? ' from a zip' : ' from the campaign’s asset box'}. Sent by the app on behalf of the team.]\n\nEDIT JOB — ${p.title}\nCampaign for ${p.platform || 'social media'}, planned ${p.date || 'no date yet'}. Sport: ${p.sport || 'not set'}.\n\n${j.source === 'zip' ? `The team uploaded a zip, "${j.zipName}", with every file for this video.` : `The manager gathered ${j.files} file${j.files === 1 ? '' : 's'} in the campaign’s asset box and marked them ready.`} Edit the full video exactly as the script says, using these files. Keep the finished MP4 1080×1920 and under 15 MB.${seoEditLine(p) ? '\n\n' + seoEditLine(p) : ''}\n\nGET THE FILES: for each asset id below, use the Artifact tool with action read, url ${APP_URL}, and path set to the asset id; it saves the file locally. Where a file has several asset ids, fetch them in order and join them (cat). Where it says base64, decode after joining (base64 -d).\n${list}\n\nSCRIPT${j.scriptName ? ' (' + j.scriptName + ')' : ''}:\n${j.script || (packFor(p.id) ? '(Production pack written by Sage, the team’s script writer.)\n' + packFor(p.id) : '') || 'No script file was found in the zip. Follow the campaign: hook "' + sentence(p.hook) + '".'}${j.scriptCut ? '\n[The script is longer than shown; the full file is in the list above.]' : ''}\n\nOUTPUT unless the script says otherwise: one vertical 9:16 video, 1080×1920, MP4 (H.264). RULES: ${RULES} RSH branding only in the corner watermark and the end card.\n\nHOUSE STYLE (follow the script where it says otherwise): ${HOUSE}\n${endCardLine(p)}\nStart from Video Studio Kit engine ${engineFor(p)}. Check stills of every beat before the full render, and list anything in the images that breaks the brand rules.\n\n${RETURN_STEPS(p.id)}`;
     }
     return `[RSH Sports Marketing OS: automatic edit job. Sent by the app on behalf of the team.]\n\n${editJob(p).replace('under 30 MB', 'under 19 MB if possible')}\n\n${RETURN_STEPS(p.id)}`;
   }
@@ -459,6 +462,109 @@ Answer with JSON only, exactly these keys:
   }
   const seoFor = (postId, ch) => { const x = seo[postId]; return x ? { ...x, ch: x[ch] || {} } : null; };
 
+  /* ---------- 0. Sage, the Script Writer ----------
+   * For every campaign Sage writes the full production pack in the RSH house format (Content Rules Kit, Nov 26 2026):
+   * READ THIS FIRST · Part 1 verified / to confirm / not used · Part 2 image prompts · Part 3 motion prompts ·
+   * Part 4 editor prompt · Part 5 voiceover · Part 6 caption · Part 7 checks. One document per campaign in "scripts".
+   * The team can edit a pack; an edited pack is never overwritten. Edit jobs use Sage's pack when no script file was uploaded. */
+  let scripts = {}, sageNote = '', sageBusy = '';
+  const openPacks = new Set();
+  const hashOf = s => { let h = 5381; for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return (h >>> 0).toString(36); };
+  const scriptSig = p => hashOf([p.title, p.hook, p.caption, p.captionBody, p.cta, p.platform, p.postType, p.date, p.sport, p.audience, p.goal, p.onImageText, p.visualConcept, p.aspectRatio].map(x => String(x || '')).join('|'));
+  async function loadScripts() { if (!db) return; try { const q = await db.collection('scripts').get(); const m = {}; for (const s of q.docs) { const d = s.data(); if (d && d.postId && d.text) m[d.postId] = d; } scripts = m; } catch (_) {} }
+  const isStill = p => /image|photo|carousel|graphic|pin/i.test(String(p.postType || '')) && !/video|reel|short|story/i.test(String(p.postType || ''));
+  function scriptPrompt(p) {
+    const sport = String(p.sport || '').trim(), tag = TAGVERB[sport.toLowerCase().split(/[ /]/)[0]], still = isStill(p), neg = app().negativePrompt ? app().negativePrompt() : '';
+    return `You are Sage, the senior script writer for RSH Sports (rshsports.com), a US maker of custom team uniforms and apparel (wrestling singlets, basketball, softball, soccer and hockey uniforms, online team stores). Buyers: high school and club coaches, athletic directors, team parents and athletes. You have written hundreds of short sports videos that people follow and comment on. Write the complete PRODUCTION PACK for the campaign at the end, in plain text, following the RSH Content Rules Kit exactly.
+
+GROUND RULES
+- Use only the facts in the campaign. Never invent product details, colours, prices, discounts, availability, testimonials, results, rule numbers, dates or athlete permissions. If something needed is missing, say so and leave a clearly marked placeholder in [BRACKETS]; do not guess.
+- If the campaign and these rules disagree, follow the campaign and point out the conflict in READ THIS FIRST.
+- Lifestyle scenes may be AI-generated. Anything that must show a real RSH product uses real photos or footage: do not write a text-to-image prompt for the product itself; say which real photos to use.
+- Logo rule: uniforms carry the team's own name, number and crest, never the RSH logo; never draw the RSH logo in an image. RSH branding only as a small corner watermark and on the end card. No third-party logos or marks on shoes, socks, apparel, bags or equipment. Original invented teams only (no real school, club or league).
+- No real, identifiable people; adults only (write "adult", an age range, in every prompt); face-safe framing when people appear.
+- No text baked into images: only the uniform's team name and number. All other text and numbers are added in editing.
+- Sport-correct gear (a wrestling singlet is a true form-fitting one-piece).
+- Tagline, only if used: "Look fearless. ${tag || '[sport verb]'} fearless."${tag ? '' : ' Only the wrestling verb is confirmed; mark any other verb as to confirm.'}
+
+SCRIPT RULES
+- Hook: on screen and readable in the first second; use the campaign hook word for word; no brand name in the hook.
+- One idea per line, the sport's real words. One clear ask for the viewer, last (a real question or "A or B"; never "like/comment/share to win" bait).
+- On-screen text: one message at a time, each line fully readable at least 2.5 s (hook 3 s); if a shot is shorter, the text stays up across the cut. Bold condensed uppercase white with a soft shadow; no text in the top 8% or bottom 12%.
+- Pacing: no shot under 2.5 s unless the storyboard asks; few shots; slowed clips use frame blending, never loops.
+- Voiceover (optional): calm and clear, about 1.7 words per second or fewer; each line with its time range; total word count and tone; say which sections have no voice; the video must work with the sound off.
+- Music: one continuous free, no-copyright track, 0.5 s fade-in, 1.5 s fade-out, ducked under the voice, never cut.
+- Quote of the Day, Motivational and Did You Know videos without a storyboard get a 2–3 s mid-roll soft sell at the midpoint: "Custom teamwear · RSH Sports" over a uniform shot.
+- Did You Know: evergreen facts only, and list each key fact with its source at the end of Part 1.
+- Length: 9:16 1080×1920, about 15–20 s unless the campaign says otherwise (Did You Know may be 16:9 1920×1080 for YouTube and Facebook).
+
+PRODUCTION PACK LAYOUT (each part under a line of ===== and its heading)
+Title block: "RSH SPORTS — PRODUCTION PACK", the campaign title, then channel · ratio · size · length · planned date · owner.
+READ THIS FIRST — the route (AI-generated scenes, real photos, or real footage) and why; decisions that need sign-off; placeholders to fill.
+PART 1 — WHAT IS VERIFIED AND WHAT IS MISSING — VERIFIED (only facts stated in the campaign); TO CONFIRM BEFORE POSTING (numbered); NOT USED ON PURPOSE.
+PART 2 — IMAGE PROMPTS — one per scene in storyboard order, each complete on its own (same athlete, kit and setting described with the same words every time; the seconds it covers). Each has "Image prompt:" (style and format, subject and one simple action, the uniform with the team's own colours, name, number and crest only, plain shoes and socks with no markings, setting, camera angle and lens look, light, mood, realistic fabric and skin, where the frame stays clean for text) and "Negative prompt:" = this list word for word, then scene-specific items:
+${neg}
+PART 3 — MOTION PROMPTS — one per image, 3–5 s, beginning "Use the image as the exact first frame." Camera movement only (slow push-in 4–5%, slow glide or slow rise), no shake; say that the athlete, kit, colours, name and number stay unchanged.${still ? ' This campaign is a still post: write "Not needed for a still post" here unless the campaign asks for motion.' : ''}
+PART 4 — EDITOR PROMPT (to paste into an AI video editor) — format and one sentence on the feel; the HOUSE STYLE block; the full TIMELINE with exact times (0:00–0:02 …): which clip, every on-screen line in quotation marks with its in and out time, transitions (soft 10–15-frame cross-dissolves), music, the END CARD, export settings. House style: ${HOUSE}${still ? ' For a still post, write the layout and text for each image or carousel slide instead of a timeline.' : ''}
+End card (about 3 s, last frame softly blurred and darkened): line 1 "RSH SPORTS · rshsports.com", line 2 the follow line from the caption${sport ? ` (e.g. "FOLLOW RSH SPORTS FOR MORE ${sport.toUpperCase()} TIPS AND STORIES")` : ''}${tag ? `, optional line 3 "LOOK FEARLESS. ${tag.toUpperCase()} FEARLESS."` : ''}. Three lines at most. Suggested Video Studio Kit engine: ${engineFor(p)}.
+PART 5 — VOICEOVER (optional) — lines with time ranges, total words, tone.${still ? ' Write "Not needed for a still post".' : ''}
+PART 6 — CAPTION — the campaign caption unchanged. If there is none, write one: line 1 the hook (no brand); line 2 an optional payoff; a blank line; one easy question to answer in a comment; a blank line; the follow line ("Follow RSH Sports for more ${sport ? sport.toLowerCase() + ' ' : ''}stories, tips and team ideas."); "Tag a teammate who needs this."; then 8 to 12 relevant hashtags including #RSHSports.
+PART 7 — CHECK BEFORE IT GOES TO REVIEW — a tick-box list: product real and available (or no product shown); colours match; no third-party marks; no price, stock or performance claims; no identifiable person; hook readable in the first second; every line up at least 2.5 s; nothing shakes or flashes; end card and website right; caption matches the campaign.
+
+Keep it complete but tight: no introduction or sign-off outside the pack.
+
+CAMPAIGN
+Title: ${p.title || ''}
+Sport: ${sport} · Audience: ${p.audience || ''} · Goal: ${p.goal || ''}
+Main channel: ${p.platform || ''} · Format: ${p.postType || ''} · Aspect ratio: ${p.aspectRatio || ''} · Planned date: ${p.date || ''} · Owner: ${p.owner || 'Project Manager'}
+Hook: ${p.hook || ''}
+On-image text: ${p.onImageText || ''}
+Visual concept / storyboard: ${p.visualConcept || ''}
+Caption: ${p.captionBody || p.caption || ''}
+Call to action: ${p.cta || ''}
+Hashtags: ${p.hashtags || ''}
+${isDyk(p) ? 'This is a Tuesday Did You Know post.\n' : ''}${seasonContext()}`;
+  }
+  async function writeScript(p) {
+    const sample = await use('sample'); if (!sample) { sageNote = 'Asking Claude is not available in this view, so Sage could not write production packs.'; return false; }
+    try {
+      const r = await sample(scriptPrompt(p), { modelTier: 'default' }), text = String((r && r.text) || '').replace(/\r\n/g, '\n').trim();
+      if (!/PART 2/.test(text) || !/PART 4/.test(text)) { sageNote = 'Sage’s last draft came back incomplete; she tries again on the next run.'; return false; }
+      const doc = { postId: p.id, title: String(p.title || '').slice(0, 120), text: text.slice(0, 60000), sig: scriptSig(p), at: new Date().toISOString(), by: 'sage', edited: false, truncated: !!(r && r.truncated), v: 1 };
+      scripts[p.id] = doc; if (db) { try { await db.doc('scripts/' + p.id).set(doc); } catch (_) { sageNote = 'Sage wrote a pack but it could not be saved. Only people who can use this page can save.'; } }
+      return true;
+    } catch (e) { sageNote = e && e.code === 'not_granted' ? 'Claude access was not allowed on this page, so Sage could not write.' : e && e.code === 'rate_limited' ? 'Claude is busy right now; Sage writes the rest on the next run.' : 'Sage could not reach Claude this time; she tries again on the next run.'; return false; }
+  }
+  // Writes packs for campaigns that have none, or whose campaign changed since (never over a pack the team edited). At most 3 per run.
+  async function scriptRun(posts, step) {
+    sageNote = ''; let wrote = 0;
+    const todo = posts.filter(p => { const s = scripts[p.id]; return !s || (!s.edited && s.sig !== scriptSig(p)); }).slice(0, 3);
+    for (const p of todo) { sageBusy = p.id; step && step(`Sage is writing the production pack for “${cut(p.title, 40)}”…`); const ok = await writeScript(p); if (ok) wrote++; else if (sageNote) break; }
+    sageBusy = '';
+    return { wrote, have: posts.filter(p => scripts[p.id]).length, total: posts.length };
+  }
+  async function saveScript(id, text) {
+    const p = (app().data().posts || []).find(x => x.id === id), cur = scripts[id] || {};
+    const doc = { ...cur, postId: id, title: String((p && p.title) || cur.title || '').slice(0, 120), text: String(text).slice(0, 60000), edited: true, editedAt: new Date().toISOString(), sig: p ? scriptSig(p) : cur.sig, at: cur.at || new Date().toISOString(), by: cur.by || 'team' };
+    scripts[id] = doc; if (db) await db.doc('scripts/' + id).set(doc); return doc;
+  }
+  // One part of a pack: 2 = image prompts, 3 = motion prompts, 4 = editor prompt, 5 = voiceover, 6 = caption.
+  function packPart(text, n) {
+    const t = String(text || ''), re = new RegExp('^[ \\t]*PART ' + n + '\\b.*$', 'm'), m = re.exec(t); if (!m) return '';
+    const rest = t.slice(m.index), nx = /\n[=\s]*\n?[ \t]*PART \d\b/.exec(rest.slice(m[0].length));
+    return rest.slice(0, nx ? m[0].length + nx.index : undefined).replace(/[\s=]+$/, '').trim();
+  }
+  const packFor = id => (scripts[id] && scripts[id].text) || '';
+  function packHtml(p) {
+    const s = scripts[p.id];
+    if (!s) return `<div class="small" style="margin:6px 0;display:flex;gap:8px;align-items:center;flex-wrap:wrap">📝 <span><strong>Sage</strong> ${sageBusy === p.id ? 'is writing this campaign’s production pack now…' : 'has not written this campaign’s production pack yet.'}</span>${sageBusy === p.id ? '' : `<button type="button" class="btn ghost smallbtn" data-sage-write="${esc(p.id)}">Write it now</button>`}</div>`;
+    const stale = s.sig !== scriptSig(p), when = new Date(s.editedAt || s.at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+    return `<details class="pack" data-sage-pack="${esc(p.id)}" ${openPacks.has(p.id) ? 'open' : ''} style="margin:8px 0;border:1px solid #d1fae5;background:#f0fdf4;border-radius:10px;padding:6px 10px"><summary style="cursor:pointer"><strong>📝 Production pack by Sage</strong> <span class="small">· ${s.edited ? 'edited by the team' : 'written'} ${esc(when)}${stale ? ' · the campaign changed since; press “Rewrite with Sage” to update it' : ''}${s.truncated ? ' · came back cut short; rewrite it' : ''}</span></summary>
+      <p class="small" style="margin:6px 0">Script, image prompts, motion prompts, editor prompt, voiceover, caption and checks, in the RSH house format. Edit it here; your edits are kept. Reel sends it with the video job.</p>
+      <textarea data-sage-text="${esc(p.id)}" rows="16" style="width:100%;box-sizing:border-box;font:12px/1.45 ui-monospace,Menlo,monospace" aria-label="Production pack for ${esc(p.title)}">${esc(s.text)}</textarea>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"><button type="button" class="btn smallbtn" data-sage-save="${esc(p.id)}">Save changes</button><button type="button" class="btn ghost smallbtn" data-sage-copy="${esc(p.id)}" data-part="0">Copy pack</button><button type="button" class="btn ghost smallbtn" data-sage-copy="${esc(p.id)}" data-part="2">Copy image prompts</button><button type="button" class="btn ghost smallbtn" data-sage-copy="${esc(p.id)}" data-part="3">Copy motion prompts</button><button type="button" class="btn ghost smallbtn" data-sage-copy="${esc(p.id)}" data-part="4">Copy editor prompt</button><button type="button" class="btn ghost smallbtn" data-sage-dl="${esc(p.id)}">Save as file</button><button type="button" class="btn ghost smallbtn" data-sage-write="${esc(p.id)}">Rewrite with Sage</button></div></details>`;
+  }
+
   /* ---------- 2. Scheduler Bot ---------- */
   function metricoolBusy() {       // "date|HH:MM|channel" already scheduled in Metricool
     const set = new Set(), sch = (window.RSH_LIVE && window.RSH_LIVE.scheduled()) || [];
@@ -601,7 +707,7 @@ Answer with JSON only, exactly these keys:
    * Five bots with their own desk. What each one "feels" and says is worked out from real numbers
    * (posts written, days uncovered, posts held back), so a glance at the office is a status report.
    */
-  const TEAM = [['pixel', 'Pixel', 'Asset Bot', '#db2777'], ['reel', 'Reel', 'Video Editor', '#b45309'], ['quill', 'Quill', 'Caption & SEO Bot', '#0071e3'], ['tempo', 'Tempo', 'Scheduler Bot', '#7c3aed'], ['ref', 'Ref', 'Manager Bot', '#d9480f'], ['courier', 'Courier', 'Posting Bot', '#0f9d7a'], ['owl', 'Night Owl', 'Daily run', '#64748b']];
+  const TEAM = [['sage', 'Sage', 'Script Writer', '#16a34a'], ['pixel', 'Pixel', 'Asset Bot', '#db2777'], ['reel', 'Reel', 'Video Editor', '#b45309'], ['quill', 'Quill', 'Caption & SEO Bot', '#0071e3'], ['tempo', 'Tempo', 'Scheduler Bot', '#7c3aed'], ['ref', 'Ref', 'Manager Bot', '#d9480f'], ['courier', 'Courier', 'Posting Bot', '#0f9d7a'], ['owl', 'Night Owl', 'Daily run', '#64748b']];
   // Bot faces are drawn with plain page elements and CSS (no SVG): Claude's sharing review only
   // accepts JPEG, PNG, GIF or WebP images, and a version containing SVG cannot be opened by invited people.
   function botSvg(color, face) {
@@ -635,6 +741,12 @@ Answer with JSON only, exactly these keys:
       : active || jWait ? ['busy', 'Editing', 'working', `${active + jWait} video${active + jWait === 1 ? '' : 's'} with the RSH SPORTS editor. I attach each one when it comes back.`]
       : done ? ['good', 'Proud', 'happy', `${done} edited video${done === 1 ? '' : 's'} came back and ${done === 1 ? 'is' : 'are'} attached.`]
       : ['plain', 'Ready', 'neutral', 'When a campaign needs a video, I send the job to the RSH SPORTS editor and attach what comes back.'];
+    { const ids = all.map(q => q.id), have = ids.filter(id => scripts[id]).length, stale = all.filter(q => scripts[q.id] && !scripts[q.id].edited && scripts[q.id].sig !== scriptSig(q)).length;
+      out.sage = sageBusy ? ['busy', 'Writing', 'working', `Writing the production pack for “${cut(((all.find(q => q.id === sageBusy)) || {}).title || 'a campaign', 50)}”.`]
+        : !all.length ? ['plain', 'Idle', 'neutral', 'No campaigns to write for yet.']
+        : sageNote ? ['bad', 'Stuck', 'worried', sageNote]
+        : have < ids.length || stale ? ['plain', 'Drafting', 'neutral', `${have} of ${ids.length} campaign${ids.length === 1 ? '' : 's'} have a production pack${stale ? `, ${stale} need${stale === 1 ? 's' : ''} updating` : ''}. I write the rest on the next run.`]
+        : ['good', 'Proud', 'happy', `Every campaign has its production pack: script, image prompts, motion prompts, editor prompt, voiceover and checks.`]; }
     out.pixel = !all.length ? ['plain', 'Idle', 'neutral', 'No campaigns to prepare assets for.']
       : missing ? ['bad', 'Busy', 'worried', `${missing} of ${all.length} campaign${all.length === 1 ? '' : 's'} still need${missing === 1 ? 's' : ''} files. I wrote a brief and a ready-to-paste prompt for each.`]
       : ['good', 'Happy', 'happy', `Every campaign has the files it needs.`];
@@ -720,8 +832,10 @@ Answer with JSON only, exactly these keys:
     busy = true; wake = why; log = []; render();
     await runAll();
     const inRange = [...new Set(((plan && plan.items) || []).map(i => i.postId))].map(id => (app().data().posts || []).find(x => x.id === id)).filter(Boolean);
+    const sg = await scriptRun(inRange, t => { wake = t; render(); });
+    log.unshift(['sage', sageNote ? sageNote : `Production packs ready for ${sg.have} of ${sg.total} campaign${sg.total === 1 ? '' : 's'}${sg.wrote ? ` (${sg.wrote} written now)` : ''}: script, image prompts, motion prompts, editor prompt, voiceover, caption and checks.`]);
     const sr = await seoRun(inRange, t => { wake = t; render(); });
-    log.splice(2, 0, ['quill', seoNote ? seoNote : `SEO ready for ${sr.have} of ${sr.total} campaign${sr.total === 1 ? '' : 's'}${sr.wrote ? ` (${sr.wrote} written now)` : ''}: keywords, hashtags, YouTube titles and tags, Pinterest titles and alt text. Approved captions are not changed; press “Add hashtags” on a post to use them.`]);
+    log.splice(3, 0, ['quill', seoNote ? seoNote : `SEO ready for ${sr.have} of ${sr.total} campaign${sr.total === 1 ? '' : 's'}${sr.wrote ? ` (${sr.wrote} written now)` : ''}: keywords, hashtags, YouTube titles and tags, Pinterest titles and alt text. Approved captions are not changed; press “Add hashtags” on a post to use them.`]);
     if (settings.autoSend) { const r = await autoSend(t => { wake = t; render(); }); log.splice(log.findIndex(l => l[0] === 'tempo') + 1, 0, ['tempo', r]); }
     const lines = log; log = []; await showWork(); log = lines; busy = false; render();
     if (queued) { const next = queued; queued = ''; await work(next); }
@@ -871,6 +985,7 @@ Answer with JSON only, exactly these keys:
     const assets = await use('assets'); let script = '', scriptName = '';
     const sf = box.files.find(f => /^text\//.test(f.mime) && /script/i.test(f.name)) || box.files.find(f => /^text\//.test(f.mime));
     if (sf) { try { const blob = new Blob(await Promise.all(sf.parts.map(async x => (await fetch('/_blob/' + x.id)).blob()))); let t = await blob.text(); if (sf.encoding === 'base64') { try { t = new TextDecoder().decode(Uint8Array.from(atob(t), c => c.charCodeAt(0))); } catch (_) {} } script = t.replace(/\r\n/g, '\n').trim().slice(0, 30000); scriptName = sf.name; } catch (_) {} }
+    if (!script && packFor(id)) { script = packFor(id).slice(0, 30000); scriptName = 'Production pack by Sage'; }
     if (!script) script = [p.script, p.voiceover ? 'VOICEOVER:\n' + p.voiceover : ''].filter(Boolean).join('\n\n');
     const job = { postId: id, title: String(p.title || '').slice(0, 120), status: 'queued', queuedAt: new Date().toISOString(), source: 'campaign', files: box.files.length, manifest: JSON.stringify(box.files.map(({ addedAt, ...f }) => f)), script, scriptName, ...(cur && cur.status ? { revisionOf: cur.assetId || '' } : {}) };
     jobs[id] = job; if (db) await db.doc('editJobs/' + id).set(job);
@@ -971,11 +1086,11 @@ Answer with JSON only, exactly these keys:
   const ISO = { canvas: null, wrap: null, log: null, ctx: null, raf: 0, people: {}, last: 0, w: 0, h: 0, convo: null, nextConvo: 0, solos: 0, transcript: [] };
   const GW = 24, GH = 14, TW = 44, TH = 22, ZH = 22;
   const LOOK = {                                     // skin, hair colour, hair style, trousers
-    pixel: ['#e8b48a', '#3b2a20', 'bun', '#334155'], reel: ['#c68642', '#1f1a17', 'cap', '#1f2937'], quill: ['#f1c27d', '#7c4a1e', 'side', '#3f3f46'],
+    sage: ['#d9a07a', '#8b3a1e', 'long', '#334155'], pixel: ['#e8b48a', '#3b2a20', 'bun', '#334155'], reel: ['#c68642', '#1f1a17', 'cap', '#1f2937'], quill: ['#f1c27d', '#7c4a1e', 'side', '#3f3f46'],
     tempo: ['#8d5524', '#111111', 'short', '#1e293b'], ref: ['#e0ac69', '#9ca3af', 'short', '#27272a'], courier: ['#d9a066', '#2d2117', 'messy', '#374151'], owl: ['#f3cfa6', '#4b5563', 'long', '#1f2937']
   };
   // private offices: 5 along the back wall, 2 along the left wall (x, y of the room's back-left corner; rooms are 3 × 3)
-  const ROOMS = { pixel: [0.3, 0.3, 'b'], reel: [3.3, 0.3, 'b'], quill: [6.3, 0.3, 'b'], tempo: [9.3, 0.3, 'b'], ref: [12.3, 0.3, 'b'], courier: [0.3, 3.9, 'l'], owl: [0.3, 6.9, 'l'] };
+  const ROOMS = { pixel: [0.3, 0.3, 'b'], reel: [3.3, 0.3, 'b'], quill: [6.3, 0.3, 'b'], tempo: [9.3, 0.3, 'b'], ref: [12.3, 0.3, 'b'], courier: [0.3, 3.9, 'l'], owl: [0.3, 6.9, 'l'], sage: [0.3, 10.2, 'l'] };
   const DESKS = Object.fromEntries(Object.entries(ROOMS).map(([id, [rx, ry, side]]) => [id, side === 'b' ? [rx + 1.4, ry + 1.3] : [rx + 1.3, ry + 1.2]]));
   const DOORS = Object.fromEntries(Object.entries(ROOMS).map(([id, [rx, ry, side]]) => [id, side === 'b' ? [[rx + 2.4, ry + 2.55], [rx + 2.4, ry + 3.45]] : [[rx + 2.55, ry + 2.3], [rx + 3.45, ry + 2.3]]]));
   DOORS.patio = [[15.9, 11.0], [15.9, 9.9]];
@@ -1174,6 +1289,9 @@ Answer with JSON only, exactly these keys:
     return { ready, held, total: items.length, need: need ? cut(need.title, 34) : '', needDate: need ? new Date(need.date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '', best, queue: q, sent, tomorrowTue: new Date(Date.now() + 864e5).getDay() === 2 };
   }
   const TALKS = [
+    f => [['sage', 'New production pack is up. Hook, shots, prompts, the lot.'], ['reel', 'Timeline with exact seconds?'], ['sage', 'Down to the tenth.'], ['reel', 'I could hug you.']],
+    f => [['pixel', 'Your image prompts have a negative list longer than the prompt.'], ['sage', 'Every logo we don’t generate is one we don’t have to blur.'], ['pixel', 'Fair.']],
+    f => [['sage', 'Is it “Wrestle fearless” or “Play fearless”?'], ['quill', 'Wrestle. Always wrestle.'], ['sage', 'Good. I already wrote it that way.']],
     f => [['tempo', 'Coffee at 10, posts at 6. Some of us live by a schedule.'], ['pixel', 'Some of us live by inspiration.'], ['tempo', 'Inspiration doesn’t send calendar invites.']],
     f => [['quill', 'I fit our whole brand story into 300 characters for Bluesky.'], ['reel', 'And?'], ['quill', 'I had to cut the word “very.” I’m still grieving.']],
     f => [['ref', 'Reminder: nothing goes out without both approvals.'], ['reel', 'Not even a tiny teaser?'], ['ref', 'Especially not a tiny teaser.'], ['reel', 'Tough crowd.']],
@@ -1203,6 +1321,7 @@ Answer with JSON only, exactly these keys:
     f => [['ref', 'Team, nice work this week.'], ['tempo', 'Is this the part where we get pizza?'], ['ref', 'This is the part where we get a checklist.'], ['pixel', 'Close enough.']]
   ];
   const SOLO = {
+    sage: ['Rewriting the hook. Third draft is the charm.', 'Counting words: 1.7 per second, not one more.'],
     pixel: ['Refilling my water. Hydrated designers make sharper crops.', 'Thinking about kerning. Again.'], reel: ['Grabbing a coffee before the next render.', 'This break room has great lighting. Just saying.'],
     quill: ['Third coffee. Don’t count.', 'Is it “email” or “e-mail”? Asking for a caption.'], tempo: ['Two-minute break. Timer is running.', 'Perfect time for coffee: 10:00 sharp.'],
     ref: ['Stretching. Good posture, good process.', 'Checking the checklist for the checklist.'], courier: ['Just five more minutes…'], owl: ['Day shift is so bright.', 'Coffee number two of the night. Morning. Whatever.']
@@ -1256,7 +1375,7 @@ Answer with JSON only, exactly these keys:
   }
   function zoneAt(x, y) { for (const [id, [rx, ry]] of Object.entries(ROOMS)) if (x > rx && x < rx + 3 && y > ry && y < ry + 3) return id; if (x > 15 && y > 10.4) return 'patio'; return ''; }
   // walls people walk around (x0, y0, x1, y1): the back offices, the left offices, the meeting room, the CR, the canteen table, the patio wall
-  const BLOCKS = [[0, 0, 15.45, 3.35], [0, 3.8, 3.35, 10.0], [5.05, 4.85, 9.55, 8.55], [4.05, 11.05, 6.55, 13.5], [9.0, 11.05, 13.9, 12.05], [14.1, 10.4, 30, 10.5]];
+  const BLOCKS = [[0, 0, 15.45, 3.35], [0, 3.8, 3.35, 13.3], [5.05, 4.85, 9.55, 8.55], [4.05, 11.05, 6.55, 13.5], [9.0, 11.05, 13.9, 12.05], [14.1, 10.4, 30, 10.5]];
   function hits(a, b, r) {                         // does segment a→b pass through rectangle r?
     if (Math.max(a[0], b[0]) < r[0] || Math.min(a[0], b[0]) > r[2] || Math.max(a[1], b[1]) < r[1] || Math.min(a[1], b[1]) > r[3]) return false;
     for (let k = 1; k < 24; k++) { const t = k / 24, x = a[0] + (b[0] - a[0]) * t, y = a[1] + (b[1] - a[1]) * t; if (x > r[0] && x < r[2] && y > r[1] && y < r[3]) return true; }
@@ -1408,9 +1527,9 @@ Answer with JSON only, exactly these keys:
     if (ISO.wrap.parentNode !== slot) slot.appendChild(ISO.wrap);
     const W = Math.max(320, slot.clientWidth || 900), H = Math.round(W * 9 / 16), dpr = Math.min(2, window.devicePixelRatio || 1);
     const roomW = (GW + GH) * TW / 2, roomH = (GW + GH) * TH / 2 + 2.6 * ZH;
-    const scale = Math.min(W / roomW, H / (roomH + 46)) * 1.14;
+    const scale = Math.min(W / roomW, H / (roomH + 46)) * 1.07;
     if (ISO.w0 !== W || ISO.dpr !== dpr) { ISO.canvas.width = Math.round(W * dpr); ISO.canvas.height = Math.round(H * dpr); ISO.dpr = dpr; ISO.w0 = W; }
-    ISO.ctx = ISO.canvas.getContext('2d'); ISO.ctx.setTransform(dpr * scale, 0, 0, dpr * scale, 0, 0); ISO.w = W / scale; ISO.h = H / scale; ISO.ox = ISO.w / 2 - (GW - GH) * TW / 4 - 60; ISO.oy = (ISO.h - roomH) / 2 + 2.6 * ZH + 2;
+    ISO.ctx = ISO.canvas.getContext('2d'); ISO.ctx.setTransform(dpr * scale, 0, 0, dpr * scale, 0, 0); ISO.w = W / scale; ISO.h = H / scale; ISO.ox = ISO.w / 2 - (GW - GH) * TW / 4 - 28; ISO.oy = (ISO.h - roomH) / 2 + 2.6 * ZH + 2;
     const t = team(), summary = [];
     TEAM.forEach(([id, name], n) => { const face = t[id][2], state = face === 'asleep' ? 'asleep' : face === 'working' ? 'working' : 'idle';
       let p = ISO.people[id]; if (!p) { const s0 = SPOTS[n % SPOTS.length]; p = ISO.people[id] = { id, x: s0[0], y: s0[1], state, moving: false }; }
@@ -1572,7 +1691,7 @@ Answer with JSON only, exactly these keys:
         const p = c.p, an = c.an;
         if (p.date !== lastDay) { lastDay = p.date; list += `<div class="day">${esc(new Date(p.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }))}</div>`; }
         const badge = c.state === 'files' ? '<span class="chk stop">Needs files</span>' : c.state === 'ready' ? '<span class="chk ok">✓ Ready</span>' : '<span class="chk warn">Held back</span>';
-        list += `<details class="camp" data-bot-camp="${esc(p.id)}" ${openCamps.has(p.id) ? 'open' : ''}><summary><span><strong>${esc(p.title)}</strong><span class="small"> · ${esc(p.platform || '')} · ${c.mine.length} channel post${c.mine.length === 1 ? '' : 's'}</span></span><span class="sumr">${badge}<span class="small">${c.ok} of ${c.mine.length} ready</span><span class="nav-caret">⌄</span></span></summary>` + `<div style="margin:8px 0"><button type="button" class="btn ghost smallbtn" data-bot-raw="${esc(p.id)}">📁 Assets & comments (${rawCount(p.id)} · 💬 ${cmtCount(p.id)})</button></div>` + nextStep(p, c) + `<div class="assetrow"><div><strong>Files needed</strong> <span class="small">· ${an.files} attached</span><div>${an.needs.map(n => `<span class="need ${n.state}">${n.state === 'have' ? '✓ ' : ''}${esc(n.label)}${n.detail ? ' (' + esc(n.detail) + ')' : ''}</span>`).join('')}</div></div><div style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="btn ghost smallbtn" data-bot-brief="${esc(p.id)}">Copy full brief for AI</button><button type="button" class="btn ghost smallbtn" data-bot-prompt="image" data-bot-post="${esc(p.id)}">Copy image prompt</button><button type="button" class="btn ghost smallbtn" data-bot-prompt="video" data-bot-post="${esc(p.id)}">Copy video brief</button>${jobs[p.id] ? '' : `<button type="button" class="btn smallbtn" data-bot-askvideo="${esc(p.id)}">Have Reel make a video</button>`}<button type="button" class="btn ghost smallbtn" data-bot-editor="${esc(p.id)}">Copy edit job</button></div>${(() => { const j = jobs[p.id]; return j ? `<div class="small" style="flex-basis:100%"><strong>Video editor${j.source === 'zip' ? ` (from “${esc(j.zipName)}”, ${j.files} files)` : ''}:</strong> ${j.status === 'queued' ? 'job waiting to be sent to RSH SPORTS.' : j.status === 'sent' ? 'job sent to RSH SPORTS ' + esc(new Date(j.sentAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })) + '. The video is attached here when it comes back.' : j.status === 'attached' ? `edited video${j.revision > 1 ? ' (revision ' + j.revision + ')' : ''} came back and is attached. <button type="button" class="btn smallbtn" data-bot-watch="${esc(p.id)}" style="padding:3px 10px;margin-left:4px">Watch and review</button>` : j.status === 'failed' ? 'the edit did not finish. ' + esc(j.reason || '') : 'video received, attaching…'}</div>` : needsVideo(p) && settings.autoEdit ? '<div class="small" style="flex-basis:100%"><strong>Video editor:</strong> this campaign needs a video; Reel sends the job on the next run.</div>' : ''; })()}${kitSport(p) ? `<div class="small" style="flex-basis:100%">Kit clip: open your RSH Kit Animator artifact, choose <strong>${esc(kitSport(p).replace(/^./, c => c.toUpperCase()))}</strong>, set the team and colours, record the 4-second clip, then drop the saved MP4 on the Office tab with this campaign selected.</div>` : ''}</div>`;
+        list += `<details class="camp" data-bot-camp="${esc(p.id)}" ${openCamps.has(p.id) ? 'open' : ''}><summary><span><strong>${esc(p.title)}</strong><span class="small"> · ${esc(p.platform || '')} · ${c.mine.length} channel post${c.mine.length === 1 ? '' : 's'}</span></span><span class="sumr">${badge}<span class="small">${c.ok} of ${c.mine.length} ready</span><span class="nav-caret">⌄</span></span></summary>` + `<div style="margin:8px 0"><button type="button" class="btn ghost smallbtn" data-bot-raw="${esc(p.id)}">📁 Assets & comments (${rawCount(p.id)} · 💬 ${cmtCount(p.id)})</button></div>` + packHtml(p) + nextStep(p, c) + `<div class="assetrow"><div><strong>Files needed</strong> <span class="small">· ${an.files} attached</span><div>${an.needs.map(n => `<span class="need ${n.state}">${n.state === 'have' ? '✓ ' : ''}${esc(n.label)}${n.detail ? ' (' + esc(n.detail) + ')' : ''}</span>`).join('')}</div></div><div style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="btn ghost smallbtn" data-bot-brief="${esc(p.id)}">Copy full brief for AI</button><button type="button" class="btn ghost smallbtn" data-bot-prompt="image" data-bot-post="${esc(p.id)}">Copy image prompt</button><button type="button" class="btn ghost smallbtn" data-bot-prompt="video" data-bot-post="${esc(p.id)}">Copy video brief</button>${jobs[p.id] ? '' : `<button type="button" class="btn smallbtn" data-bot-askvideo="${esc(p.id)}">Have Reel make a video</button>`}<button type="button" class="btn ghost smallbtn" data-bot-editor="${esc(p.id)}">Copy edit job</button></div>${(() => { const j = jobs[p.id]; return j ? `<div class="small" style="flex-basis:100%"><strong>Video editor${j.source === 'zip' ? ` (from “${esc(j.zipName)}”, ${j.files} files)` : ''}:</strong> ${j.status === 'queued' ? 'job waiting to be sent to RSH SPORTS.' : j.status === 'sent' ? 'job sent to RSH SPORTS ' + esc(new Date(j.sentAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })) + '. The video is attached here when it comes back.' : j.status === 'attached' ? `edited video${j.revision > 1 ? ' (revision ' + j.revision + ')' : ''} came back and is attached. <button type="button" class="btn smallbtn" data-bot-watch="${esc(p.id)}" style="padding:3px 10px;margin-left:4px">Watch and review</button>` : j.status === 'failed' ? 'the edit did not finish. ' + esc(j.reason || '') : 'video received, attaching…'}</div>` : needsVideo(p) && settings.autoEdit ? '<div class="small" style="flex-basis:100%"><strong>Video editor:</strong> this campaign needs a video; Reel sends the job on the next run.</div>' : ''; })()}${kitSport(p) ? `<div class="small" style="flex-basis:100%">Kit clip: open your RSH Kit Animator artifact, choose <strong>${esc(kitSport(p).replace(/^./, c => c.toUpperCase()))}</strong>, set the team and colours, record the 4-second clip, then drop the saved MP4 on the Office tab with this campaign selected.</div>` : ''}</div>`;
         for (const it of c.mine) {
           const key = it.postId + '|' + it.channel, open = openItem === key;
           list += `<div class="item" data-bot-item="${esc(key)}"><div style="display:flex;gap:8px;align-items:flex-start">${chBadge(it.channel)}<div><strong>${esc(NAME[it.channel])}</strong><div class="small">${it.caption.length} characters</div>${it.posted ? `<div class="posted">✓ Posted ${esc(new Date(it.posted.at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }))}</div>` : ''}</div></div>
@@ -1860,6 +1979,14 @@ Answer with JSON only, exactly these keys:
   }
   function find(key) { return ((plan && plan.items) || []).find(i => i.postId + '|' + i.channel === key); }
   async function onClick(e) {
+    const sw = e.target.closest('[data-sage-write]');
+    if (sw) { const q = (app().data().posts || []).find(x => x.id === sw.dataset.sageWrite); if (!q || sageBusy) return; if (scripts[q.id] && scripts[q.id].edited && !confirm('The team edited this pack. Replace it with a new one from Sage?')) return; sageNote = ''; sageBusy = q.id; openPacks.add(q.id); render(); const ok = await writeScript(q); sageBusy = ''; note = ok ? '' : sageNote; render(); return; }
+    const ss = e.target.closest('[data-sage-save]');
+    if (ss) { const ta = document.querySelector(`#rshBots [data-sage-text="${CSS.escape(ss.dataset.sageSave)}"]`); if (!ta) return; try { await saveScript(ss.dataset.sageSave, ta.value); ss.textContent = 'Saved'; setTimeout(() => render(), 900); } catch (_) { ss.textContent = 'Could not save'; } return; }
+    const sc = e.target.closest('[data-sage-copy]');
+    if (sc) { const ta = document.querySelector(`#rshBots [data-sage-text="${CSS.escape(sc.dataset.sageCopy)}"]`), full = ta ? ta.value : packFor(sc.dataset.sageCopy), n = Number(sc.dataset.part), text = n ? (packPart(full, n) || full) : full, old = sc.textContent; try { await navigator.clipboard.writeText(text); sc.textContent = 'Copied'; } catch (_) { sc.textContent = 'Copy failed'; } setTimeout(() => { sc.textContent = old; }, 1600); return; }
+    const sd = e.target.closest('[data-sage-dl]');
+    if (sd) { const q = (app().data().posts || []).find(x => x.id === sd.dataset.sageDl), ta = document.querySelector(`#rshBots [data-sage-text="${CSS.escape(sd.dataset.sageDl)}"]`); try { const dl = await use('downloads'); if (!dl) throw new Error('Saving files is not available here'); await dl.save({ filename: `production-pack-${slug(q ? q.title : 'campaign') || 'campaign'}.txt`, data: new Blob([ta ? ta.value : packFor(sd.dataset.sageDl)], { type: 'text/plain' }) }); } catch (err) { note = 'The file was not saved: ' + ((err && err.message) || 'cancelled') + '.'; render(); } return; }
     const at = e.target.closest('[data-bot-addtags]');
     if (at) { const it = find(at.dataset.botAddtags), so = it && seoFor(it.postId, it.channel); if (it && so) { const add = (so.ch.hashtags || []).filter(t => !it.caption.toLowerCase().includes(t.toLowerCase())); if (add.length) { it.caption = it.caption.replace(/\s+$/, '') + (/(#[\p{L}\p{N}_]+)\s*$/u.test(it.caption) ? ' ' : '\n\n') + add.join(' '); it.edited = true; await save(); render(); } } return; }
     if (e.target.closest('[data-bot-weekly]')) { const pre = document.querySelector('#rshBots [data-bot-weeklytext]'), text = weeklyReport(); if (pre) { pre.hidden = false; pre.textContent = text; } const b = e.target.closest('[data-bot-weekly]'); try { navigator.clipboard.writeText(text).then(() => { b.textContent = 'Copied: paste it to Anthony'; setTimeout(() => { b.textContent = 'Weekly report for Anthony'; }, 2500); }, () => {}); } catch (_) {} return; }
@@ -1922,7 +2049,7 @@ Answer with JSON only, exactly these keys:
     const view = document.getElementById('view-bots'); if (!view || !app() || !app().track || document.getElementById('rshBots')) return;
     const host = document.createElement('div'); host.id = 'rshBots'; view.appendChild(host);
     host.addEventListener('click', onClick); host.addEventListener('change', onChange);
-    host.addEventListener('toggle', e => { const d = e.target; if (d && d.matches && d.matches('details.camp')) { if (d.open) openCamps.add(d.dataset.botCamp); else openCamps.delete(d.dataset.botCamp); } }, true);
+    host.addEventListener('toggle', e => { const d = e.target; if (d && d.matches && d.matches('details.camp')) { if (d.open) openCamps.add(d.dataset.botCamp); else openCamps.delete(d.dataset.botCamp); } if (d && d.matches && d.matches('details.pack')) { if (d.open) openPacks.add(d.dataset.sagePack); else openPacks.delete(d.dataset.sagePack); } }, true);
     const zone = e => e.target.closest && e.target.closest('[data-bot-drop]'), files = dt => [...((dt && dt.files) || [])].filter(f => /^(image\/(png|jpeg|webp)|video\/(mp4|webm))$/.test(f.type) || isZip(f));
     host.addEventListener('dragover', e => { const z = zone(e); if (z) { e.preventDefault(); z.classList.add('over'); } });
     host.addEventListener('dragleave', e => { const z = zone(e); if (z) z.classList.remove('over'); });
@@ -1944,11 +2071,11 @@ Answer with JSON only, exactly these keys:
       await reconcileJobs();
       reviseFromNotes();   // remember the notes already there, so only new ones start a revision
       await collect();
-      await aoRead(); await loadConns();
+      await aoRead(); await loadConns(); await loadScripts();
       setTimeout(() => { if (aoOn()) aoStart(); else nightOwl(); }, 1500);
       setInterval(() => { aoRead().then(render); }, 5 * 60000);
     }
     render();
   }
-  window.RSH_BOTS = { conns: () => conns, viaOf, engineFor, HOUSE, music: () => MUSIC, musicStart, musicStop, match: () => ISO.match, startMatch: (a, b) => startMatch(ISO.people[a], ISO.people[b], performance.now()), zoneAt, addIdea, IDEAS: () => IDEAS, postComment, loadAllComments, cmtCount, ctaFor, withCta, isoPeople: () => ISO.people, aoCycle, aoStart, aoBeat, aoAlive, reviseFromNotes, shrinkVideo, nightOwl, weeklyReport, learnedTags, resultsForPrompt, openRaw, addRaw, sendRaw, rawCount, loadRaw, dayFor, isDyk, targets, sendText, autoSend, seoFor, seoRun, learnedTimes, schedule, attachForPost, driveUpload, fileFor, autoLink, needsFile, readyItems, placedOn, place, unplace, setMediaUrl, sendToMetricool, metricoolPost, NAME, freshVideos, watch, onChange: f => listeners.push(f), handoff, collect, start, captionFor, assetNeeds, imagePrompt, videoBrief, editJob };
+  window.RSH_BOTS = { scripts: () => scripts, scriptPrompt, writeScript, scriptRun, saveScript, packPart, packHtml, conns: () => conns, viaOf, engineFor, HOUSE, music: () => MUSIC, musicStart, musicStop, match: () => ISO.match, startMatch: (a, b) => startMatch(ISO.people[a], ISO.people[b], performance.now()), zoneAt, addIdea, IDEAS: () => IDEAS, postComment, loadAllComments, cmtCount, ctaFor, withCta, isoPeople: () => ISO.people, aoCycle, aoStart, aoBeat, aoAlive, reviseFromNotes, shrinkVideo, nightOwl, weeklyReport, learnedTags, resultsForPrompt, openRaw, addRaw, sendRaw, rawCount, loadRaw, dayFor, isDyk, targets, sendText, autoSend, seoFor, seoRun, learnedTimes, schedule, attachForPost, driveUpload, fileFor, autoLink, needsFile, readyItems, placedOn, place, unplace, setMediaUrl, sendToMetricool, metricoolPost, NAME, freshVideos, watch, onChange: f => listeners.push(f), handoff, collect, start, captionFor, assetNeeds, imagePrompt, videoBrief, editJob };
 })();
