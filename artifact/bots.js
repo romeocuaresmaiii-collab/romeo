@@ -711,7 +711,7 @@ Answer with JSON only, exactly these keys:
   // with the attached file (via Google Drive) and Quill's hashtags. Only posts the Manager Bot marked ready
   // (both approvals, all checks) are sent; nothing is published early or without approval.
   async function autoSend(step) {
-    const items = ((plan && plan.items) || []).filter(i => i.ready && !i.posted && !(i.sent && /scheduled|draft|queued/.test(i.sent.status)));
+    const items = ((plan && plan.items) || []).filter(i => i.ready && !i.posted && !(i.sent && /scheduled|draft|queued/.test(i.sent.status)) && viaOf(i.channel) === 'metricool');
     if (!items.length) return 'Nothing new to send to Metricool: every ready post is already there.';
     let ok = 0, queued = 0; const fails = [];
     for (const it of items) {
@@ -1213,6 +1213,7 @@ Answer with JSON only, exactly these keys:
      receiver moves to where it will land; now and then it drops and someone scores. */
   function startMatch(a, b, now) {
     if (!a || !b || a === b) return; if (ISO.match) endMatch();
+    if (ISO.convo && (ISO.convo.who.includes(a.id) || ISO.convo.who.includes(b.id))) { Object.values(ISO.people).forEach(q => { if (ISO.convo.who.includes(q.id)) { q.convo = false; q.goal = null; } }); ISO.convo = null; ISO.nextConvo = (now || performance.now()) + 8000; }   // players leave any chat first
     const y = (COURT.y0 + COURT.y1) / 2, la = COURT.net - 2.0, lb = COURT.net + 2.0;
     a.act = { type: 'badminton', target: [la, y], dur: 32000 + Math.random() * 16000 }; a.side = 'l'; a.goal = null; a.mug = false;
     b.act = { type: 'badminton', target: [lb, y], dur: a.act.dur }; b.side = 'r'; b.goal = null; b.mug = false;
@@ -1491,6 +1492,43 @@ Answer with JSON only, exactly these keys:
       </div></div>`;
   }
 
+  /* ---------- Connections: getting ready to post without Metricool ----------
+   * For each RSH account: the official API it needs, what the platform requires, a status the team keeps up to date,
+   * and which route posts take ("Publish via": Metricool today, Direct once connected, or another scheduler).
+   * Keys and tokens are never stored in this page: a direct connection runs through a secure connector on a server. */
+  const API = {
+    instagram: ['Instagram Graph API · Content Publishing', 'Instagram professional (Business or Creator) account linked to the RSH Facebook Page · Meta developer app with instagram_basic and instagram_content_publish · Meta App Review · a daily publishing limit per account', 'https://developers.facebook.com/docs/instagram-platform/content-publishing'],
+    facebook: ['Facebook Pages API (posts and Reels)', 'Admin of the RSH Facebook Page · Meta developer app with pages_manage_posts and pages_read_engagement · Meta App Review and Business Verification', 'https://developers.facebook.com/docs/pages-api'],
+    threads: ['Threads API', 'Threads profile linked to @team.rshsports · Meta developer app with threads_basic and threads_content_publish · Meta App Review', 'https://developers.facebook.com/docs/threads'],
+    tiktok: ['TikTok Content Posting API (Direct Post)', 'TikTok for Developers app with the Content Posting API · the app must pass TikTok’s audit before posts can be public (unaudited apps post privately) · the RSH TikTok account authorizes it', 'https://developers.tiktok.com/doc/content-posting-api-get-started'],
+    youtube: ['YouTube Data API v3 (videos.insert)', 'Google Cloud project with the YouTube Data API · OAuth consent screen · the API audit, without which uploads stay private · the RSH channel authorizes it', 'https://developers.google.com/youtube/v3/guides/uploading_a_video'],
+    pinterest: ['Pinterest API v5 (create Pins)', 'Pinterest business account · developer app approved for Standard access · the RSH account authorizes it', 'https://developers.pinterest.com/docs/api/v5/'],
+    bluesky: ['Bluesky AT Protocol', 'An app password created in Bluesky settings · no review needed, the simplest one to connect first', 'https://docs.bsky.app/docs/get-started']
+  };
+  const CONN_STEPS = ['Developer app created', 'Permissions requested', 'Platform review or audit passed', 'Account authorized', 'Test post published'];
+  let conns = {};
+  async function loadConns() { if (!db) return; try { const d = await db.doc('bots/connections').get(); conns = d.exists ? (JSON.parse(d.data().json || '{}') || {}) : {}; } catch (_) {} }
+  async function saveConns() { if (!db) return; try { await db.doc('bots/connections').set({ json: JSON.stringify(conns), updatedAt: new Date().toISOString() }); } catch (_) { note = 'Connections could not be saved. Only the owner and editors can change them.'; } }
+  const viaOf = ch => (conns[ch] && conns[ch].via) || 'metricool';
+  const connDone = ch => ((conns[ch] && conns[ch].steps) || []).length;
+  function connectionsHtml(items) {
+    return `<div class="card" style="margin-top:16px">
+      <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start"><div><h2 style="font-size:18px">Connections: posting without Metricool</h2><p class="small" style="margin-top:6px;max-width:720px">Every RSH account in one place, ready for the move off Metricool. Today posts go through Metricool. For each account, follow the steps to get the platform’s own posting access; when all five are done, switch <strong>Publish via</strong> to <strong>Direct</strong>. You can also point an account at another scheduler (Buffer, Hootsuite, Later…). Keys and passwords are never stored in this page: a direct connection runs through a secure connector on a server.</p></div>
+      <span class="st">${ACCOUNTS.filter(([ch]) => connDone(ch) >= CONN_STEPS.length).length} of ${ACCOUNTS.length} ready for direct posting</span></div>
+      <div class="accs" style="margin-top:12px">${ACCOUNTS.map(([ch, handle, url]) => { const posts = items.filter(i => i.channel === ch), rdy = posts.filter(i => i.ready && !i.posted).length, sent = posts.filter(i => i.sent && /scheduled|draft/.test(i.sent.status)).length, a = API[ch] || ['', '', ''], done = connDone(ch), via = viaOf(ch), steps = (conns[ch] && conns[ch].steps) || [];
+        return `<div class="acc" data-bot-acc="${ch}" style="display:grid;gap:8px"><div class="top">${chBadge(ch)}<div><strong>${esc(NAME[ch])}</strong><div class="small">${esc(handle)}</div></div></div>
+          <div class="small">${posts.length ? `${posts.length} planned · ${rdy} ready · ${sent} in Metricool` : 'Not used in the current plan.'}</div>
+          <label class="small" style="display:grid;gap:3px"><strong>Publish via</strong><select data-conn-via="${ch}"><option value="metricool" ${via === 'metricool' ? 'selected' : ''}>Metricool (today)</option><option value="direct" ${via === 'direct' ? 'selected' : ''} ${done < CONN_STEPS.length ? 'disabled' : ''}>Direct from this app${done < CONN_STEPS.length ? ' (finish the steps first)' : ''}</option><option value="other" ${via === 'other' ? 'selected' : ''}>Another scheduler</option></select></label>
+          ${via === 'other' ? `<input type="text" data-conn-other="${ch}" value="${esc((conns[ch] && conns[ch].other) || '')}" placeholder="Which one? e.g. Buffer" aria-label="Other scheduler for ${esc(NAME[ch])}">` : ''}
+          <details><summary class="small"><strong>Direct posting: ${done} of ${CONN_STEPS.length} steps</strong> · ${esc(a[0])}</summary>
+            <div class="small" style="margin-top:6px">${esc(a[1])}</div>
+            <div style="display:grid;gap:4px;margin-top:6px">${CONN_STEPS.map((st, n) => `<label class="small" style="display:flex;gap:6px;align-items:center"><input type="checkbox" data-conn-step="${ch}|${n}" ${steps.includes(n) ? 'checked' : ''}> ${esc(st)}</label>`).join('')}</div>
+            <textarea data-conn-note="${ch}" rows="2" style="width:100%;margin-top:6px;box-sizing:border-box" placeholder="Notes: who applied, app ID (no secrets), review dates…" aria-label="Notes for ${esc(NAME[ch])}">${esc((conns[ch] && conns[ch].note) || '')}</textarea>
+            <a class="small" href="${esc(a[2])}" target="_blank" rel="noopener noreferrer">${esc(NAME[ch])} developer docs ↗</a></details>
+          <div style="display:flex;gap:6px;flex-wrap:wrap"><a class="btn ghost smallbtn" href="${esc(url)}" target="_blank" rel="noopener noreferrer">Open ${esc(NAME[ch])} ↗</a></div></div>`; }).join('')}</div>
+      <p class="small" style="margin-top:12px">Suggested order: Bluesky (no review), then YouTube and Pinterest, then Meta (Instagram, Facebook, Threads together, one App Review), then TikTok (audit). Until an account is switched, Tempo keeps scheduling it through Metricool exactly as now.</p></div>`;
+  }
+
   /* ---------- rendering ---------- */
   function render() { renderMain(); isoMount(); }
   function renderMain() {
@@ -1554,17 +1592,7 @@ Answer with JSON only, exactly these keys:
         ${list}
         </div>
       </div>
-      <div data-bot-panel="channels" ${tab === 'channels' ? '' : 'hidden'}>
-        <div class="card" style="margin-top:16px">
-        <h2 style="font-size:18px">RSH Sports channels</h2>
-        <p class="small" style="margin-top:6px">Every RSH Sports account in one place. Today a ready post reaches them through Metricool or by hand, from the Plan. Each account has a slot for a direct connection from this app, so it can schedule and post without Metricool once that is built.</p>
-        <div class="accs">${ACCOUNTS.map(([ch, handle, url]) => { const posts = items.filter(i => i.channel === ch), rdy = posts.filter(i => i.ready && !i.posted).length, done = posts.filter(i => i.posted).length;
-          return `<div class="acc" data-bot-acc="${ch}"><div class="top">${chBadge(ch)}<div><strong>${esc(NAME[ch])}</strong><div class="small">${esc(handle)}</div></div></div>
-            <div><span class="st">Today: Metricool or by hand</span><span class="st">Direct posting: not connected yet</span></div>
-            <div class="small">${posts.length ? `${posts.length} planned post${posts.length === 1 ? '' : 's'} · ${rdy} ready · ${done} posted` : 'Not used in the current plan.'}</div>
-            <div style="display:flex;gap:6px;flex-wrap:wrap"><a class="btn ghost smallbtn" href="${esc(url)}" target="_blank" rel="noopener noreferrer">Open ${esc(NAME[ch])} ↗</a><button type="button" class="btn ghost smallbtn" disabled title="Comes with direct posting">Connect directly</button></div></div>`; }).join('')}</div>
-        </div>
-      </div>
+      <div data-bot-panel="channels" ${tab === 'channels' ? '' : 'hidden'}>${tab === 'channels' ? connectionsHtml(items) : ''}</div>
       <div data-bot-panel="playbook" ${tab === 'playbook' ? '' : 'hidden'}>${tab === 'playbook' ? playbookHtml() : ''}</div>
       <div data-bot-panel="setup" ${tab === 'setup' ? '' : 'hidden'}>
         <div class="card" style="margin-top:16px">
@@ -1852,6 +1880,10 @@ Answer with JSON only, exactly these keys:
   }
   async function onChange(e) {
     const t = e.target;
+    if (t.matches('[data-conn-via]')) { const ch = t.dataset.connVia; conns[ch] = { ...(conns[ch] || {}), via: t.value }; await saveConns(); return render(); }
+    if (t.matches('[data-conn-step]')) { const [ch, n] = t.dataset.connStep.split('|'); const c = conns[ch] = { ...(conns[ch] || {}) }; const st = new Set(c.steps || []); if (t.checked) st.add(Number(n)); else st.delete(Number(n)); c.steps = [...st].sort(); if (c.via === 'direct' && c.steps.length < CONN_STEPS.length) c.via = 'metricool'; await saveConns(); return render(); }
+    if (t.matches('[data-conn-note]')) { const ch = t.dataset.connNote; conns[ch] = { ...(conns[ch] || {}), note: String(t.value).slice(0, 600) }; await saveConns(); return; }
+    if (t.matches('[data-conn-other]')) { const ch = t.dataset.connOther; conns[ch] = { ...(conns[ch] || {}), other: String(t.value).slice(0, 60) }; await saveConns(); return; }
     if (t.matches('[data-bot-file]')) { const files = [...t.files], camp = document.querySelector('#rshBots [data-bot-dropcamp]'); t.value = ''; return attach(files, camp && camp.value); }
     if (t.matches('[data-bot-dropcamp]')) return;
     if (t.id === 'rshBotAlways') { try { localStorage.setItem(AO_KEY, t.checked ? '1' : '0'); } catch (_) {} if (t.checked) aoStart(); else { if (aoTimer) clearInterval(aoTimer); aoTimer = null; if (aoInfo && aoInfo.id === aoId && db) { try { await db.doc('bots/alwaysOn').set({ ...aoInfo, on: false, at: new Date().toISOString(), status: 'switched off' }); } catch (_) {} } await aoRead(); } return render(); }
@@ -1892,11 +1924,11 @@ Answer with JSON only, exactly these keys:
       await reconcileJobs();
       reviseFromNotes();   // remember the notes already there, so only new ones start a revision
       await collect();
-      await aoRead();
+      await aoRead(); await loadConns();
       setTimeout(() => { if (aoOn()) aoStart(); else nightOwl(); }, 1500);
       setInterval(() => { aoRead().then(render); }, 5 * 60000);
     }
     render();
   }
-  window.RSH_BOTS = { music: () => MUSIC, musicStart, musicStop, match: () => ISO.match, startMatch: (a, b) => startMatch(ISO.people[a], ISO.people[b], performance.now()), zoneAt, addIdea, IDEAS: () => IDEAS, postComment, loadAllComments, cmtCount, ctaFor, withCta, isoPeople: () => ISO.people, aoCycle, aoStart, aoBeat, aoAlive, reviseFromNotes, shrinkVideo, nightOwl, weeklyReport, learnedTags, resultsForPrompt, openRaw, addRaw, sendRaw, rawCount, loadRaw, dayFor, isDyk, targets, sendText, autoSend, seoFor, seoRun, learnedTimes, schedule, attachForPost, driveUpload, fileFor, autoLink, needsFile, readyItems, placedOn, place, unplace, setMediaUrl, sendToMetricool, metricoolPost, NAME, freshVideos, watch, onChange: f => listeners.push(f), handoff, collect, start, captionFor, assetNeeds, imagePrompt, videoBrief, editJob };
+  window.RSH_BOTS = { conns: () => conns, viaOf, music: () => MUSIC, musicStart, musicStop, match: () => ISO.match, startMatch: (a, b) => startMatch(ISO.people[a], ISO.people[b], performance.now()), zoneAt, addIdea, IDEAS: () => IDEAS, postComment, loadAllComments, cmtCount, ctaFor, withCta, isoPeople: () => ISO.people, aoCycle, aoStart, aoBeat, aoAlive, reviseFromNotes, shrinkVideo, nightOwl, weeklyReport, learnedTags, resultsForPrompt, openRaw, addRaw, sendRaw, rawCount, loadRaw, dayFor, isDyk, targets, sendText, autoSend, seoFor, seoRun, learnedTimes, schedule, attachForPost, driveUpload, fileFor, autoLink, needsFile, readyItems, placedOn, place, unplace, setMediaUrl, sendToMetricool, metricoolPost, NAME, freshVideos, watch, onChange: f => listeners.push(f), handoff, collect, start, captionFor, assetNeeds, imagePrompt, videoBrief, editJob };
 })();
