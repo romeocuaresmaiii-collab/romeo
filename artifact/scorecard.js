@@ -81,7 +81,7 @@
     const fmt = n => (Math.round(n * 10) / 10).toFixed(1).replace(/\.0$/, ''), one = n => (Math.round(n * 10 + 1e-9) / 10).toFixed(1);
     const card = document.createElement('div'); card.className = 'card'; card.id = 'rshScore'; card.style.marginBottom = '16px';
     card.innerHTML = `
-      <div class="eyebrow">APP SCORECARD · UPDATED NOVEMBER 23, 2026</div>
+      <div class="eyebrow">APP SCORECARD · UPDATED NOVEMBER 26, 2026</div>
       <h2 style="margin-top:6px">Where the app stands, and what 10/10 takes</h2>
       <div class="score-head">
         <div><div class="score-big">${one(now)} <span class="small">/ 10</span></div><div class="small" style="margin-top:6px">Average of the ten ratings below</div></div>

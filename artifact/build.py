@@ -51,6 +51,7 @@ cal = (ROOT / 'artifact' / 'calendar.js').read_text(encoding='utf-8')
 homejs = (ROOT / 'artifact' / 'home.js').read_text(encoding='utf-8')
 tracker = (ROOT / 'artifact' / 'tracker.js').read_text(encoding='utf-8')
 bots = (ROOT / 'artifact' / 'bots.js').read_text(encoding='utf-8')
+organize = (ROOT / 'artifact' / 'organize.js').read_text(encoding='utf-8')
 shim = once(shim, '__APP_VERSION__', version)
 shim = once(shim, '__BUNDLED_MEDIA__', json.dumps(bundled))
 shim = once(shim, '__WEEKLY_PACKS__', json.dumps(packs, ensure_ascii=False).replace('</', '<\\/'))
@@ -100,16 +101,45 @@ s = once(s, "tracker:['Campaign Checklist',", "bots:['24/7 Bots','Captions, timi
 
 # 4. Wording that would be untrue here.
 s = once(s, f'<strong>LOCAL APP · V{version}</strong><div class="small">Activate the local Data Vault in Setup & Backup to preserve browser work. Export a backup before upgrading. Metricool is connected in ChatGPT only, not this local app.</div>',
-         f'<strong>ARTIFACT EDITION · V{version} · BUILD 70</strong><div class="small">Your workspace and uploaded media are saved automatically to this artifact’s private storage. Approvals are local records, not authenticated. No Metricool sync or publishing.</div>')
+         f'<strong>ARTIFACT EDITION · V{version} · BUILD 71</strong><div class="small">Your workspace and uploaded media are saved automatically to this artifact’s private storage. Approvals are local records, not authenticated. No Metricool sync or publishing.</div>')
 s = once(s, "'Use python3 server.py in the extracted v%s folder, then open http://127.0.0.1:8765. Buttons and media uploads require the local server.'" % version, "'Open this page from your Claude artifacts.'")
 
 for old, new in (('Local editorial plans are separate from the read-only Metricool monthly archive.', 'Team plans, with what is scheduled and published in Metricool.'), ('Metricool connected to ChatGPT only', 'Live results from Metricool'), ('Local workspace · demo/pilot', 'RSH Sports workspace')):
     assert old in s, old
     s = s.replace(old, new)
 
+# 5. Organized navigation (Nov 26): daily work on top; one entry per topic under "More tools", related screens as tabs.
+NAV_NEW = """<div class="nav-group-label">YOUR DAILY WORK</div>
+<button class="active" data-view="overview" type="button"><span class="icon">◈</span> Home</button>
+<button data-view="tracker" type="button"><span class="icon">☑</span> Checklist</button>
+<button data-view="studio" type="button"><span class="icon">✦</span> Create</button>
+<button data-view="calendar" type="button"><span class="icon">▦</span> Calendar</button>
+<button data-view="approvals" type="button"><span class="icon">✓</span> Reviews</button>
+<button data-view="bots" type="button"><span class="icon">◎</span> 24/7 Bots</button>
+<details class="nav-more-details" id="navMoreDetails"><summary><span class="icon">⊞</span><span>More tools</span><span class="nav-caret">⌄</span></summary><div class="nav-extra"><div class="nav-group-label" style="margin-top:10px">RESULTS</div>
+<button data-view="weekly" type="button"><span class="icon">▤</span> Insights & Performance<span class="nav-keywords"> Insights Performance Metricool history Manual tracker Content Library Growth Operating System</span></button>
+<button data-view="revenue" type="button"><span class="icon">＄</span> Revenue & ROI<span class="nav-keywords"> campaign link builder UTM</span></button>
+<div class="nav-group-label" style="margin-top:10px">PLAN & RESEARCH</div>
+<button data-view="strategy" type="button"><span class="icon">◇</span> Strategy<span class="nav-keywords"> Strategy Lab Decision Engine Season Intelligence radar</span></button>
+<button data-view="competitors" type="button"><span class="icon">⌕</span> Competitors<span class="nav-keywords"> Competitive Intelligence watchlist</span></button>
+<button data-view="experiments" type="button"><span class="icon">◷</span> Growth Experiments</button>
+<button data-view="aiworkbench" type="button"><span class="icon">✧</span> AI Workbench</button>
+<div class="nav-group-label" style="margin-top:10px">FOR ANTHONY</div>
+<button data-view="executive" type="button"><span class="icon">▤</span> Executive Brief<span class="nav-keywords"> Anthony Review Center</span></button>
+<button data-view="market" type="button"><span class="icon">◈</span> Scorecard & Roadmap<span class="nav-keywords"> Market Audit</span></button>
+<div class="nav-group-label" style="margin-top:10px">SYSTEM</div>
+<button data-view="settings" type="button"><span class="icon">⚙</span> Setup & Backup</button>
+""" + "".join(f'<button data-view="{v}" type="button" class="nav-merged" tabindex="-1" aria-hidden="true"><span class="icon">·</span> {t}</button>\n' for v, t in (('recommend', 'Decision Engine'), ('seasons', 'Season Intelligence'), ('analytics', 'Manual tracker'), ('metricool', 'Metricool history'), ('november', 'Content Library'), ('growthos', 'Growth Operating System'), ('compintel', 'Competitive Intelligence'), ('pitch', 'Anthony Review Center'))) + "</div></details>"
+i = s.index('<div class="nav-group-label">YOUR DAILY WORK</div>'); j = s.index('</div></details>', i) + len('</div></details>')
+s = s[:i] + NAV_NEW + s[j:]
+GROUPS_OLD = """ {tabs:[['strategy','Strategy Lab'],['recommend','Decision Engine']]},
+ {tabs:[['metricool','Metricool history'],['analytics','Manual tracker']]},"""
+s = once(s, GROUPS_OLD, """ {tabs:[['strategy','Strategy Lab'],['recommend','Decision Engine'],['seasons','Season radar']]},
+ {tabs:[['weekly','Insights'],['metricool','Metricool history'],['analytics','Manual tracker'],['november','Content Library'],['growthos','Growth OS']]},""")
+
 # Live results panel (artifact edition only) loads before the host layer starts the app.
 assert s.count('<script>\n' + shim) == 1
-s = s.replace('<script>\n' + shim, '<script>\n' + live + '\n</script>\n<script>\n' + score + '\n</script>\n<script>\n' + camp + '\n</script>\n<script>\n' + exper + '\n</script>\n<script>\n' + signoff + '\n</script>\n<script>\n' + cal + '\n</script>\n<script>\n' + homejs + '\n</script>\n<script>\n' + tracker + '\n</script>\n<script>\n' + bots + '\n</script>\n<script>\n' + shim)
+s = s.replace('<script>\n' + shim, '<script>\n' + live + '\n</script>\n<script>\n' + score + '\n</script>\n<script>\n' + camp + '\n</script>\n<script>\n' + exper + '\n</script>\n<script>\n' + signoff + '\n</script>\n<script>\n' + cal + '\n</script>\n<script>\n' + homejs + '\n</script>\n<script>\n' + tracker + '\n</script>\n<script>\n' + bots + '\n</script>\n<script>\n' + organize + '\n</script>\n<script>\n' + shim)
 
 # Claude's sharing review accepts only JPEG, PNG, GIF or WebP images (MP4/WebM video, MP3/WAV audio).
 # A version with anything else cannot be opened by invited people, so fail the build instead.
