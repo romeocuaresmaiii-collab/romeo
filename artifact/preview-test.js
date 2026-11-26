@@ -465,6 +465,10 @@ const out = []; const ok = (n, c, d) => { out.push(c); console.log((c ? 'PASS  '
     const sel = q('[data-conn-via="bluesky"]'); const directOn = !sel.querySelector('option[value="direct"]').disabled; sel.value = 'direct'; sel.dispatchEvent(new Event('change', { bubbles: true })); await new Promise(r => setTimeout(r, 150));
     const via = B.viaOf('bluesky'), keep = B.viaOf('instagram'); const c0 = q('[data-conn-step="bluesky|0"]'); c0.checked = false; c0.dispatchEvent(new Event('change', { bubbles: true })); await new Promise(r => setTimeout(r, 150));
     const back = B.viaOf('bluesky'); q('[data-bot-tab="office"]').click(); return { cards, directOff, directOn, via, keep, back, noKeys: !/password\s*[:=]|token\s*[:=]/i.test(document.querySelector('#rshBots').innerHTML) }; });
+  const hs = await p.evaluate(() => { const B = window.RSH_BOTS, posts = window.RSH_APP.data().posts, w = posts.find(x => /wrestl/i.test(x.sport || '')) || posts[0], j = B.editJob(w);
+    return { house: /HOUSE STYLE/.test(j) && /at least 2\.5 s/.test(j) && /top 8%/.test(j) && /ducked under the voice/.test(j), card: /RSH logo · rshsports\.com/.test(j) && /rsh_cta\.py/.test(j), engine: /Video Studio Kit engine \d\d/.test(j),
+      quiz: B.engineFor({ title: 'Basketball Clocks: Quick Fan Quiz', hook: 'Which one is it?' }), dyk: B.engineFor({ title: 'DYK: The 3-Point Takedown' }), prod: B.engineFor({ title: 'Reversible Singlet: Show Both Sides' }), tag: /Wrestle fearless/.test(B.editJob({ ...w, sport: 'Wrestling' })) }; });
+  ok('Every edit job carries the RSH house style, the app end card and the right Video Studio Kit engine', hs.house && hs.card && hs.engine && /^09/.test(hs.quiz) && /^01/.test(hs.dyk) && /^07/.test(hs.prod) && hs.tag, JSON.stringify(hs));
   ok('Channels: each account has a Publish-via choice; Direct unlocks only after all five steps and falls back to Metricool if a step is unticked; no keys in the page', cn.cards === 7 && cn.directOff && cn.directOn && cn.via === 'direct' && cn.keep === 'metricool' && cn.back === 'metricool' && cn.noKeys, JSON.stringify(cn));
   await b.close(); srv.close();
   process.exit(out.every(Boolean) ? 0 : 1);
