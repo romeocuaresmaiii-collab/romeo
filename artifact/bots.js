@@ -34,7 +34,7 @@
   let db = null, settings = { ...DEFAULTS }, plan = null, busy = false, note = '', log = [], openItem = null;
   let phase = null, wake = '', assetSig = null, queued = '', drop = { msg: '', busy: false };
   let tab = 'office', filter = 'all';
-  let jobs = {}, editorState = 'unknown', dispatching = false;      // edit jobs by campaign id; whether the editor can be reached from this view                 // which section of the screen is showing; which campaigns the plan lists
+  let jobs = {}, editorState = 'unknown', dispatching = false, sendRetries = 0, retryTimer = 0; const RETRY_WAIT = [30e3, 120e3, 300e3, 600e3];      // edit jobs by campaign id; whether the editor can be reached from this view                 // which section of the screen is showing; which campaigns the plan lists
   const openCamps = new Set();
   const slotName = t => (settings.labels && settings.labels[t]) ? `${clock(t)} · ${settings.labels[t]}` : clock(t);      // which bot is at work right now; why the team started; attachments seen so far
 
@@ -310,14 +310,21 @@
     if (added) dispatch();
   }
   async function dispatch() {
-    if (dispatching || !db || editorState === 'unavailable') return; dispatching = true;   // a page that was refused once does not keep retrying
+    if (dispatching || !db || editorState === 'unavailable' || editorState === 'retrying') return; dispatching = true;   // a page that was refused once does not keep retrying
     try {
       const queued = Object.values(jobs).filter(j => j.status === 'queued'); if (!queued.length) return;
       const mcp = await use('mcp'); if (!mcp) { editorState = 'unavailable'; return; }
       for (const j of queued) {
         const p = (app().data().posts || []).find(x => x.id === j.postId); if (!p) continue;
         try { await mcp.callTool(REMOTE, 'send_message', { session_id: EDITOR_SESSION, message: handoff(p, j) }); editorState = 'ok'; j.status = 'sent'; j.sentAt = new Date().toISOString(); await db.doc('editJobs/' + j.postId).set(j); }
-        catch (e) { editorState = 'unavailable'; j.lastError = String((e && e.code) || 'send_failed'); try { await db.doc('editJobs/' + j.postId).set(j); } catch (_) {} break; }
+        catch (e) {
+          const code = String((e && e.code) || 'send_failed'); j.lastError = code; j.tries = (j.tries || 0) + 1; try { await db.doc('editJobs/' + j.postId).set(j); } catch (_) {}
+          // A passing hiccup (upstream_error, timeout, network) is tried again after 30 s, 2 min, 5 min, 10 min; a refusal stops this page from retrying.
+          const passing = !/denied|refus|forbidden|permission|not_allowed|unauthori/i.test(code);
+          if (passing && sendRetries < RETRY_WAIT.length) { editorState = 'retrying'; clearTimeout(retryTimer); retryTimer = setTimeout(() => { if (editorState === 'retrying') editorState = 'unknown'; dispatch(); }, RETRY_WAIT[sendRetries++]); }
+          else editorState = 'unavailable';
+          break;
+        }
       }
     } finally { dispatching = false; render(); }
   }
