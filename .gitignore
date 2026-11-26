@@ -5,3 +5,6 @@ node_modules/
 RSH_Sports_Marketing_OS_v9_0_8.zip
 artifact/dist/
 artifact/seed/
+
+# RSH studio kits are private (stored as an asset in the app); never push them while the repo is public
+studio/
