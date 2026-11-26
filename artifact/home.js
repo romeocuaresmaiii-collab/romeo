@@ -53,7 +53,7 @@
     const home = document.getElementById('view-overview'); if (!home || !app() || document.getElementById('rshQuick')) return;
     // 1. quick actions replace the two introductory cards
     const bar = document.createElement('div'); bar.id = 'rshQuick'; bar.setAttribute('aria-label', 'Quick actions'); home.insertBefore(bar, home.firstChild);
-    bar.addEventListener('click', e => { const v = e.target.closest('[data-quick-video]'); if (v && window.RSH_BOTS) return window.RSH_BOTS.watch(v.dataset.quickVideo); const b = e.target.closest('[data-quick]'); if (b) app().navigate(b.dataset.quick); });
+    bar.addEventListener('click', e => { const v = e.target.closest('[data-quick-video]'); if (v && window.RSH_BOTS) return window.RSH_BOTS.watch(v.dataset.quickVideo); const b = e.target.closest('[data-quick]'); if (b && b.dataset.quick === 'approvals' && window.RSH_REVIEW) return window.RSH_REVIEW.open('todo'); if (b) app().navigate(b.dataset.quick); });
     if (window.RSH_BOTS && window.RSH_BOTS.onChange) window.RSH_BOTS.onChange(quick);
     const hero = home.querySelector(':scope > .card.hero'), cta = home.querySelector(':scope > .smart-home-cta');
     // 2. order: quick actions, live summary, campaigns needing a next step, campaign results, then everything else

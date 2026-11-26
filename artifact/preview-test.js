@@ -529,6 +529,20 @@ const out = []; const ok = (n, c, d) => { out.push(c); console.log((c ? 'PASS  '
   ok('Posting Rulebook: routing picks the home platform, DYK goes only to Instagram 7 AM + YouTube 4 PM on Tuesday, the home posts first, weekends move to weekday slots', rb.routes === 'instagram,facebook,instagram,tiktok,youtube,threads,facebook' && rb.dykT === 'instagram,youtube' && rb.dyk === '2026-12-08 07:00/16:00' && rb.revT.split(',')[0] === 'tiktok' && rb.revT.split(',').length <= 4 && rb.order && rb.weekend === '2026-12-07 10:00' && rb.pins === '2026-12-04 8 19:00-20:45/20:00', JSON.stringify(rb).slice(0, 400));
   ok('Posting Rulebook: each platform gets its own caption format and one CTA (link in first comment, Link in bio, one-line TikTok, YouTube one line + site, plain-words Threads and Bluesky, pin link)', Object.values(rb.caps).every(Boolean) && rb.yt, JSON.stringify(rb.caps));
   ok('Posting Rulebook: Ref holds a platform without its own file, a 6 PM Instagram reel and the wrong tagline verb; Manila times and taglines are right', rb.own && rb.sixpm && rb.tag && rb.manila === '8 PM,1 AM next day,7 PM' && rb.taglines === 'Look fearless. Play fearless.|Look fearless. Skate fearless.|Look fearless. Fight fearless.', JSON.stringify({ own: rb.own, sixpm: rb.sixpm, tag: rb.tag, manila: rb.manila, taglines: rb.taglines }));
+  const qr = await p.evaluate(async () => { const R = window.RSH_REVIEW, A = window.RSH_APP, wait = ms => new Promise(r => setTimeout(r, ms)), host = () => document.getElementById('rshQR');
+    const btn = !!document.getElementById('rshQRBtn');
+    const pick = A.data().posts.filter(q => q.date >= new Date().toISOString().slice(0, 10) && (q.creativeAssets || []).length && ['checks', 'manager'].includes(R.stepOf(q)));
+    if (pick.length < 2) return { skip: true, btn };
+    const a = pick[0], b = pick[1]; R.open(null, a.id); await wait(700);
+    const shows = /The post, exactly as it goes out/i.test(host().innerText) && !!host().querySelector('[data-qr-approve][disabled]');
+    for (let k = 0; k < 5; k++) { const c = host().querySelectorAll('[data-qr-check]')[k]; if (c && !c.checked) { c.checked = true; c.dispatchEvent(new Event('change', { bubbles: true })); await wait(400); } }
+    const pf = host().querySelector('[data-qr-platform]'); pf.checked = true; pf.dispatchEvent(new Event('change', { bubbles: true })); await wait(300);
+    const enabled = !host().querySelector('[data-qr-approve]').disabled; host().querySelector('[data-qr-approve]').click(); await wait(500);
+    const pa = A.data().posts.find(q => q.id === a.id), approved = !!(pa.approvalMeta || {}).pmReviewedAt && R.stepOf(pa) === 'anthony';
+    R.open(null, b.id); await wait(600); host().querySelector('[data-qr-note]').value = 'Swap the hook for the coach quote.'; host().querySelector('[data-qr-changes]').click(); await wait(500);
+    const pb = A.data().posts.find(q => q.id === b.id), changed = pb.status === 'Draft' && R.stepOf(pb) === 'changes' && /coach quote/.test((pb.approvalMeta || {}).notes || '');
+    R.close(); return { btn, shows, enabled, approved, changed }; });
+  ok('Quick review: one screen per campaign; ticking the checklist enables Approve, approval moves it to Anthony, and a change request sends it back with the note', qr.skip ? qr.btn : qr.btn && qr.shows && qr.enabled && qr.approved && qr.changed, JSON.stringify(qr));
   ok('Every attached photo or video has a full-quality download button in the campaign’s media gallery', /Download the original file at full quality/.test(await p.evaluate(() => document.documentElement.innerHTML)) || /⬇ Download/.test(require('fs').readFileSync('/home/user/rsh-sports-os/index.html', 'utf8')), 'gallery button');
   const hs = await p.evaluate(() => { const B = window.RSH_BOTS, posts = window.RSH_APP.data().posts, w = posts.find(x => /wrestl/i.test(x.sport || '')) || posts[0], j = B.editJob(w);
     return { house: /HOUSE STYLE/.test(j) && /at least 2\.5 s/.test(j) && /top 8%/.test(j) && /ducked under the voice/.test(j), card: /RSH logo · rshsports\.com/.test(j) && /rsh_cta\.py/.test(j), engine: /Video Studio Kit engine \d\d/.test(j),

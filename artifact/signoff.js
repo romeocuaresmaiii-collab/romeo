@@ -121,5 +121,12 @@
     new MutationObserver(() => { if (!document.getElementById('rshSign')) paint(); }).observe(editor, { childList: true });
     init();
   }
-  window.RSH_SIGNOFF = { start };
+  // Quick Review asks who the final approver is and whether this campaign's current content carries their signature.
+  async function info(id) {
+    if (!loaded) { try { await init(); } catch (_) {} }
+    if (approverId && !(id in sigs)) await loadSig(id);
+    const p = post(id), sig = sigs[id], cur = sig && p ? await fingerprint(p) : null;
+    return { approverId, me, mine: !!me && me === approverId, name: nameOf(approverId), signed: !!(sig && sig.hash === cur), stale: !!(sig && sig.hash !== cur), at: sig ? sig.at : null, note, busy };
+  }
+  window.RSH_SIGNOFF = { start, info, sign: id => sign(id) };
 })();

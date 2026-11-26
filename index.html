@@ -4381,6 +4381,27 @@ window.RSH_APP={data:()=>d,save:()=>save(),notice:t=>notice(t),navigate:v=>navig
  negativePrompt:()=>RSH_NEGATIVE,logoRule:()=>RSH_LOGO_RULE,
  // v9.11: open Reviews on one campaign, showing one of its files first (used for videos the editor sends back).
  openReview:(id,assetId)=>{if(!d.posts.some(p=>p.id===id))return false;approvalSelectedId=id;reviewSearchText='';reviewFilterStage='all';if(el('reviewSearch'))el('reviewSearch').value='';if(el('reviewFilter'))el('reviewFilter').value='all';reviewMediaFocusPost=id;reviewMediaFocusId=assetId||'';navigate('approvals');return true},
+ // Quick Review (Nov 26): every review step for one campaign in one place, with the same rules as Create and Reviews.
+ review:{
+  checks:id=>{const p=d.posts.find(x=>x.id===id);return p&&p.visualReview&&p.visualReview.assetKey===visualAssetKey(p)?{...(p.visualReview.checks||{})}:{}},
+  valid:id=>visualReviewValid(d.posts.find(x=>x.id===id)),
+  fits:id=>visualRequirements(d.posts.find(x=>x.id===id)),
+  saveChecks:(id,checks)=>{const p=d.posts.find(x=>x.id===id);if(!p||!visualAssets(p).length)return {ok:false,msg:'Attach the finished photo or video first.'};
+   if(['Approved','Scheduled','Published'].includes(p.status)&&p.approvalMeta?.anthonyConfirmedAt)return {ok:false,msg:'This campaign is already approved.'};
+   p.visualReview={assetKey:visualAssetKey(p),assetIds:visualAssets(p).map(a=>a.id),checks:Object.fromEntries(visualCheckNames.map(k=>[k,!!checks[k]])),savedAt:new Date().toISOString(),attestation:'Checked in Quick Review for all attached photos and videos; manual checks, not automatic logo detection.'};
+   if(visualReviewValid(p)&&p.status==='Draft'){p.status='Review';p.approvalMeta={...(p.approvalMeta||{}),pmReviewedAt:null,anthonyConfirmedAt:null,anthonyEvidence:'',approvedAt:null};approvalLog(p,'Sent to review','Quick Review','All five visual checks done');}
+   save();return {ok:true}},
+  approve:(id,notes)=>{const p=d.posts.find(x=>x.id===id);if(!p)return {ok:false,msg:'Campaign not found.'};
+   if(p.approvalMeta?.pmReviewedAt)return {ok:false,msg:'Manager review is already done; it is waiting for Anthony.'};
+   if(!visualAssets(p).length)return {ok:false,msg:'Attach the finished photo or video first.'};
+   if(!visualRequirements(p))return {ok:false,msg:'The attached files do not match the post format.'};
+   if(!visualReviewValid(p))return {ok:false,msg:'Tick all the checks for the current files first.'};
+   p.status='Review';p.approvalMeta={...(p.approvalMeta||{}),reviewer:'Project Manager',notes:String(notes||''),pmReviewedAt:new Date().toISOString(),anthonyConfirmedAt:null,approvedAt:null};
+   approvalLog(p,'Manager review passed; waiting for Anthony','Project Manager',String(notes||''));save();return {ok:true}},
+  changes:(id,notes)=>{const p=d.posts.find(x=>x.id===id);const n=String(notes||'').trim();if(!p)return {ok:false,msg:'Campaign not found.'};if(!n)return {ok:false,msg:'Write what needs to change.'};
+   p.approvalMeta={...(p.approvalMeta||{}),notes:n,pmReviewedAt:null,anthonyConfirmedAt:null,anthonyEvidence:'',approvedAt:null};p.status='Draft';
+   v9LogRevision(p,'Changes requested',n);approvalLog(p,'Changes requested: all approvals cleared','Project Manager',n);save();return {ok:true}}
+ },
  // v9.10: attach a file that is already in the artifact's file store to a campaign (same effect as attaching in Create: the visual checks reset).
  attachAsset:(id,a)=>{const p=d.posts.find(x=>x.id===id);if(!p||!a||!/^[0-9a-f]{32}$/.test(String(a.id||''))||!/^(image\/(png|jpeg|webp)|video\/(mp4|webm))$/.test(String(a.mime||'')))return false;let ex=visualAssets(p);if(ex.some(x=>x.id===a.id))return true;if(a.replaces&&ex.some(x=>x.id===a.replaces))ex=ex.filter(x=>x.id!==a.replaces);/* a revised video replaces the earlier cut */if(ex.length>=10)return false;const parts=Array.isArray(a.parts)&&a.parts.length>1&&a.parts.length<=40&&a.parts.every(x=>x&&/^[0-9a-f]{32}$/.test(String(x.id||''))&&Number.isFinite(x.start)&&Number.isFinite(x.end)&&x.end>x.start)?a.parts.map(x=>({id:x.id,start:x.start,end:x.end})):null;p.creativeAssets=ex.concat([{id:a.id,name:String(a.name||'video.mp4').slice(0,130),mime:a.mime,bytes:Number(a.bytes)||0,width:Number(a.width)||null,height:Number(a.height)||null,uploadedAt:new Date().toISOString(),storage:'media',...(parts?{parts}:{})}]);p.creativeAsset=p.creativeAssets[0];visualResetReview(p);save();return true},
  // v9.9: edit a campaign's idea from the details panel. Same consequences as the Calendar editor: a change is logged,
