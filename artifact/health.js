@@ -21,6 +21,23 @@
     const L = window.RSH_LIVE, f = L && L.fetchedAt && L.fetchedAt();
     out.push(!f ? ['bad', 'Metricool results', 'No results have been loaded from Metricool yet.', 'On Home, press “Refresh from Metricool”, and allow the Metricool connector if asked.']
       : (Date.now() - Date.parse(f)) > 36 * 3600e3 ? ['warn', 'Metricool results', `Last loaded ${ago(f)}.`, 'On Home, press “Refresh from Metricool”.'] : ['ok', 'Metricool results', `Last loaded ${ago(f)}.`, '']);
+    const sch = L && L.scheduled && L.scheduled();
+    if (!sch) out.push(['warn', 'Next 14 days in Metricool', 'The Metricool schedule has not been loaded yet.', 'On Home, press “Refresh from Metricool”.']);
+    else {
+      const d0 = new Date(), key = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+      const have = new Set(sch.filter(p => !p[4] && p[1] && p[1] !== 'pinterest').map(p => String(p[0]).slice(0, 10)));
+      const gaps = []; for (let i = 0; i < 14; i++) { const d = new Date(d0.getFullYear(), d0.getMonth(), d0.getDate() + i); if (!have.has(key(d))) gaps.push(d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })); }
+      const loaded = L.fetchedAt && L.fetchedAt();
+      out.push(!gaps.length ? ['ok', 'Next 14 days in Metricool', 'Every day of the next 14 has at least one scheduled post besides Pinterest.', '']
+        : [gaps.length > 7 ? 'bad' : 'warn', 'Next 14 days in Metricool', `${14 - gaps.length} of the next 14 days have a scheduled post besides Pinterest (schedule loaded ${ago(loaded)}). Empty: ${gaps.slice(0, 6).join(', ')}${gaps.length > 6 ? ` and ${gaps.length - 6} more` : ''}.`, 'Plan campaigns for the empty days, get them approved, and send them to Metricool. Refresh from Metricool afterwards.']);
+    }
+    let drill = null; try { if (db) { const sn = await Promise.race([db.doc('health/restoreDrill').get(), new Promise(r => setTimeout(() => r(null), 4000))]); drill = sn && sn.exists ? sn.data() : null; } } catch (_) {}
+    out.push(!drill ? ['warn', 'Backup restore drill', 'No restore drill is on record.', 'Ask Claude to run the restore drill (it restores the live workspace into an empty copy and compares every campaign).']
+      : (Date.now() - Date.parse(drill.at)) > 35 * 864e5 ? ['warn', 'Backup restore drill', `Last passed ${ago(drill.at)} (${drill.campaigns} campaigns). Run one a month.`, 'Ask Claude to run the restore drill again.']
+      : drill.ok ? ['ok', 'Backup restore drill', `Passed ${ago(drill.at)}: all ${drill.campaigns} campaigns came back unchanged from a downloaded backup.`, ''] : ['bad', 'Backup restore drill', `Failed ${ago(drill.at)}: ${drill.note || 'the restored copy did not match'}.`, 'Tell Claude in the chat.']);
+    const rv = L && L.rivals && L.rivals();
+    out.push(rv && rv.length ? ['ok', 'Competitors', `${rv.length} competitor account${rv.length === 1 ? '' : 's'} tracked from Metricool (Insights → live results).`, '']
+      : ['warn', 'Competitors', 'No competitors are set up in Metricool, so the app cannot compare RSH with rivals.', 'In Metricool, open Competitors and add 5–8 similar-sized team-apparel accounts on Instagram and Facebook. The next “Refresh from Metricool” brings them in.']);
     if (!H) { out.push(['bad', '24/7 Bots', 'The bots did not load in this view.', 'Reload the page.']); return out; }
     out.push(!H.planAt ? ['warn', 'Bots’ plan', 'The bots have not prepared a plan yet.', 'Open 24/7 Bots and press “Run everything”.'] : (Date.now() - Date.parse(H.planAt)) > 26 * 3600e3 ? ['warn', 'Bots’ plan', `Last prepared ${ago(H.planAt)}.`, 'Open 24/7 Bots and press “Run everything” (or keep the app open on one computer with 24/7 on).'] : ['ok', 'Bots’ plan', `Prepared ${ago(H.planAt)}.`, '']);
     const w = H.week; out.push(!w.total ? ['warn', 'Next 7 days', 'No posts are planned for the next 7 days.', 'Create campaigns for the coming week.'] : w.sent < w.total ? ['warn', 'Next 7 days', `${w.total} channel posts planned: ${w.ready} ready, ${w.sent} already in Metricool.`, 'Open the Checklist to see what each held-back post still needs.'] : ['ok', 'Next 7 days', `All ${w.total} planned channel posts are in Metricool.`, '']);

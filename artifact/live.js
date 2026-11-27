@@ -202,7 +202,7 @@
   function rivalBox() {
     const r = state.rivals; if (!r || !r.length) return '';
     const rows = r.slice().sort((a, b) => (b[2] || 0) - (a[2] || 0)).map(x => `<tr><td><strong>${esc(x[1])}</strong><div class="small">${esc(NETS[x[0]] || x[0])}</div></td><td>${x[2] == null ? '—' : fmt(x[2])}</td><td>${x[3] == null ? '—' : fmt(x[3])}</td><td>${x[4] == null ? '—' : fmt(x[4])}</td></tr>`).join('');
-    return `<div class="live-box"><h3>Competitors tracked in Metricool · last ${DAYS} days</h3><div class="scroll"><table><thead><tr><th>Account</th><th>Followers</th><th>Posts</th><th>Interactions</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+    return `<div class="live-box"><h3>Competitors tracked in Metricool · last ${DAYS} days</h3><div class="scroll"><table><thead><tr><th>Account</th><th>Followers</th><th>Posts</th><th>Avg. interactions per post</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
   }
 
   const listeners = [];
@@ -305,6 +305,23 @@
         const sp = compactScheduled(await mcp.callTool(SERVER, SCHED_TOOL, { brandId: BRAND_ID, fromDate: iso(w.curTo, '00:00:00'), toDate: iso(until, '23:59:59'), timezone: 'America/New_York' }));
         if (sp) { state.scheduled = sp; if (db) await db.doc('live/scheduled').set({ fetchedAt: state.fetchedAt, posts: JSON.stringify(sp).slice(0, 230000) }); }
       } catch (_) {}
+      try {
+        // Competitors added in Metricool (Competitors section). Row: [net, name, followers, posts in period, avg interactions per post]
+        const rv = [];
+        for (const [net, m] of [['INSTAGRAM', ['IGCO03', 'IGCO02', 'IGCO07', 'IGCO08', 'IGCO12', 'IGCO09', 'IGCO06']], ['FACEBOOK', ['FBCO13', 'FBCO02', 'FBCO06', 'FBCO07', null, 'FBCO08', 'FBCO05']]]) {
+          const res = await mcp.callTool(SERVER, TOOL, { brandId: BRAND_ID, from: iso(w.curFrom, '00:00:00'), to: iso(w.curTo, '23:59:59'), metrics: m.filter(Boolean) });
+          let x = res && (res.payload !== undefined ? res.payload : res); if (typeof x === 'string') { try { x = JSON.parse(x); } catch (_) { x = null; } }
+          if (x && Array.isArray(x.content) && x.content[0] && typeof x.content[0].text === 'string') { try { x = JSON.parse(x.content[0].text); } catch (_) { x = null; } }
+          const rows = x && Array.isArray(x.rows) ? x.rows : null; if (!rows) continue;
+          for (const r of rows) {
+            if (!Array.isArray(r)) continue;
+            const v = net === 'INSTAGRAM' ? r : [r[0], r[1], r[2], r[3], null, r[4], r[5]];
+            const posts = (num(v[3]) || 0) + (num(v[4]) || 0), avg = num(v[5]) === null && num(v[6]) === null ? null : (num(v[5]) || 0) + (num(v[6]) || 0);
+            const name = String(v[0] || v[1] || '').slice(0, 60); if (name) rv.push([net, name, num(v[2]), posts, avg === null ? null : Math.round(avg)]);
+          }
+        }
+        state.rivals = rv; if (db) await db.doc('live/rivals').set({ fetchedAt: state.fetchedAt, rivals: JSON.stringify(rv) });
+      } catch (_) {}
       if (db) { try { await db.doc(DOC).set({ fetchedAt: state.fetchedAt, days: DAYS, rows: JSON.stringify(state.rows).slice(0, 230000) }); } catch (_) { state.note = 'Loaded, but the results could not be saved for other viewers.'; } }
     } catch (e) {
       const code = (e && e.code) || 'unknown';
@@ -339,5 +356,5 @@
     // With the connector available, refresh on open when results are missing or older than three hours.
     if (canRefresh && (!state.fetchedAt || Date.now() - new Date(state.fetchedAt).getTime() > STALE_MS)) refresh(false);
   }
-  window.RSH_LIVE = { refresh: byClick => refresh(byClick), fetchedAt: () => state.fetchedAt, brief: () => (state.rows && state.rows.length ? briefText(summarise(state.rows, state.fetchedAt)) : ''), rows: () => state.rows, scheduled: () => state.scheduled, onData: fn => listeners.push(fn), start, summarise, compact, findRows };
+  window.RSH_LIVE = { refresh: byClick => refresh(byClick), fetchedAt: () => state.fetchedAt, brief: () => (state.rows && state.rows.length ? briefText(summarise(state.rows, state.fetchedAt)) : ''), rows: () => state.rows, scheduled: () => state.scheduled, rivals: () => state.rivals, onData: fn => listeners.push(fn), start, summarise, compact, findRows };
 })();

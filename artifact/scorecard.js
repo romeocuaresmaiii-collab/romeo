@@ -2,51 +2,51 @@
  *
  * Replaces the 18 November self-assessment on the Market Audit screen with the current one.
  * Scores are the team's own judgement on a 1–10 scale, not an external rating. "What 10/10 takes"
- * comes from a benchmark of leading social media tools checked on 23 November 2026; ratings updated 26 November 2026.
+ * comes from a benchmark of leading social media tools checked on 23 November 2026; ratings updated 27 November 2026.
  */
 (function () {
   'use strict';
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   // [capability, score on Nov 18, score now, what changed (or why not), what 10/10 takes, next step]
   const ROWS = [
-    ['Sports-specific strategy', 7, 8, 'Nov 26: a researched Season Playbook (2026–27 rule changes, state and NCAA dates, what competitors post and miss), with ready ideas that become draft campaigns citing their sources.',
+    ['Sports-specific strategy', 7, 8, 'Nov 26: a researched Season Playbook with sourced ideas. Nov 27: the monthly report splits results by sport and season phase, and every fact is checked before a script is written.',
       'Every post tagged with sport, season phase and audience; results reported by those tags; order deadlines on the calendar six weeks ahead.',
-      'Report results by sport and season phase, and keep the Playbook updated each month.'],
-    ['Calendar + planning', 6, 7, 'The app reads what is really scheduled in Metricool, and Tempo places approved posts on calendar days at the times your own results favour.',
+      'Link each published post to its campaign so the sport split fills in, and put order deadlines on the calendar.'],
+    ['Calendar + planning', 6, 8, 'Nov 27: the System check counts the next 14 days in Metricool and names every empty day. Right now only a few of those days have a post besides Pinterest.',
       'One calendar that always matches Metricool, with at least 14 days scheduled at all times.',
-      'Warn on the Calendar when fewer than 14 days are scheduled.'],
-    ['Approvals + assignments', 5, 8, 'Anthony’s final approval is now signed from his own sign-in. Everyone on the team can add files and comments to a campaign, and a “changes needed” comment starts a revised video automatically.',
+      'Fill the empty days the System check lists, and keep 14 days scheduled.'],
+    ['Approvals + assignments', 5, 9, 'Anthony signs from his own sign-in. Nov 27: any change to a signed campaign is logged (who, when, what) and the campaign goes back to review on its own.',
       'Nothing publishes without an approver and time recorded by that person; edits after approval are logged.',
-      'Log every edit made after approval and send the campaign back for review.'],
-    ['Reporting + analytics', 5, 7, 'Live per-post results, followers and a plain-language brief replace the dated snapshot.',
+      'Keep it running; the remaining gap is posts changed directly inside Metricool, which the app cannot see.'],
+    ['Reporting + analytics', 5, 8, 'Nov 27: a one-page monthly report builds itself from Metricool and the campaigns, with channels, top posts, sport split, tracking and next steps, ready to download.',
       'A monthly report produced in under five minutes with no manual copying, every number traceable to Metricool or the store.',
-      'Add a one-page monthly report.'],
-    ['Competitor intelligence', 3, 4, 'Competitor posting gaps were researched on Nov 26 and are in the Playbook; the update is still by hand.',
+      'Add store sales once orders are connected.'],
+    ['Competitor intelligence', 3, 4, 'Nov 27: the app now pulls competitors from Metricool on every refresh, but none are set up in Metricool yet, so there is nothing to compare.',
       'A monthly digest of five to eight similar-sized rivals’ top three posts, and one tested idea a month that came from it.',
-      'Build the monthly rival digest from public posts.'],
-    ['AI recommendations', 2, 4, 'Quill writes SEO from the hashtags that did best on each channel, and Tempo picks times from your own results, each with the reason shown.',
+      'Add 5–8 similar-sized team-apparel accounts in Metricool → Competitors.'],
+    ['AI recommendations', 2, 5, 'Quill (hashtags) and Tempo (times) show their reasons. Nov 27: the monthly report checks them fairly, learning only from earlier posts and testing on the month’s own posts.',
       'Every recommendation cites the posts behind it, and at least half of the ones adopted beat the account’s median post.',
-      'Track whether the adopted advice beat the median post.'],
+      'Read the check each month and drop advice that keeps losing.'],
     ['Integrations + publishing', 1, 6, 'Approved posts are scheduled into Metricool from the app, video edits come back attached, and the Channels tab tracks each account’s route to direct posting without Metricool.',
       'Results refresh on their own, 99% of scheduled posts publish on time, and failures are flagged within 15 minutes.',
       'Connect Bluesky directly first (no review needed), then YouTube, Pinterest, Meta and TikTok as their reviews pass.'],
-    ['Security + reliability', 4, 6, 'The code is in a GitHub repository with 114 automated tests, and no keys or passwords are stored in the page. No restore test has been done yet.',
+    ['Security + reliability', 4, 7, 'No keys in the page; 138 automated tests. Nov 27: a restore drill put the live workspace backup into an empty copy and all 27 campaigns came back unchanged. The code repository is still public.',
       'Two-step sign-in on every connected account, no secrets in the workspace, and a restore from backup tested each quarter.',
-      'Make the repository private and run a restore test from the backup.'],
-    ['Content experimentation', 5, 5, 'No change. Tests can be defined, but results are entered by hand.',
+      'Make the repository private and turn on two-step sign-in on every account.'],
+    ['Content experimentation', 5, 6, 'Experiment results now fill from the live post data when you pick the posts; no test has been logged yet.',
       'Two logged one-variable tests a month, each with a hypothesis, a metric and a result; winners go into a written playbook.',
-      'Fill experiment results from the live post data.'],
-    ['Sales attribution', 3, 3, 'No change. Tracked links can be built, but most Pinterest pins still point to the homepage without tracking.',
+      'Run two one-variable tests in December (hook and format).'],
+    ['Sales attribution', 3, 4, 'Nov 27: every store link the app sends to Metricool is tagged with its channel and campaign automatically. Store orders are not connected yet.',
       'Every outbound link tagged; monthly revenue by channel and post matches the store within 5%.',
-      'Tag every link, use one discount code per channel, and connect store orders.'],
+      'Use one discount code per channel and connect store orders.'],
   ];
   const STEPS = [
     ['Reply to every comment and message', 'Not on the scorecard yet', 'The new posts ask real questions; answering in the first hour is what turns comments into followers.'],
-    ['Tag every link and connect store orders', 'Sales attribution', 'This is what lets you tell Anthony which posts sell. Start with the Pinterest pins.'],
+    ['Connect store orders', 'Sales attribution', 'Links are tagged now; orders are what let you tell Anthony which posts sell.'],
     ['Connect the first account directly', 'Integrations', 'Bluesky needs no platform review. Then YouTube and Pinterest, then Meta and TikTok.'],
-    ['Make the repository private and test a restore', 'Security', 'Restore the backup into a copy once, and keep the code out of public view.'],
+    ['Make the repository private', 'Security', 'The restore drill passed on Nov 27; keep the code out of public view and turn on two-step sign-in.'],
     ['Run two small tests a month from live data', 'Experimentation, AI recommendations', 'One variable at a time: hook or format. Record the result automatically.'],
-    ['Monthly rival digest', 'Competitor intelligence', 'Five to eight brands of similar size, their top three posts each month.'],
+    ['Add competitors in Metricool', 'Competitor intelligence', 'Five to eight brands of similar size; the app brings them in on the next refresh.'],
   ];
   const SKIP = 'Not worth chasing at this size: enterprise security certificates and single sign-on, social listening subscriptions, multi-touch attribution tools, and best-time-to-post tuning (too few posts and followers for the numbers to mean anything).';
 
