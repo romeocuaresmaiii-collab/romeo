@@ -600,6 +600,21 @@ const out = []; const ok = (n, c, d) => { out.push(c); console.log((c ? 'PASS  '
     return { kinds: [r1 && r1.kind, r2 && r2.kind], orders: sum.orders, revenue: Math.round(sum.revenue), ig: sum.byChannel.instagram && Math.round(sum.byChannel.instagram.revenue), tt: sum.byChannel.tiktok && Math.round(sum.byChannel.tiktok.revenue), pin: sum.byChannel.pinterest && Math.round(sum.byChannel.pinterest.revenue), private: !/@example\.com|Pat Coach|Jo Parent/.test(raw), inReport: /Sales from social/.test(txt) && /\$202\.00/.test(txt), bad: S.read('a,b\n1,2') === null };
   });
   ok('Sales from social: a Shopify orders export credits orders to channels by discount code (one per order, refunds dropped), the marketing report by link tags, only totals are saved (no names or emails), and the monthly report shows them', sl.kinds.join() === 'orders,marketing' && sl.orders === 3 && sl.revenue === 202 && sl.ig === 180 && sl.tt === 54 && sl.pin === 66 && sl.private && sl.inReport && sl.bad, JSON.stringify(sl));
+  const cw = await p.evaluate(async () => {
+    const wait = ms => new Promise(z => setTimeout(z, ms)), A = window.RSH_APP, post = A.data().posts.find(x => (x.creativeAssets || []).length) || A.data().posts[0];
+    await window.RSH_CAMPAIGN.open(post.id); await wait(300);
+    const h = document.getElementById('rshCamp'), txt = h.innerText, heads = [...h.querySelectorAll('section h3')].map(x => x.textContent.replace(/^\d/, '').trim());
+    const media = h.querySelectorAll('.file img, .file video').length;
+    h.querySelector('[data-c-text]').value = 'Looks good from the campaign page'; h.querySelector('[data-c-post]').click(); await wait(400);
+    const posted = /Comment saved/.test(h.innerText) && Object.values(window.__store).some(v => v && v.text === 'Looks good from the campaign page');
+    h.querySelector('[data-c-close]').click(); const closed = h.style.display === 'none';
+    document.querySelector('[data-view="tracker"]').click(); await wait(400);
+    const row = document.querySelector('[data-track-row] .title'); let viaRow = false;
+    if (row) { row.click(); await wait(300); viaRow = document.getElementById('rshCamp').style.display === 'flex'; window.RSH_CAMPAIGN.close(); }
+    return { heads, strip: !!h.querySelector('.strip'), next: /Next:/.test(txt), media, posted, closed, viaRow };
+  });
+  if (SHOTS) { await p.evaluate(async () => { const A = window.RSH_APP, post = A.data().posts.find(x => (x.creativeAssets || []).length) || A.data().posts[0]; await window.RSH_CAMPAIGN.open(post.id); }); await p.waitForTimeout(600); await p.screenshot({ path: path.join(SHOTS, 'campaign-page.png'), fullPage: false }); await p.evaluate(() => { const h = document.getElementById('rshCamp'); h.scrollTop = 900; }); await p.waitForTimeout(200); await p.screenshot({ path: path.join(SHOTS, 'campaign-page-2.png') }); await p.evaluate(() => window.RSH_CAMPAIGN.close()); }
+  ok('One campaign, one page: brief, facts, script, files (with previews), editor, checks and approval, posts and comments in order, each with its action; opens from a Checklist title', cw.heads.join('|') === 'Brief|Facts|Script · Sage’s production pack|Files|Video editor|Checks & approval|Posts|Comments' && cw.strip && cw.next && cw.posted && cw.closed && cw.viaRow, JSON.stringify(cw));
   const aex = await p.evaluate(async () => { const B = window.RSH_BOTS;
     const a = B.aiFail('Sage', { code: 'rate_limited', reason: 'usage_limit', message: 'limit' }, 'Quote: Hand Raised'), b = B.aiFail('Sage', { code: 'upstream_error' }, 'X'), c = B.aiFail('Quill', { code: 'session_expired' }, 'Y');
     await new Promise(z => setTimeout(z, 200)); const d = window.__store['diagnostics/ai'];

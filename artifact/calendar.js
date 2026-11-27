@@ -132,7 +132,7 @@
           <div class="small">The app sends the campaign's attached photo or video with the post: it puts the file in your Google Drive as a share link (Google Drive must be connected inside Metricool too).</div>
           <label><input type="checkbox" data-day-ai ${aiFlag ? 'checked' : ''}> The photo or video was made with AI (adds the AI label on Instagram, TikTok, YouTube and Pinterest)</label></div>
         <h3>On this day</h3>
-        ${here.length ? here.map(i => { const [c, l] = statusOf(i); return `<div class="row"><div class="t"><strong>${esc(N[i.channel] || i.channel)} · ${esc(title(i.postId))}</strong><span class="st ${c}">${esc(l)}</span></div>
+        ${here.length ? here.map(i => { const [c, l] = statusOf(i); return `<div class="row"><div class="t"><strong>${esc(N[i.channel] || i.channel)} · <span class="rsh-camp-link" data-campaign-open="${esc(i.postId)}">${esc(title(i.postId))}</span></strong><span class="st ${c}">${esc(l)}</span></div>
           <div class="cap">${esc(i.caption)}</div>
           ${i.sent && i.sent.reason ? `<div class="small" style="color:#b42318">${esc(i.sent.reason)}</div>` : ''}
           ${i.sent && i.sent.plannerUrl ? `<a class="small" href="${esc(i.sent.plannerUrl)}" target="_blank" rel="noopener noreferrer">Open it in Metricool ↗</a>` : ''}
@@ -140,7 +140,7 @@
           <div class="acts"><input type="time" data-day-time="${esc(key(i))}" value="${esc(i.time)}" aria-label="Time" ${i.sent && /scheduled|draft|posted/.test(i.sent.status) ? 'disabled' : ''}><span class="small">US Eastern</span>
           ${i.sent && /scheduled|draft|posted/.test(i.sent.status) ? '' : `<button type="button" class="btn smallbtn" data-day-send="${esc(key(i))}">Send to Metricool</button><button type="button" class="btn ghost smallbtn" data-day-remove="${esc(key(i))}">Remove from day</button>`}</div></div>`; }).join('') : '<div class="small">Nothing placed on this day yet.</div>'}
         <h3>Ready to place</h3>
-        ${past ? '' : avail.length ? avail.map(i => `<div class="row"><div class="t"><strong>${esc(N[i.channel] || i.channel)} · ${esc(title(i.postId))}</strong>${i.placed ? `<span class="st">On ${esc(i.date.slice(5))}</span>` : ''}</div><div class="cap">${esc(i.caption)}</div>
+        ${past ? '' : avail.length ? avail.map(i => `<div class="row"><div class="t"><strong>${esc(N[i.channel] || i.channel)} · <span class="rsh-camp-link" data-campaign-open="${esc(i.postId)}">${esc(title(i.postId))}</span></strong>${i.placed ? `<span class="st">On ${esc(i.date.slice(5))}</span>` : ''}</div><div class="cap">${esc(i.caption)}</div>
           <div class="acts"><input type="time" data-day-newtime="${esc(key(i))}" value="${esc(i.time || '18:00')}" aria-label="Time"><button type="button" class="btn ghost smallbtn" data-day-add="${esc(key(i))}">${i.placed ? 'Move to this day' : 'Add to this day'}</button></div></div>`).join('')
           : '<div class="small">No posts are ready. A post is ready when its campaign has its files, the five visual checks and both approvals. Run the bots in 24/7 Bots to refresh the list.</div>'}
       </div>`;

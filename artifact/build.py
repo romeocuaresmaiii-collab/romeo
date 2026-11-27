@@ -58,6 +58,7 @@ report = (ROOT / 'artifact' / 'report.js').read_text(encoding='utf-8')
 mwatch = (ROOT / 'artifact' / 'mwatch.js').read_text(encoding='utf-8')
 rivals = (ROOT / 'artifact' / 'rivals.js').read_text(encoding='utf-8')
 sales = (ROOT / 'artifact' / 'sales.js').read_text(encoding='utf-8')
+campaign = (ROOT / 'artifact' / 'campaign.js').read_text(encoding='utf-8')
 shim = once(shim, '__APP_VERSION__', version)
 shim = once(shim, '__BUNDLED_MEDIA__', json.dumps(bundled))
 shim = once(shim, '__WEEKLY_PACKS__', json.dumps(packs, ensure_ascii=False).replace('</', '<\\/'))
@@ -107,7 +108,7 @@ s = once(s, "tracker:['Campaign Checklist',", "bots:['24/7 Bots','Captions, timi
 
 # 4. Wording that would be untrue here.
 s = once(s, f'<strong>LOCAL APP · V{version}</strong><div class="small">Activate the local Data Vault in Setup & Backup to preserve browser work. Export a backup before upgrading. Metricool is connected in ChatGPT only, not this local app.</div>',
-         f'<strong>ARTIFACT EDITION · V{version} · BUILD 99</strong><div class="small">Everything saves automatically to this app’s shared storage. Anthony’s final approval is signed with his own account. Approved posts go to Metricool. Open ⋯ More → System check to see that everything works.</div>')
+         f'<strong>ARTIFACT EDITION · V{version} · BUILD 100</strong><div class="small">Everything saves automatically to this app’s shared storage. Anthony’s final approval is signed with his own account. Approved posts go to Metricool. Open ⋯ More → System check to see that everything works.</div>')
 s = once(s, "'Use python3 server.py in the extracted v%s folder, then open http://127.0.0.1:8765. Buttons and media uploads require the local server.'" % version, "'Open this page from your Claude artifacts.'")
 
 for old, new in (('Local editorial plans are separate from the read-only Metricool monthly archive.', 'Team plans, with what is scheduled and published in Metricool.'), ('Metricool connected to ChatGPT only', 'Live results from Metricool'), ('Local workspace · demo/pilot', 'RSH Sports workspace')):
@@ -145,7 +146,7 @@ s = once(s, GROUPS_OLD, """ {tabs:[['strategy','Strategy Lab'],['recommend','Dec
 
 # Live results panel (artifact edition only) loads before the host layer starts the app.
 assert s.count('<script>\n' + shim) == 1
-s = s.replace('<script>\n' + shim, '<script>\n' + live + '\n</script>\n<script>\n' + score + '\n</script>\n<script>\n' + camp + '\n</script>\n<script>\n' + exper + '\n</script>\n<script>\n' + signoff + '\n</script>\n<script>\n' + cal + '\n</script>\n<script>\n' + homejs + '\n</script>\n<script>\n' + tracker + '\n</script>\n<script>\n' + bots + '\n</script>\n<script>\n' + organize + '\n</script>\n<script>\n' + review + '\n</script>\n<script>\n' + health + '\n</script>\n<script>\n' + report + '\n</script>\n<script>\n' + mwatch + '\n</script>\n<script>\n' + rivals + '\n</script>\n<script>\n' + sales + '\n</script>\n<script>\n' + shim)
+s = s.replace('<script>\n' + shim, '<script>\n' + live + '\n</script>\n<script>\n' + score + '\n</script>\n<script>\n' + camp + '\n</script>\n<script>\n' + exper + '\n</script>\n<script>\n' + signoff + '\n</script>\n<script>\n' + cal + '\n</script>\n<script>\n' + homejs + '\n</script>\n<script>\n' + tracker + '\n</script>\n<script>\n' + bots + '\n</script>\n<script>\n' + organize + '\n</script>\n<script>\n' + review + '\n</script>\n<script>\n' + health + '\n</script>\n<script>\n' + report + '\n</script>\n<script>\n' + mwatch + '\n</script>\n<script>\n' + rivals + '\n</script>\n<script>\n' + sales + '\n</script>\n<script>\n' + campaign + '\n</script>\n<script>\n' + shim)
 
 # Claude's sharing review accepts only JPEG, PNG, GIF or WebP images (MP4/WebM video, MP3/WAV audio).
 # A version with anything else cannot be opened by invited people, so fail the build instead.

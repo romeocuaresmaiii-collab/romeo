@@ -154,7 +154,7 @@
   const FIELDS = [['hook', 'Hook', 'big', 2], ['caption', 'Caption and call to action', '', 9], ['onImageText', 'Text on the image', '', 2], ['visualConcept', 'Visual concept', '', 4], ['visualPrompt', 'Image prompt / storyboard', '', 10], ['script', 'Script (scene by scene, with timings such as 0–2s:)', '', 12], ['voiceover', 'Voice-over', '', 6]];
   let detailId = null, editing = false, detailNote = '';
   function closeDetail() { detailId = null; editing = false; detailNote = ''; const d = document.getElementById('rshDetail'), b = document.getElementById('rshDetailBack'); if (d) d.remove(); if (b) b.remove(); }
-  function openDetail(id) { detailId = id; editing = false; detailNote = ''; paintDetail(); }
+  function openDetail(id, edit) { detailId = id; editing = !!edit; detailNote = ''; paintDetail(); }
   function paintDetail() {
     const p = (app().data().posts || []).find(x => x.id === detailId); if (!p) return closeDetail();
     const r = describe(p), day = p.date ? dayLabel(p.date) : null;
@@ -222,5 +222,5 @@
   }
   // How many campaigns in the current range still need work (for the Home shortcut).
   function openCount() { if (!app() || !app().track) return 0; const all = (app().data().posts || []).filter(p => p.date); const r = range || defaultRange(all); return all.filter(p => p.date >= r.from && p.date <= r.to && app().track(p).stage !== 'ready').length; }
-  window.RSH_TRACKER = { start, render, openCount };
+  window.RSH_TRACKER = { start, render, openCount, describe: p => describe(p), openDetail };
 })();
