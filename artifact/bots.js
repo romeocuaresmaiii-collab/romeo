@@ -324,7 +324,8 @@
       const mcp = await use('mcp'); if (!mcp) { editorState = 'unavailable'; return; }
       for (const j of queued) {
         const p = (app().data().posts || []).find(x => x.id === j.postId); if (!p) continue;
-        if (j.source !== 'revision' && (!factState(p).ok || (dykVideo(p) && !hasVO(p)))) continue;   // a DYK also waits for its voiceover   // research first: the job waits until the campaign's facts pass
+        if (j.source !== 'revision' && (!factState(p).ok || (dykVideo(p) && !hasVO(p)))) continue;   // a DYK also waits for its voiceover
+        if (!j.manifest && raw[p.id] && (raw[p.id].files || []).length) { j.source = 'campaign'; j.files = raw[p.id].files.length; j.manifest = JSON.stringify(raw[p.id].files.map(({ addedAt, ...f }) => f)); }   // an early job picks up the files the team added since   // research first: the job waits until the campaign's facts pass
         try { await mcp.callTool(REMOTE, 'send_message', { session_id: EDITOR_SESSION, message: handoff(p, j) }); editorState = 'ok'; j.status = 'sent'; j.sentAt = new Date().toISOString(); await db.doc('editJobs/' + j.postId).set(j); }
         catch (e) {
           const code = String((e && e.code) || 'send_failed'); j.lastError = code; j.tries = (j.tries || 0) + 1; try { await db.doc('editJobs/' + j.postId).set(j); } catch (_) {}
@@ -1398,7 +1399,7 @@ Add PART 8 — PLATFORM VERSIONS: one block for each of ${t.map(c => NAME[c]).jo
   async function sendRaw(id) {
     const p = (app().data().posts || []).find(x => x.id === id); if (!p) throw new Error('Campaign not found.');
     const box = await loadRaw(id); if (!box.files || !box.files.length) throw new Error('Add the files first.');
-    const cur = jobs[id]; if (cur && (cur.status === 'queued' || cur.status === 'sent')) throw new Error('Reel already has an edit job for this campaign. Wait for the video, or ask for a revision when it comes back.');
+    const cur = jobs[id]; if (cur && cur.status === 'sent') throw new Error('The editor already has this campaign. Wait for the video, or ask for a revision when it comes back.');   // a job still waiting in the queue is replaced by this fuller one
     const assets = await use('assets'); let script = '', scriptName = '';
     const sf = box.files.find(f => /^text\//.test(f.mime) && /script/i.test(f.name)) || box.files.find(f => /^text\//.test(f.mime));
     if (sf) { try { const blob = new Blob(await Promise.all(sf.parts.map(async x => (await fetch('/_blob/' + x.id)).blob()))); let t = await blob.text(); if (sf.encoding === 'base64') { try { t = new TextDecoder().decode(Uint8Array.from(atob(t), c => c.charCodeAt(0))); } catch (_) {} } script = t.replace(/\r\n/g, '\n').trim().slice(0, 30000); scriptName = sf.name; } catch (_) {} }
@@ -1438,7 +1439,7 @@ Add PART 8 — PLATFORM VERSIONS: one block for each of ${t.map(c => NAME[c]).jo
       <div style="display:grid;gap:6px;margin-top:8px">${(box.files || []).map((f, n) => `<div style="display:flex;gap:10px;align-items:center;justify-content:space-between;border:1px solid #e5e5ea;border-radius:10px;padding:8px 10px"><span>${icon(f.mime)} <strong>${esc(f.name)}</strong> <span class="small">${esc(f.mime)} · ${kb(f.bytes || 0)}</span></span><button type="button" class="btn ghost smallbtn" data-raw-remove="${n}" ${rawBusy ? 'disabled' : ''}>Remove</button></div>`).join('') || '<div class="small">No files yet.</div>'}</div>
       <div class="small" style="margin-top:10px">${hasScript ? '✓ Script found' : '⚠ No script yet: add a .txt or .md file, or write the script in the campaign’s details. Without one Reel follows the campaign brief.'}</div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:16px;border-top:1px solid #e5e5ea;padding-top:14px">
-        <button type="button" class="btn" data-raw-send ${rawBusy || !(box.files || []).length || (j && (j.status === 'queued' || j.status === 'sent')) ? 'disabled' : ''}>${j && j.status === 'attached' ? 'Send again for a new edit' : 'Assets ready: start editing'}</button>
+        <button type="button" class="btn" data-raw-send ${rawBusy || !(box.files || []).length || (j && j.status === 'sent') ? 'disabled' : ''}>${j && j.status === 'attached' ? 'Send again for a new edit' : j && j.status === 'queued' ? 'Assets ready: send them with the waiting job' : 'Assets ready: start editing'}</button>
         <span class="small">${esc(jobTxt || 'Reel sends every file and the script to the RSH SPORTS editor; the finished video is attached to this campaign for manager and Anthony review.')}</span></div>
       ${commentsHtml(p)}</div>`;
   }
