@@ -234,7 +234,7 @@
   const kitSport = p => { const sp = String(p.sport || '').toLowerCase(); return KIT_SPORTS.find(k => sp.includes(k.split(' ')[0])) || ''; };
   // The team's video editor: a Claude Code session named "RSH SPORTS" that edits videos from a pasted script and prompt.
   function editJob(p) {
-    const type = String(p.postType || '').toLowerCase(), secs = /story/.test(type) ? '10 to 15' : '15 to 20';
+    const type = String(p.postType || '').toLowerCase(), secs = dykPack(p) ? '45 to 55' : /story/.test(type) ? '10 to 15' : '15 to 20';
     return [`EDIT JOB — ${p.title}`,
       `Campaign for ${p.platform || 'social media'}, planned ${p.date || 'no date yet'}. Sport: ${p.sport || 'not set'}. Audience: ${p.audience || 'not set'}. Goal: ${p.goal || 'not set'}.`,
       dykVideo(p) ? `Make one landscape 16:9 Did You Know video, 1920×1080, ${secs} seconds, MP4 (H.264 + AAC), under 15 MB.\n${VO_RULE}` : `Make one vertical 9:16 video, 1080×1920, ${secs} seconds, MP4 (H.264), under 15 MB (the app sends files up to 16 MB to Metricool through Google Drive).`,
@@ -263,7 +263,7 @@
   // Which Video Studio Kit engine fits the campaign (studio/video/engines).
   function engineFor(p) {
     const t = `${p.title || ''} ${p.postType || ''} ${p.hook || ''} ${p.visualConcept || ''}`.toLowerCase();
-    if (/did you know|\bdyk\b/.test(t)) return '01 Did You Know, rendered 16:9 1920×1080 (the DYK series is landscape; one file for its Instagram Reel and YouTube post)';
+    if (/did you know|\bdyk\b/.test(t)) return '01 Did You Know, rendered 16:9 1920×1080, 45–55 s, narrated (the RSH DYK Video Kit: follow PART 5 of the pack, the editing brief; one file for its Instagram Reel and YouTube post)';
     if (/quiz| a or b|which one/.test(t)) return '09 quiz explainer (current house style)';
     if (/quote/.test(t)) return /kit|uniform|reveal/.test(t) ? '05 Quote of the Day kit reveal' : '04 Quote of the Day (calm)';
     if (/singlet|product|colorway|colourway|reversible|photo/.test(t)) return '07 product photos (real photos only)';
@@ -274,14 +274,14 @@
   }
   const RULES = 'Realistic, natural light. Sport-correct gear and setting. No third-party logos, brand marks or wordmarks on shoes, socks, apparel, bags or equipment. No real, identifiable people. Suitable for parents, coaches and athletes.';
   function imagePrompt(p) {
-    { const part = packPart(packFor(p.id), 2), pb = productBlock(p); if (part) return pb ? part + '\n\n' + pb : part; }
+    { const part = packPart(packFor(p.id), packMap(p).img), pb = productBlock(p); if (part) return pb ? part + '\n\n' + pb : part; }
     const type = String(p.postType || '').toLowerCase(), base = String(p.visualPrompt || p.visualConcept || '').trim();
     return [base || `A premium, photorealistic ${p.sport || 'sports'} photo for ${p.platform || 'social media'}: ${sentence(p.hook)}`,
       /carousel/.test(type) ? 'Make this a matching set of 3 to 5 images with the same athlete, setting and light: 1) a cover with clear space for the headline, 2 to 4) supporting moments, last) a calm closing frame.' : '',
       productBlock(p), sizeLines(p), `Leave clean space for text; do not put any text in the image.`, base ? '' : RULES, app().logoRule ? 'RSH logo rule: ' + app().logoRule() : '', app().negativePrompt ? 'Negative prompt: ' + app().negativePrompt() + (kitNeg(p.sport) ? '; ' + kitNeg(p.sport) : '') : '', NO_NUMBER.test(p.sport || '') ? 'Wrestling singlets have no player number: show the team or school name and crest only.' : ''].filter(Boolean).join('\n\n');
   }
   function videoBrief(p) {
-    { const part = packPart(packFor(p.id), 4), pb = productBlock(p); if (part) return pb ? part + '\n\n' + pb : part; }
+    { const part = packPart(packFor(p.id), packMap(p).editor), pb = productBlock(p); if (part) return pb ? part + '\n\n' + pb : part; }
     return [`Create a 10 to 15 second vertical 9:16 video for ${p.platform || 'social media'} about ${p.sport || 'the sport'}.`,
       p.visualConcept ? `Scene: ${String(p.visualConcept).trim()}` : '',
       `Shots: 1) Opening, first 2 seconds: the moment that matches the hook “${sentence(p.hook)}”. 2) Middle: the main action, one clear movement, steady framing. 3) Ending, last 2 seconds: hold on a clean frame with room for the call to action.`,
@@ -619,7 +619,7 @@ Answer with JSON only, exactly these keys:
   const openPacks = new Set();
   let deskOpen = false;
   const hashOf = s => { let h = 5381; for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return (h >>> 0).toString(36); };
-  const scriptSig = p => hashOf([p.title, p.hook, p.caption, p.captionBody, p.cta, p.platform, p.postType, p.date, p.sport, p.audience, p.goal, p.onImageText, p.visualConcept, p.aspectRatio].map(x => String(x || '')).join('|') + (NO_NUMBER.test(String(p.sport || '')) ? '|kit-rule-2' : '') + (rbOn(p.date) ? '|rulebook-1' : '') + (isDyk(p) ? '|dyk-16x9-vo-1' : '') + (factDocs[p.id] && factDocs[p.id].claims && factDocs[p.id].claims.length ? '|facts-' + factDocs[p.id].at : ''));   // kit-rule-2: wrestling singlets carry no player number (Nov 26)
+  const scriptSig = p => hashOf([p.title, p.hook, p.caption, p.captionBody, p.cta, p.platform, p.postType, p.date, p.sport, p.audience, p.goal, p.onImageText, p.visualConcept, p.aspectRatio].map(x => String(x || '')).join('|') + (NO_NUMBER.test(String(p.sport || '')) ? '|kit-rule-2' : '') + (rbOn(p.date) ? '|rulebook-1' : '') + (isDyk(p) ? '|dyk-16x9-vo-1|dyk-kit-2026-11-27' : '') + (factDocs[p.id] && factDocs[p.id].claims && factDocs[p.id].claims.length ? '|facts-' + factDocs[p.id].at : ''));   // kit-rule-2: wrestling singlets carry no player number (Nov 26)
   async function loadScripts() { if (!db) return; try { const q = await db.collection('scripts').get(); const m = {}; for (const s of q.docs) { const d = s.data(); if (d && d.postId && d.text) m[d.postId] = d; } scripts = m; } catch (_) {} }
   function factBlock(p) {
     const f = factDocs[p.id]; if (!f || !f.claims || !f.claims.length || !factState(p).ok) return '';
@@ -653,7 +653,51 @@ Answer with JSON only, exactly these keys:
     try { const mcp = await use('mcp'); if (mcp) await mcp.callTool(REMOTE, 'send_message', { session_id: EDITOR_SESSION, message: `[RSH Sports Marketing OS: fact-check request. Sent by the app on behalf of the team.]\n\nResearch every factual claim in these campaigns on the internet before anything is written, made or posted (rules and rule numbers, seasons, dates, statistics, health claims, product facts). Use official sources: NFHS, NCAA, state associations, USA Wrestling, the rshsports.com product page. Follow studio/WORKFLOW.md, section "Fact checks", and write facts/<id> in ${APP_URL}.\n\n${list}` }); } catch (_) {}
   }
   const isStill = p => /image|photo|carousel|graphic|pin/i.test(String(p.postType || '')) && !/video|reel|short|story/i.test(String(p.postType || ''));
+  /* ---------- RSH DYK Video Kit (2026-11-27): every Did You Know pack follows it ----------
+   * The kit's text lives in this artifact's private storage (asset DYK_KIT_ASSET), not in the code. */
+  const DYK_KIT_ASSET = '854c2acd6c5940fd72b43ce4a078731e';
+  let dykKit = null;
+  async function loadDykKit() {
+    if (dykKit) return dykKit; if (window.RSH_DYK_KIT) return (dykKit = window.RSH_DYK_KIT);
+    try { const r = await fetch('/_blob/' + DYK_KIT_ASSET); if (r.ok) { const k = await r.json(); if (k && k.files) dykKit = k; } } catch (_) {}
+    return dykKit;
+  }
+  const dykPack = p => isDyk(p) && !isStill(p);
+  // Which pack part holds what: a DYK pack uses the kit's layout (2 script, 3 image prompts, 4 motion prompts, 5 editing brief).
+  const packMap = p => dykPack(p) ? { img: 3, motion: 4, editor: 5 } : { img: 2, motion: 3, editor: 4 };
+  function dykPrompt(p) {
+    const K = dykKit.files, sport = String(p.sport || '').trim(), f = factDocs[p.id];
+    const attach = Object.keys(K).filter(n => !/^0[01]_/.test(n)).sort().map(n => `----- ATTACHED FILE: ${n} -----\n${K[n].trim()}`).join('\n\n');
+    return `${K['01_AI_INSTRUCTIONS.txt'].trim()}
+
+=====================================================
+RSH RULES ON TOP OF THE KIT (set by the team; they win where they differ)
+=====================================================
+- Follow the RSH DYK Video Kit for this pack, every part of it, in the exact PART 1–7 layout of 06_Output_Template.txt with the "PART n" headings as written there.
+- You cannot search the web here. This campaign's facts were researched on the web by the team before you were asked${f && f.claims && f.claims.length && factState(p).ok ? '; the VERIFIED FACTS below come from opened sources. Use them in PART 1 with their sources, links and the check date ' + String(f.at || '').slice(0, 10) + '. Any other fact: leave it out or mark it UNVERIFIED' : '. No verified facts were supplied: mark every fact UNVERIFIED'}.
+${NO_NUMBER.test(sport) ? '- Wrestling singlets carry NO player number (wrestlers are paired by weight class): every uniform shows the team or school name and crest only. This overrides the kit\'s "name, number and crest". Add "numbers on the singlet" to every negative prompt.\n' : ''}- The voiceover is always included and is recorded in ElevenLabs from PART 2: write numbers, years and rule names in the VO lines as they are spoken ("three points", "twenty twenty-four").
+- The same 16:9 file goes to the Tuesday Instagram Reel (7 AM) and to YouTube (4 PM, as a regular video). Instagram allows at most 5 hashtags: after the PART 6 caption add a line "Instagram hashtags (5): …" with the five strongest.
+- Tagline: "${TAGLINE(p.sport) || 'Look fearless. [sport verb] fearless.'}"${TAGLINE(p.sport) ? '' : ' (verb to confirm, see 10_Taglines_by_Sport.txt)'}.
+- If the campaign below differs from the kit (its hook, length, caption or visuals), write the pack the kit's way, keep the campaign's verified facts, and list each difference under "To confirm before posting".
+
+=====================================================
+ATTACHED FILES (the RSH DYK Video Kit, version ${dykKit.version || ''})
+=====================================================
+${attach}
+
+=====================================================
+THE REQUEST
+=====================================================
+Make the complete DYK pack for this campaign.
+Title: ${p.title || ''}
+Sport: ${sport} · Audience: ${p.audience || ''} · Goal: ${p.goal || ''} · Planned date: ${p.date || ''} · Owner: ${p.owner || 'Project Manager'}
+Hook in the campaign: ${p.hook || ''}
+Caption in the campaign: ${p.captionBody || p.caption || ''}
+Video brief in the campaign: ${p.video || p.visualConcept || ''}
+${p.source ? 'Source: ' + p.source + '\n' : ''}${factBlock(p)}${(() => { const o = (app().data().posts || []).filter(q => q.id !== p.id && isDyk(q)).map(q => `- ${q.title} (${q.date || 'no date'})`); return o.length ? `\nOther DYK campaigns already in the plan (treat as done, do not repeat):\n${o.join('\n')}\n` : ''; })()}`;
+  }
   function scriptPrompt(p) {
+    if (dykPack(p) && dykKit) return dykPrompt(p);
     const sport = String(p.sport || '').trim(), tag = TAGVERB[sport.toLowerCase().split(/[ /]/)[0]], still = isStill(p), neg = app().negativePrompt ? app().negativePrompt() : '';
     return `You are Sage, the senior script writer for RSH Sports (rshsports.com), a US maker of custom team uniforms and apparel (wrestling singlets, basketball, softball, soccer and hockey uniforms, online team stores). Buyers: high school and club coaches, athletic directors, team parents and athletes. You have written hundreds of short sports videos that people follow and comment on. Write the complete PRODUCTION PACK for the campaign at the end, in plain text, following the RSH Content Rules Kit exactly.
 
@@ -726,6 +770,7 @@ Add PART 8 — PLATFORM VERSIONS: one block for each of ${t.map(c => NAME[c]).jo
 `;
   }
   async function writeScript(p) {
+    if (dykPack(p) && !(await loadDykKit())) { sageNote = 'The RSH DYK Video Kit could not be loaded, so Sage did not write the Did You Know pack; she tries again on the next run.'; return false; }
     const sample = await use('sample'); if (!sample) { sageNote = 'Asking Claude is not available in this view, so Sage could not write production packs.'; return false; }
     try {
       const r = await sample(scriptPrompt(p), { modelTier: 'default' }), text = String((r && r.text) || '').replace(/\r\n/g, '\n').trim();
@@ -739,7 +784,11 @@ Add PART 8 — PLATFORM VERSIONS: one block for each of ${t.map(c => NAME[c]).jo
   async function scriptRun(posts, step) {
     sageNote = ''; let wrote = 0;
     const todo = posts.filter(p => { const s = scripts[p.id]; return factState(p).ok && (!s || (!s.edited && s.sig !== scriptSig(p))); }).slice(0, 3);   // research first: Sage writes once the facts are checked
-    for (const p of todo) { sageBusy = p.id; try { window.RSH_TRACKER && window.RSH_TRACKER.render(); } catch (_) {} step && step(`Sage is writing the production pack for “${cut(p.title, 40)}”…`); const ok = await writeScript(p); if (ok) wrote++; else if (sageNote) break; }
+    if (todo.some(dykPack)) await loadDykKit();
+    let kitMiss = 0;
+    for (const p of todo) { if (dykPack(p) && !dykKit) { kitMiss++; continue; }   // a DYK waits for the kit; the others are written anyway
+      sageBusy = p.id; try { window.RSH_TRACKER && window.RSH_TRACKER.render(); } catch (_) {} step && step(`Sage is writing the production pack for “${cut(p.title, 40)}”…`); const ok = await writeScript(p); if (ok) wrote++; else if (sageNote) break; }
+    if (kitMiss && !sageNote) sageNote = `The RSH DYK Video Kit could not be loaded, so ${kitMiss} Did You Know pack${kitMiss === 1 ? ' waits' : 's wait'}; Sage tries again on the next run.`;
     sageBusy = ''; try { window.RSH_TRACKER && window.RSH_TRACKER.render(); } catch (_) {}
     return { wrote, have: posts.filter(p => scripts[p.id]).length, total: posts.length };
   }
@@ -865,7 +914,7 @@ Add PART 8 — PLATFORM VERSIONS: one block for each of ${t.map(c => NAME[c]).jo
     return `<details class="pack" data-sage-pack="${esc(p.id)}" ${openPacks.has(p.id) ? 'open' : ''} style="margin:8px 0;border:1px solid #d1fae5;background:#f0fdf4;border-radius:10px;padding:6px 10px"><summary style="cursor:pointer"><strong>📝 Production pack by Sage</strong> <span class="small">· ${s.edited ? 'edited by the team' : 'written'} ${esc(when)}${stale ? (NO_NUMBER.test(String(p.sport || '')) ? ' · written before the no-number rule for wrestling singlets; Sage rewrites it on her next run' : ' · the campaign changed since; press “Rewrite with Sage” to update it') : ''}${s.truncated ? ' · came back cut short; rewrite it' : ''}</span></summary>
       <p class="small" style="margin:6px 0">Script, image prompts, motion prompts, editor prompt, voiceover, caption and checks, in the RSH house format. Edit it here; your edits are kept. Reel sends it with the video job.</p>
       <textarea data-sage-text="${esc(p.id)}" rows="16" style="width:100%;box-sizing:border-box;font:12px/1.45 ui-monospace,Menlo,monospace" aria-label="Production pack for ${esc(p.title)}">${esc(s.text)}</textarea>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"><button type="button" class="btn smallbtn" data-sage-save="${esc(p.id)}">Save changes</button><button type="button" class="btn ghost smallbtn" data-sage-copy="${esc(p.id)}" data-part="0">Copy pack</button><button type="button" class="btn ghost smallbtn" data-sage-copy="${esc(p.id)}" data-part="2">Copy image prompts</button><button type="button" class="btn ghost smallbtn" data-sage-copy="${esc(p.id)}" data-part="3">Copy motion prompts</button><button type="button" class="btn ghost smallbtn" data-sage-copy="${esc(p.id)}" data-part="4">Copy editor prompt</button><button type="button" class="btn ghost smallbtn" data-sage-dl="${esc(p.id)}">Save as file</button><button type="button" class="btn ghost smallbtn" data-sage-write="${esc(p.id)}">Rewrite with Sage</button></div></details>`;
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"><button type="button" class="btn smallbtn" data-sage-save="${esc(p.id)}">Save changes</button><button type="button" class="btn ghost smallbtn" data-sage-copy="${esc(p.id)}" data-part="0">Copy pack</button><button type="button" class="btn ghost smallbtn" data-sage-copy="${esc(p.id)}" data-part="${packMap(p).img}">Copy image prompts</button><button type="button" class="btn ghost smallbtn" data-sage-copy="${esc(p.id)}" data-part="${packMap(p).motion}">Copy motion prompts</button><button type="button" class="btn ghost smallbtn" data-sage-copy="${esc(p.id)}" data-part="${packMap(p).editor}">Copy editor prompt</button><button type="button" class="btn ghost smallbtn" data-sage-dl="${esc(p.id)}">Save as file</button><button type="button" class="btn ghost smallbtn" data-sage-write="${esc(p.id)}">Rewrite with Sage</button></div></details>`;
   }
 
   /* ---------- 2. Scheduler Bot ---------- */
@@ -2466,11 +2515,11 @@ Add PART 8 — PLATFORM VERSIONS: one block for each of ${t.map(c => NAME[c]).jo
       await reconcileJobs();
       reviseFromNotes();   // remember the notes already there, so only new ones start a revision
       await collect();
-      await aoRead(); await loadConns(); await loadScripts(); await loadFacts(); await loadCatalog();
+      await aoRead(); await loadConns(); await loadScripts(); await loadFacts(); loadDykKit(); await loadCatalog();
       setTimeout(() => { if (aoOn()) aoStart(); else nightOwl(); }, 1500);
       setInterval(() => { aoRead().then(render); }, 5 * 60000);
     }
     render();
   }
-  window.RSH_BOTS = { voState: id => { const p = (app().data().posts || []).find(x => x.id === id); return !p || !dykVideo(p) ? '' : hasVO(p) ? 'ok' : 'missing'; }, factState: id => { const p = (app().data().posts || []).find(x => x.id === id); return p ? factState(p) : null; }, factDocs: () => factDocs, factText, refreshFacts: async () => { await loadFacts(); }, requestFacts: ids => requestFacts((app().data().posts || []).filter(p => ids.includes(p.id))), sizePlan, isBusy: () => busy, sageState: id => scripts[id] ? 'done' : sageBusy === id ? 'writing' : freshIds.includes(id) ? 'next' : 'todo', isNew, planItems: id => ((plan && plan.items) || []).filter(i => i.postId === id), commentsFor: id => (comments[id] || []).slice(), whoIs: async ids => { await whoIs(ids); return Object.fromEntries(ids.map(i => [i, names[i] || 'Teammate'])); }, mealNow, rbOn, rbHome, rbTargets, rbPlace, rbCaption, rbChecks, rbFileFor, rbYouTubeTitle, manila, TAGLINE, RB_SLOTS, aiOf, SPECS, sizePlan, sizeLines, specFor, kindOf, ratioOf, productJob, readyRefs, POST_SIZE, catalog: () => catalog, refs: () => refs, productsFor, productBlock, searchCatalog, requestPhotos, loadCatalog, scripts: () => scripts, scriptPrompt, writeScript, scriptRun, saveScript, packPart, packHtml, conns: () => conns, viaOf, engineFor, HOUSE, music: () => MUSIC, musicStart, musicStop, match: () => ISO.match, startMatch: (a, b) => startMatch(ISO.people[a], ISO.people[b], performance.now()), zoneAt, addIdea, IDEAS: () => IDEAS, postComment, loadAllComments, cmtCount, ctaFor, withCta, isoPeople: () => ISO.people, aoCycle, aoStart, aoBeat, aoAlive, reviseFromNotes, shrinkVideo, nightOwl, weeklyReport, learnedTags, resultsForPrompt, openRaw, addRaw, sendRaw, rawCount, loadRaw, dayFor, isDyk, targets, sendText, autoSend, seoFor, seoRun, learnedTimes, schedule, attachForPost, driveUpload, fileFor, autoLink, needsFile, readyItems, placedOn, place, unplace, setMediaUrl, sendToMetricool, metricoolPost, NAME, freshVideos, watch, onChange: f => listeners.push(f), handoff, collect, start, captionFor, assetNeeds, imagePrompt, videoBrief, editJob };
+  window.RSH_BOTS = { loadDykKit, packMap, voState: id => { const p = (app().data().posts || []).find(x => x.id === id); return !p || !dykVideo(p) ? '' : hasVO(p) ? 'ok' : 'missing'; }, factState: id => { const p = (app().data().posts || []).find(x => x.id === id); return p ? factState(p) : null; }, factDocs: () => factDocs, factText, refreshFacts: async () => { await loadFacts(); }, requestFacts: ids => requestFacts((app().data().posts || []).filter(p => ids.includes(p.id))), sizePlan, isBusy: () => busy, sageState: id => scripts[id] ? 'done' : sageBusy === id ? 'writing' : freshIds.includes(id) ? 'next' : 'todo', isNew, planItems: id => ((plan && plan.items) || []).filter(i => i.postId === id), commentsFor: id => (comments[id] || []).slice(), whoIs: async ids => { await whoIs(ids); return Object.fromEntries(ids.map(i => [i, names[i] || 'Teammate'])); }, mealNow, rbOn, rbHome, rbTargets, rbPlace, rbCaption, rbChecks, rbFileFor, rbYouTubeTitle, manila, TAGLINE, RB_SLOTS, aiOf, SPECS, sizePlan, sizeLines, specFor, kindOf, ratioOf, productJob, readyRefs, POST_SIZE, catalog: () => catalog, refs: () => refs, productsFor, productBlock, searchCatalog, requestPhotos, loadCatalog, scripts: () => scripts, scriptPrompt, writeScript, scriptRun, saveScript, packPart, packHtml, conns: () => conns, viaOf, engineFor, HOUSE, music: () => MUSIC, musicStart, musicStop, match: () => ISO.match, startMatch: (a, b) => startMatch(ISO.people[a], ISO.people[b], performance.now()), zoneAt, addIdea, IDEAS: () => IDEAS, postComment, loadAllComments, cmtCount, ctaFor, withCta, isoPeople: () => ISO.people, aoCycle, aoStart, aoBeat, aoAlive, reviseFromNotes, shrinkVideo, nightOwl, weeklyReport, learnedTags, resultsForPrompt, openRaw, addRaw, sendRaw, rawCount, loadRaw, dayFor, isDyk, targets, sendText, autoSend, seoFor, seoRun, learnedTimes, schedule, attachForPost, driveUpload, fileFor, autoLink, needsFile, readyItems, placedOn, place, unplace, setMediaUrl, sendToMetricool, metricoolPost, NAME, freshVideos, watch, onChange: f => listeners.push(f), handoff, collect, start, captionFor, assetNeeds, imagePrompt, videoBrief, editJob };
 })();
