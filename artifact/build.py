@@ -53,6 +53,7 @@ tracker = (ROOT / 'artifact' / 'tracker.js').read_text(encoding='utf-8')
 bots = (ROOT / 'artifact' / 'bots.js').read_text(encoding='utf-8')
 organize = (ROOT / 'artifact' / 'organize.js').read_text(encoding='utf-8')
 review = (ROOT / 'artifact' / 'review.js').read_text(encoding='utf-8')
+health = (ROOT / 'artifact' / 'health.js').read_text(encoding='utf-8')
 shim = once(shim, '__APP_VERSION__', version)
 shim = once(shim, '__BUNDLED_MEDIA__', json.dumps(bundled))
 shim = once(shim, '__WEEKLY_PACKS__', json.dumps(packs, ensure_ascii=False).replace('</', '<\\/'))
@@ -102,7 +103,7 @@ s = once(s, "tracker:['Campaign Checklist',", "bots:['24/7 Bots','Captions, timi
 
 # 4. Wording that would be untrue here.
 s = once(s, f'<strong>LOCAL APP · V{version}</strong><div class="small">Activate the local Data Vault in Setup & Backup to preserve browser work. Export a backup before upgrading. Metricool is connected in ChatGPT only, not this local app.</div>',
-         f'<strong>ARTIFACT EDITION · V{version} · BUILD 86</strong><div class="small">Your workspace and uploaded media are saved automatically to this artifact’s private storage. Approvals are local records, not authenticated. No Metricool sync or publishing.</div>')
+         f'<strong>ARTIFACT EDITION · V{version} · BUILD 87</strong><div class="small">Everything saves automatically to this app’s shared storage. Anthony’s final approval is signed with his own account. Approved posts go to Metricool. Open ⋯ More → System check to see that everything works.</div>')
 s = once(s, "'Use python3 server.py in the extracted v%s folder, then open http://127.0.0.1:8765. Buttons and media uploads require the local server.'" % version, "'Open this page from your Claude artifacts.'")
 
 for old, new in (('Local editorial plans are separate from the read-only Metricool monthly archive.', 'Team plans, with what is scheduled and published in Metricool.'), ('Metricool connected to ChatGPT only', 'Live results from Metricool'), ('Local workspace · demo/pilot', 'RSH Sports workspace')):
@@ -140,10 +141,16 @@ s = once(s, GROUPS_OLD, """ {tabs:[['strategy','Strategy Lab'],['recommend','Dec
 
 # Live results panel (artifact edition only) loads before the host layer starts the app.
 assert s.count('<script>\n' + shim) == 1
-s = s.replace('<script>\n' + shim, '<script>\n' + live + '\n</script>\n<script>\n' + score + '\n</script>\n<script>\n' + camp + '\n</script>\n<script>\n' + exper + '\n</script>\n<script>\n' + signoff + '\n</script>\n<script>\n' + cal + '\n</script>\n<script>\n' + homejs + '\n</script>\n<script>\n' + tracker + '\n</script>\n<script>\n' + bots + '\n</script>\n<script>\n' + organize + '\n</script>\n<script>\n' + review + '\n</script>\n<script>\n' + shim)
+s = s.replace('<script>\n' + shim, '<script>\n' + live + '\n</script>\n<script>\n' + score + '\n</script>\n<script>\n' + camp + '\n</script>\n<script>\n' + exper + '\n</script>\n<script>\n' + signoff + '\n</script>\n<script>\n' + cal + '\n</script>\n<script>\n' + homejs + '\n</script>\n<script>\n' + tracker + '\n</script>\n<script>\n' + bots + '\n</script>\n<script>\n' + organize + '\n</script>\n<script>\n' + review + '\n</script>\n<script>\n' + health + '\n</script>\n<script>\n' + shim)
 
 # Claude's sharing review accepts only JPEG, PNG, GIF or WebP images (MP4/WebM video, MP3/WAV audio).
 # A version with anything else cannot be opened by invited people, so fail the build instead.
 assert '<svg' not in s.lower() and 'image/svg' not in s.lower(), 'SVG is not allowed in the artifact page'
+# Header: keep the status, Review and Search in view; the rest goes in one "⋯ More" menu. Drop the stale sidebar note.
+s = once(s, '<button class="btn smallbtn" id="topPitch">◉ Present to Anthony</button><button class="btn ghost smallbtn" id="quickExport">↧ Backup data</button><button class="btn ghost smallbtn" id="beginnerToggle" aria-pressed="true">Beginner guide: On</button><button class="btn ghost smallbtn" id="openCommandPalette">⌘ Search</button><button type="button" class="btn ghost smallbtn" id="rshHealthButton">App status</button>',
+         '<button class="btn ghost smallbtn" id="openCommandPalette">⌘ Search</button><details class="topmore"><summary class="btn ghost smallbtn">⋯ More</summary><div class="topmore-menu"><button type="button" class="btn ghost smallbtn" id="rshHealthButton">✓ System check</button><button class="btn ghost smallbtn" id="topPitch">◉ Present to Anthony</button><button class="btn ghost smallbtn" id="quickExport">↧ Backup data</button><button class="btn ghost smallbtn" id="beginnerToggle" aria-pressed="true">Beginner guide: On</button></div></details>')
+s = once(s, '<div class="sidebar-paused small">Cloud team login is paused until Anthony approves the app.</div>', '')
+s = once(s, '<header class="top">', '<style>.topmore{position:relative}.topmore>summary{list-style:none;cursor:pointer}.topmore>summary::-webkit-details-marker{display:none}.topmore:not([open]) .topmore-menu{display:none}.topmore-menu{position:absolute;right:0;top:calc(100% + 6px);z-index:50;display:grid;gap:6px;min-width:210px;padding:10px;background:var(--card,#fff);border:1px solid #e5e7eb;border-radius:14px;box-shadow:0 14px 40px rgba(15,23,42,.18)}.topmore-menu .btn{justify-content:flex-start;width:100%;text-align:left}</style><header class="top">')
 (OUT / 'RSH Sports Marketing OS.html').write_text(s, encoding='utf-8')
 print('built', len(s), 'bytes; bundled media:', len(bundled), '; weekly packs:', len(packs))
+

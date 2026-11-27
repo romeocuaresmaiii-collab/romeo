@@ -139,7 +139,7 @@
   function start() {
     if (!app() || !app().review || document.getElementById('rshQR')) return;
     const host = document.createElement('div'); host.id = 'rshQR'; document.body.appendChild(host);
-    const top = document.getElementById('topPitch');
+    const top = document.getElementById('openCommandPalette') || document.getElementById('topPitch');   // the Review button sits before Search in the header
     if (top) { const b = document.createElement('button'); b.type = 'button'; b.id = 'rshQRBtn'; b.className = 'btn smallbtn'; b.style.background = '#047857'; b.addEventListener('click', () => open('todo')); top.parentNode.insertBefore(b, top); }
     host.addEventListener('click', e => {
       const t = e.target;
