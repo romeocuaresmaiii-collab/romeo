@@ -63,6 +63,11 @@
     const RR = window.RSH_REPORT && window.RSH_REPORT.adviceRolling && L && L.rows ? window.RSH_REPORT.adviceRolling(L.rows() || []) : null;
     if (RR) { const pc = a => a.n ? Math.round(a.won / a.n * 100) : null, t = pc(RR.time), g = pc(RR.tag), okk = (t == null || t >= 50) && (g == null || g >= 50);
       out.push([okk ? 'ok' : 'warn', 'Bots’ advice vs results', `Learned from the first half of the loaded results, tested on the second half: Tempo’s times ${RR.time.won}/${RR.time.n}${t != null ? ` (${t}%)` : ''}, Quill’s hashtags ${RR.tag.won}/${RR.tag.n}${g != null ? ` (${g}%)` : ''} beat their channel’s median.`, okk ? '' : 'Treat the advice that is under 50% as a test, not a rule, until it improves.']); }
+    const IB = window.RSH_INBOX, ibw = IB ? IB.waiting() : [];
+    if (IB) { const late = ibw.filter(x => x.spottedAt && Date.now() - Date.parse(x.spottedAt) > 60 * 6e4);
+      out.push(late.length ? ['bad', 'Comments to answer', `${late.length} post${late.length === 1 ? ' has' : 's have'} comments waiting more than 60 minutes.`, 'Open 💬 Inbox at the top and answer them (the rulebook asks for 60 minutes).']
+        : ibw.length ? ['warn', 'Comments to answer', `${ibw.reduce((a, x) => a + x.open, 0)} new comment${ibw.length === 1 ? '' : 's'} on ${ibw.length} post${ibw.length === 1 ? '' : 's'}, inside the 60 minutes.`, 'Open 💬 Inbox at the top.']
+        : ['ok', 'Comments to answer', 'No unanswered comments on Instagram and TikTok posts from the last 7 days.', '']); }
     const SL = window.RSH_SALES, sm = SL ? Object.keys(SL.months()).sort().pop() : null, ss = sm ? SL.summary(sm) : null, codesSet = SL && Object.values(SL.codes()).some(Boolean);
     out.push(!ss ? ['warn', 'Sales from social', 'No Shopify sales imported yet, so the app cannot say which posts sell.', 'Revenue → Sales from social: set one discount code per channel, then import the Shopify orders export each month.']
       : (Date.now() - Date.parse(ss.importedAt || 0)) > 35 * 864e5 ? ['warn', 'Sales from social', `Last import ${ago(ss.importedAt)} (${ss.month}).`, 'Import this month’s Shopify orders export.']
