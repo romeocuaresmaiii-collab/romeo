@@ -572,6 +572,11 @@ const out = []; const ok = (n, c, d) => { out.push(c); console.log((c ? 'PASS  '
     return { lesson: L.some(x => /Number hook.*beat.*Question hook.{0,2} by 50%/.test(x.text)), inPrompt: /TESTED LESSONS/.test(tl) && /TESTED LESSONS/.test(pr), cites: !!(tk.ex && tk.ex.length) && /\(\w{3} \d+, [\d,]+\)/.test(B.cite(tk.ex)), marks: Object.values(window.RSH_SEASON_MARKS()).flat().filter(m => m.order).length, rivals: /Their top posts/.test(document.getElementById('rshLive').innerText) && /Team order drop day/.test(document.getElementById('rshLive').innerText) };
   });
   ok('Test winners go into a tested playbook that Sage and Quill read; advice names the posts behind it; season dates and order windows reach the calendar; rivals’ top posts show', ad.lesson && ad.inPrompt && ad.cites && ad.marks >= 5 && ad.rivals, JSON.stringify(ad));
+  const aex = await p.evaluate(async () => { const B = window.RSH_BOTS;
+    const a = B.aiFail('Sage', { code: 'rate_limited', reason: 'usage_limit', message: 'limit' }, 'Quote: Hand Raised'), b = B.aiFail('Sage', { code: 'upstream_error' }, 'X'), c = B.aiFail('Quill', { code: 'session_expired' }, 'Y');
+    await new Promise(z => setTimeout(z, 200)); const d = window.__store['diagnostics/ai'];
+    return { a: /usage limit/.test(a), b: /temporary error \(upstream_error\)/.test(b), c: /sign in again/.test(c), logged: !!d && d.code === 'session_expired' && d.who === 'Quill' }; });
+  ok('When asking Claude fails, Sage and Quill say why (usage limit, busy, sign-in, temporary) and the cause is logged for tracing', aex.a && aex.b && aex.c && aex.logged, JSON.stringify(aex));
   // Direct posting, phase 1 (Bluesky): an approved post goes to RSH's own gateway queue instead of Metricool
   const dpx = await p.evaluate(async () => {
     const B = window.RSH_BOTS, A = window.RSH_APP, wait = ms => new Promise(z => setTimeout(z, ms)), ps = A.data().posts.slice(0, 3);
