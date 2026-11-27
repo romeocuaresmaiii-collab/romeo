@@ -563,6 +563,27 @@ const out = []; const ok = (n, c, d) => { out.push(c); console.log((c ? 'PASS  '
     return { lesson: L.some(x => /Number hook.*beat.*Question hook.{0,2} by 50%/.test(x.text)), inPrompt: /TESTED LESSONS/.test(tl) && /TESTED LESSONS/.test(pr), cites: !!(tk.ex && tk.ex.length) && /\(\w{3} \d+, [\d,]+\)/.test(B.cite(tk.ex)), marks: Object.values(window.RSH_SEASON_MARKS()).flat().filter(m => m.order).length, rivals: /Their top posts/.test(document.getElementById('rshLive').innerText) && /Team order drop day/.test(document.getElementById('rshLive').innerText) };
   });
   ok('Test winners go into a tested playbook that Sage and Quill read; advice names the posts behind it; season dates and order windows reach the calendar; rivals’ top posts show', ad.lesson && ad.inPrompt && ad.cites && ad.marks >= 5 && ad.rivals, JSON.stringify(ad));
+  // Competitors inside the app: list, add/remove, research request, monthly digest, idea → A/B test
+  await p.evaluate(() => document.querySelector('[data-view="competitors"]').click()); await p.waitForTimeout(400);
+  const rvx = await p.evaluate(async () => {
+    const R = window.RSH_RIVALS, host = document.getElementById('rshRivals'), wait = ms => new Promise(z => setTimeout(z, ms));
+    window.__store['rivals/digest-2026-11'] = { json: JSON.stringify({ month: '2026-11', researchedAt: '2026-11-27', summary: 'Test summary', posts: [{ rival: 'Brand A', net: 'Instagram', url: 'https://www.instagram.com/a/', what: 'Named colorway reveal', why: 'Story' }], ideas: [{ title: 'Named reveal test', platform: 'Instagram', kpi: 'views', a: 'Plain', b: 'Named', hypothesis: 'Names win' }] }) };
+    await R.load();
+    const f = host.querySelector('#rvAddForm'); f.name.value = 'Test Rival'; f.website.value = 'https://example.com'; f.instagram.value = 'https://www.instagram.com/testrival/'; f.requestSubmit(); await wait(300);
+    const added = JSON.parse(window.__store['rivals/list'].json).some(r => r.name === 'Test Rival' && r.social.instagram);
+    const id = R.list().find(r => r.name === 'Test Rival').id;
+    host.querySelector(`[data-rv-remove="${id}"]`).click(); await wait(100); const afterOne = R.list().length;
+    host.querySelector(`[data-rv-remove="${id}"]`).click(); await wait(300); const removed = !JSON.parse(window.__store['rivals/list'].json).some(r => r.name === 'Test Rival');
+    host.querySelector('#rvResearch').click(); await wait(300); const req = window.__store['rivals/request'] && window.__store['rivals/request'].status === 'queued';
+    const text = host.innerText, before = (window.RSH_APP.data().growthTests || []).length;
+    host.querySelector('[data-rv-test="0"]').click(); await wait(200);
+    const tests = window.RSH_APP.data().growthTests, made = tests.length === before + 1 && tests[tests.length - 1].fromRivalIdea === 'Named reveal test';
+    host.querySelector('[data-rv-test="0"]').click(); await wait(200); const noDup = window.RSH_APP.data().growthTests.length === before + 1;
+    tests.splice(tests.length - 1, 1); window.RSH_APP.save();
+    const rep = window.RSH_REPORT.build(202611);
+    return { added, keptAfterOneClick: afterOne === 1, removed, req, digest: /Named colorway reveal/.test(text) && /Ideas for RSH/.test(text), made, noDup, report: rep.rivals.length === 1 && rep.rivalIdeas.length === 1 };
+  });
+  ok('Competitors live in the app: add and remove (with a confirm click), ask Claude to research, read the monthly digest, and turn an idea into one A/B test; the monthly report shows them', rvx.added && rvx.keptAfterOneClick && rvx.removed && rvx.req && rvx.digest && rvx.made && rvx.noDup && rvx.report, JSON.stringify(rvx));
   const ut = await p.evaluate(() => { const B = window.RSH_BOTS, P = { id: 'abc123', title: 'Reversible Singlet: Show Both Sides' };
     const a = B.tagLinks('Shop now: https://www.rshsports.com/products/rev-1. Or visit www.rshsports.com', 'facebook', P), b = B.tagLinks('Team gear at rshsports.com. Email info@rshsports.com', 'threads', P), c = B.tagLinks('https://www.rshsports.com/products/x?utm_source=pinterest&utm_medium=organic_social', 'pinterest', P);
     return { a, b, c, left: B.untagged(a) + B.untagged(c) }; });

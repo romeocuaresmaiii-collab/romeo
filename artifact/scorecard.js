@@ -21,16 +21,16 @@
     ['Reporting + analytics', 5, 9, 'Nov 27: a one-page monthly report builds itself (channels, top posts, sport split, rivals, advice check, next steps), and the numbers refresh every hour while the app is open.',
       'A monthly report produced in under five minutes with no manual copying, every number traceable to Metricool or the store.',
       'Add store sales once orders are connected.'],
-    ['Competitor intelligence', 3, 4, 'Nov 27: the app pulls competitors and their top three posts from Metricool into Home and the monthly report, but none are set up in Metricool yet, so it is empty.',
+    ['Competitor intelligence', 3, 6, 'Nov 27: competitors now live in the app itself (no Metricool): 7 similar-sized singlet and team-uniform brands with their social accounts, a monthly digest of their standout posts researched by Claude, and a button that turns an idea into an A/B test. Post-level numbers are not public, so the digest describes what they post rather than measuring it.',
       'A monthly digest of five to eight similar-sized rivals’ top three posts, and one tested idea a month that came from it.',
-      'Add 5–8 similar-sized team-apparel accounts in Metricool → Competitors.'],
+      'Test one competitor idea every month and keep the winners.'],
     ['AI recommendations', 2, 6, 'Nov 27: Tempo and Quill name the real posts behind each recommendation, test winners feed Sage and Quill, and the monthly report checks the advice on posts it was not learned from.',
       'Every recommendation cites the posts behind it, and at least half of the ones adopted beat the account’s median post.',
       'Needs a month of results showing at least half of the advice beats the median post.'],
     ['Integrations + publishing', 1, 7, 'Approved posts go to Metricool from the app and video edits come back attached. Nov 27: the app checks Metricool every 15 minutes while open and flags any post that failed or is late.',
       'Results refresh on their own, 99% of scheduled posts publish on time, and failures are flagged within 15 minutes.',
       'Connect Bluesky directly first (no review needed), then YouTube, Pinterest, Meta and TikTok as their reviews pass.'],
-    ['Security + reliability', 4, 7, 'No keys in the page; 140 automated tests. Nov 27: a restore drill put the live workspace backup into an empty copy and all 27 campaigns came back unchanged. The code repository is still public.',
+    ['Security + reliability', 4, 7, 'No keys in the page; 141 automated tests. Nov 27: a restore drill put the live workspace backup into an empty copy and all 27 campaigns came back unchanged. The code repository is still public.',
       'Two-step sign-in on every connected account, no secrets in the workspace, and a restore from backup tested each quarter.',
       'Make the repository private and turn on two-step sign-in on every account.'],
     ['Content experimentation', 5, 7, 'Results fill from live posts. Nov 27: winners go into a tested playbook that Sage and Quill follow, with a “2 tests this month” counter. No test has been logged yet.',
@@ -46,7 +46,7 @@
     ['Connect the first account directly', 'Integrations', 'Bluesky needs no platform review. Then YouTube and Pinterest, then Meta and TikTok.'],
     ['Make the repository private', 'Security', 'The restore drill passed on Nov 27; keep the code out of public view and turn on two-step sign-in.'],
     ['Run two small tests a month from live data', 'Experimentation, AI recommendations', 'One variable at a time: hook or format. Record the result automatically.'],
-    ['Add competitors in Metricool', 'Competitor intelligence', 'Five to eight brands of similar size; the app brings them in on the next refresh.'],
+    ['Test one competitor idea a month', 'Competitor intelligence', 'Seven similar-size brands are tracked in Competitors; press “Make it an A/B test” on one idea each month.'],
   ];
   const SKIP = 'Not worth chasing at this size: enterprise security certificates and single sign-on, social listening subscriptions, multi-touch attribution tools, and best-time-to-post tuning (too few posts and followers for the numbers to mean anything).';
 

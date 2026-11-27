@@ -14,6 +14,7 @@
   const ago = t => { if (!t) return 'never'; const m = Math.round((Date.now() - Date.parse(t)) / 6e4); return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : m < 48 * 60 ? Math.round(m / 60) + ' h ago' : Math.round(m / 1440) + ' days ago'; };
   const list = (a, n = 3) => a.slice(0, n).map(x => '“' + x + '”').join(', ') + (a.length > n ? ` and ${a.length - n} more` : '');
 
+  const esc2 = x => String(x || '');
   async function checks() {
     const out = [], H = bots() && bots().health ? bots().health() : null;
     let db = null; try { db = window.claude ? await Promise.race([window.claude.use('db'), new Promise(r => setTimeout(() => r(null), 4000))]) : null; } catch (_) {}
@@ -47,9 +48,10 @@
         : ['ok', 'Metricool matches the approval', 'Every post the app sent is in Metricool exactly as approved.', '']);
       if (mw.outside.length) out.push(['warn', 'Posts added outside the app', `${mw.outside.length} upcoming post${mw.outside.length === 1 ? ' was' : 's were'} added in Metricool directly, so no approval is on record: ${lbl(mw.outside)}.`, 'Create them as campaigns so Anthony can sign them, or leave them if they were agreed another way.']);
     }
-    const rv = L && L.rivals && L.rivals();
-    out.push(rv && rv.length ? ['ok', 'Competitors', `${rv.length} competitor account${rv.length === 1 ? '' : 's'} tracked from Metricool (Insights → live results).`, '']
-      : ['warn', 'Competitors', 'No competitors are set up in Metricool, so the app cannot compare RSH with rivals.', 'In Metricool, open Competitors and add 5–8 similar-sized team-apparel accounts on Instagram and Facebook. The next “Refresh from Metricool” brings them in.']);
+    const RV = window.RSH_RIVALS, rl = RV ? RV.list() : [], dg = RV ? RV.digest() : null, thisMonth = RV && dg && dg.month === RV.monthKey();
+    out.push(rl.length < 5 ? ['warn', 'Competitors', `${rl.length} competitor${rl.length === 1 ? '' : 's'} tracked in the app; aim for 5–8 similar-sized brands.`, 'Open Competitors and add them (name, website and their social links).']
+      : !thisMonth ? ['warn', 'Competitors', `${rl.length} tracked, but this month’s digest is not ready yet${RV.requested() ? ' (research requested)' : ''}.`, RV.requested() ? 'Nothing to do: Claude researches within the hour.' : 'Open Competitors and press “Research now”.']
+      : ['ok', 'Competitors', `${rl.length} similar-sized brands tracked; ${esc2(dg.month)} digest has ${(dg.posts || []).length} standout posts and ${(dg.ideas || []).length} ideas to test.`, '']);
     if (!H) { out.push(['bad', '24/7 Bots', 'The bots did not load in this view.', 'Reload the page.']); return out; }
     out.push(!H.planAt ? ['warn', 'Bots’ plan', 'The bots have not prepared a plan yet.', 'Open 24/7 Bots and press “Run everything”.'] : (Date.now() - Date.parse(H.planAt)) > 26 * 3600e3 ? ['warn', 'Bots’ plan', `Last prepared ${ago(H.planAt)}.`, 'Open 24/7 Bots and press “Run everything” (or keep the app open on one computer with 24/7 on).'] : ['ok', 'Bots’ plan', `Prepared ${ago(H.planAt)}.`, '']);
     const w = H.week; out.push(!w.total ? ['warn', 'Next 7 days', 'No posts are planned for the next 7 days.', 'Create campaigns for the coming week.'] : w.sent < w.total ? ['warn', 'Next 7 days', `${w.total} channel posts planned: ${w.ready} ready, ${w.sent} already in Metricool.`, 'Open the Checklist to see what each held-back post still needs.'] : ['ok', 'Next 7 days', `All ${w.total} planned channel posts are in Metricool.`, '']);
