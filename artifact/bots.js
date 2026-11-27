@@ -1070,7 +1070,7 @@ Add PART 8 — PLATFORM VERSIONS: one block for each of ${t.map(c => NAME[c]).jo
       if (!it.caption.trim()) out.push(['stop', 'No caption']);
       const video = kindOf(p) === 'video' || kindOf(p) === 'story';
       if (!it.rb && (it.channel === 'tiktok' || it.channel === 'youtube') && !video) out.push(['warn', `${NAME[it.channel]} needs a video; this campaign is a ${p.postType || 'photo'}`]);
-      if (/rshsports\.com/i.test(it.caption) && !/[?&]utm_/i.test(it.caption) && !(it.rb && ['youtube', 'threads', 'bluesky'].includes(it.channel))) out.push(['warn', 'Store link has no tracking']);
+      { const n = untagged(it.caption); if (n) out.push(['ok', `${n} store link${n === 1 ? '' : 's'} will get tracking tags when sent (channel, campaign and post)`]); }
       if (it.rb) out.push(...rbChecks(it, items, p));
       { const tags = (it.caption.match(/(^|\s)#[\p{L}\p{N}_]+/gu) || []).length, mx = MAXTAGS[it.channel];
         if (it.rb) { const rmx = RB_MAXTAGS[it.channel]; if (tags > rmx) out.push(['stop', rmx === 0 ? `No hashtags on ${NAME[it.channel]} (rulebook)` : `${tags} hashtags; the rulebook allows ${rmx} on ${NAME[it.channel]}`]); }
@@ -2276,6 +2276,23 @@ Add PART 8 — PLATFORM VERSIONS: one block for each of ${t.map(c => NAME[c]).jo
     for (const t of tags) { const next = out + (out === capRef ? '\n\n' : ' ') + t; if (next.length > (LIMIT[it.channel] || 2200)) break; out = next; }
     return out;
   }
+  /* Every store link that leaves the app carries tracking: utm_source (the channel), utm_medium=organic_social,
+   * utm_campaign (the campaign) and utm_content (the campaign id), so store sales can be traced to the exact post.
+   * Links that already carry some tags get the missing ones; a plain "rshsports.com" written out in words is left alone. */
+  function tagLinks(text, ch, p) {
+    return String(text || '').replace(/\b(?:https?:\/\/)?(?:www\.)?rshsports\.com(\/[^\s<>"')\]]*)?/gi, (m, path, off, all) => {
+      const before = all.slice(Math.max(0, off - 1), off);
+      if (!/^https?:\/\//i.test(m) && !/^www\./i.test(m) && !path) return m;   // a plain brand mention stays plain
+      if (before === '@' || before === '.') return m;
+      let url = /^https?:\/\//i.test(m) ? m : 'https://' + (/^www\./i.test(m) ? m : 'www.' + m), tail = '';
+      const t = /[.,!?;:]+$/.exec(url); if (t) { tail = t[0]; url = url.slice(0, -tail.length); }
+      const want = { utm_source: ch, utm_medium: 'organic_social', utm_campaign: slug(p.title || 'rsh') || 'rsh', utm_content: p.id || '' };
+      const [base, q = ''] = url.split('?'), have = new URLSearchParams(q);
+      for (const [k, v] of Object.entries(want)) if (v && !have.has(k)) have.set(k, v);
+      return (/rshsports\.com$/i.test(base) ? base + '/' : base) + '?' + have.toString() + tail;
+    });
+  }
+  const untagged = text => (String(text || '').match(/(?:https?:\/\/|www\.)(?:www\.)?rshsports\.com[^\s]*/gi) || []).filter(u => !/[?&]utm_source=/.test(u)).length;
   function metricoolPost(it, mode, ai) {
     const p = (app().data().posts || []).find(x => x.id === it.postId) || {}, files = [p.creativeAsset].concat(p.creativeAssets || []).filter(Boolean);
     const vid = files.some(a => /^video\//.test(a.mime || '')), title = String(p.title || '').slice(0, 90), ch = it.channel;
@@ -2292,6 +2309,8 @@ Add PART 8 — PLATFORM VERSIONS: one block for each of ${t.map(c => NAME[c]).jo
     if (ch === 'pinterest') info.pinterestData = { boardId: settings.pinBoard || '', pinTitle: (so && so.ch.title) || title, pinLink: (String(it.caption).match(/https:\/\/\S+/) || [it.rb ? rbLink(p, 'pinterest') : ''])[0], isAiGenerated: !!ai };
     if (ch === 'threads') info.threadsData = {};
     if (ch === 'bluesky') info.blueskyData = {};
+    info.text = tagLinks(info.text, ch, p); if (info.firstCommentText) info.firstCommentText = tagLinks(info.firstCommentText, ch, p);
+    if (info.pinterestData && info.pinterestData.pinLink) info.pinterestData.pinLink = tagLinks(info.pinterestData.pinLink, ch, p);
     return { blogId: BRAND, date: `${it.date}T${it.time}:00${nyOffset(it.date, it.time)}`, info: JSON.stringify(info) };
   }
   // Make the public link for the post's attached file by itself: upload it to the viewer's Google Drive,
@@ -2562,7 +2581,7 @@ Add PART 8 — PLATFORM VERSIONS: one block for each of ${t.map(c => NAME[c]).jo
     }
     render();
   }
-  window.RSH_BOTS = { health: () => {   // for the System check
+  window.RSH_BOTS = { tagLinks, untagged, health: () => {   // for the System check
       const now = Date.now(), jl = Object.values(jobs), q = jl.filter(j => j.status === 'queued' || j.status === 'sent'), posts = app().data().posts || [], items = (plan && plan.items) || [];
       const oldest = q.reduce((m, j) => Math.min(m, Date.parse(j.queuedAt) || now), now), fd = Object.values(factDocs), today = iso(new Date()), wkEnd = (() => { const d = new Date(); d.setDate(d.getDate() + 7); return iso(d); })();
       const wk = items.filter(i => i.date >= today && i.date <= wkEnd), wkPosts = posts.filter(p => p.date >= today && p.date <= wkEnd);
