@@ -48,6 +48,12 @@
         : ['ok', 'Metricool matches the approval', 'Every post the app sent is in Metricool exactly as approved.', '']);
       if (mw.outside.length) out.push(['warn', 'Posts added outside the app', `${mw.outside.length} upcoming post${mw.outside.length === 1 ? ' was' : 's were'} added in Metricool directly, so no approval is on record: ${lbl(mw.outside)}.`, 'Create them as campaigns so Anthony can sign them, or leave them if they were agreed another way.']);
     }
+    // Direct posting (moving off Metricool): Bluesky first, through RSH's own posting gateway.
+    let gw = null; try { if (db) { const sn = await Promise.race([db.doc('live/gateway').get(), new Promise(r => setTimeout(() => r(null), 4000))]); gw = sn && sn.exists ? sn.data() : null; } } catch (_) {}
+    const dir = H && H.direct ? H.direct : { bluesky: false };
+    out.push(!dir.bluesky ? ['warn', 'Direct posting (Bluesky)', gw && gw.ok ? `RSH’s posting gateway is live (${gw.handle || 'Bluesky'}), but direct posting is not switched on yet, so Bluesky still goes through Metricool.` : 'Bluesky still goes through Metricool. RSH’s own posting gateway is built but not set up yet.', gw && gw.ok ? 'Ask Claude to switch Bluesky to direct posting.' : 'Follow gateway/README.md (about 15 minutes, once), then tell Claude.']
+      : gw && gw.ok && (Date.now() - Date.parse(gw.checkedAt || 0)) < 26 * 3600e3 ? ['ok', 'Direct posting (Bluesky)', `Bluesky posts go straight from the app through RSH’s gateway (${gw.handle || ''}, checked ${ago(gw.checkedAt)}). No Metricool.`, '']
+      : ['bad', 'Direct posting (Bluesky)', `Switched on, but the gateway ${gw && gw.error ? 'reported: ' + gw.error : 'has not been checked in the last day'}.`, 'Tell Claude in the chat; until it is fixed, queued Bluesky posts wait.']);
     const RV = window.RSH_RIVALS, rl = RV ? RV.list() : [], dg = RV ? RV.digest() : null, thisMonth = RV && dg && dg.month === RV.monthKey();
     out.push(rl.length < 5 ? ['warn', 'Competitors', `${rl.length} competitor${rl.length === 1 ? '' : 's'} tracked in the app; aim for 5–8 similar-sized brands.`, 'Open Competitors and add them (name, website and their social links).']
       : !thisMonth ? ['warn', 'Competitors', `${rl.length} tracked, but this month’s digest is not ready yet${RV.requested() ? ' (research requested)' : ''}.`, RV.requested() ? 'Nothing to do: Claude researches within the hour.' : 'Open Competitors and press “Research now”.']

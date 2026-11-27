@@ -165,19 +165,36 @@
     if (message) toast(message, 4500);
     return true;
   }
+  // A record holds at most 256 KiB. Up to 200 KB the workspace is stored as plain JSON ("json"); above that it is
+  // gzip-compressed ("gz", base64), which holds several months of campaigns. Every reader accepts either form.
+  const GZ_FROM = window.__RSH_TEST_GZ_FROM || 200000;
+  async function gzip(text) { const cs = new Blob([text]).stream().pipeThrough(new CompressionStream('gzip')); return b64(new Uint8Array(await new Response(cs).arrayBuffer())); }
+  async function gunzip(b) { const bin = atob(b), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return await new Response(new Blob([u]).stream().pipeThrough(new DecompressionStream('gzip'))).text(); }
+  async function bodyJson(body) {
+    if (!body) return null; if (typeof body.json === 'string') return body.json;
+    if (typeof body.gz === 'string') { try { return await gunzip(body.gz); } catch (_) { return null; } }
+    return null;
+  }
+  async function bodyFor(json) {
+    const meta = { updatedAt: new Date().toISOString(), appVersion: VERSION };
+    if (json.length <= GZ_FROM || typeof CompressionStream !== 'function') { if (json.length > 240000) throw Object.assign(new Error('too large'), { code: 'too_large' }); return { json, ...meta }; }
+    const gz = await gzip(json); if (gz.length > 240000) throw Object.assign(new Error('too large'), { code: 'too_large' });
+    return { gz, enc: 'gzip', bytes: json.length, ...meta };
+  }
+  window.RSH_WS_CODEC = { bodyJson, bodyFor };
   async function flush() {
     if (writing || pendingJson === null || !db) return;
     writing = true; let json = pendingJson; pendingJson = null; let merged = false;
     try {
-      const snap = await withTimeout(db.doc(WS_DOC).get(), 10000), body = snap.exists ? snap.data() : null, theirs = body && typeof body.json === 'string' ? body.json : null;
+      const snap = await withTimeout(db.doc(WS_DOC).get(), 10000), body = snap.exists ? snap.data() : null, theirs = await bodyJson(body);
       const baseJson = ls.get(BASE);
       if (theirs && theirs !== baseJson && theirs !== json) {            // a teammate saved since this browser last synced
         const m = merge3(parse(baseJson), parse(json), parse(theirs));
         if (m) { const mj = JSON.stringify(m); merged = mj !== json; json = mj; }
       }
-      if (json.length > 240000) throw Object.assign(new Error('too large'), { code: 'too_large' });
+      const out = await bodyFor(json);
       lastWritten = json;
-      await db.doc(WS_DOC).set({ json, updatedAt: new Date().toISOString(), appVersion: VERSION });
+      await db.doc(WS_DOC).set(out);
       ls.set(BASE, json);
       if (merged && pendingJson === null) adopt(json, 'A teammate’s changes were merged with yours.');
       if (pendingJson === null) { ls.set(KEY + ':dirty', ''); pill('saved', 'Saved · team copy up to date'); }
@@ -203,21 +220,21 @@
   document.addEventListener('focusout', () => { if (remoteWaiting) setTimeout(() => { if (remoteWaiting && !typing()) onRemote(remoteWaiting); }, 400); });
   function watchTeam() {
     if (!db) return;
-    try { db.doc(WS_DOC).onSnapshot(snap => { if (!snap.exists || (snap.metadata && snap.metadata.hasPendingWrites)) return; const d = snap.data(); if (d && typeof d.json === 'string') onRemote(d.json); }, () => {}); } catch (_) {}
+    try { db.doc(WS_DOC).onSnapshot(snap => { if (!snap.exists || (snap.metadata && snap.metadata.hasPendingWrites)) return; bodyJson(snap.data()).then(j => { if (j) onRemote(j); }); }, () => {}); } catch (_) {}
   }
 
   async function hydrate() {
     if (!db) return 'browser';
     let snap;
     try { snap = await withTimeout(db.doc(WS_DOC).get(), 10000); } catch (_) { return 'unreachable'; }
-    const body = snap && snap.exists ? snap.data() : null, cloud = body && typeof body.json === 'string' && parse(body.json) ? body.json : null;
+    const body = snap && snap.exists ? snap.data() : null, raw = await bodyJson(body), cloud = raw && parse(raw) ? raw : null;
     const local = ls.get(KEY), dirty = !!ls.get(KEY + ':dirty');
     if (local && dirty && cloud) {                      // unsaved edits from this browser: merge them into the team copy, never overwrite it
       const m = merge3(parse(ls.get(BASE)), parse(local), parse(cloud));
       if (m) { const mj = JSON.stringify(m); ls.set(KEY, mj); ls.set(BASE, cloud); if (mj === cloud) { ls.set(KEY + ':dirty', ''); return 'cloud'; } pendingJson = mj; return 'local-newer'; }
     }
     if (cloud) { ls.set(KEY, cloud); ls.set(BASE, cloud); ls.set(KEY + ':dirty', ''); return 'cloud'; }
-    if (body && typeof body.json === 'string') return 'cloud-invalid';
+    if (body && (typeof body.json === 'string' || typeof body.gz === 'string')) return 'cloud-invalid';
     if (local) { pendingJson = local; return 'local-only'; }
     return 'empty';
   }
@@ -374,7 +391,7 @@
     if (path === '/api/vault/status') {
       if (!db) return json(500, { error: NEED_DB });
       const rows = await vaultRows();
-      return json(200, { available: true, latestRevision: rows[0] ? rows[0].revision : 0, updatedAt: rows[0] ? rows[0].created : null, revisions: rows.slice(0, VAULT_KEEP).map(r => ({ revision: r.revision, at: r.created, bytes: (r.json || '').length })), location: "This artifact's private storage; not shared team storage" });
+      return json(200, { available: true, latestRevision: rows[0] ? rows[0].revision : 0, updatedAt: rows[0] ? rows[0].created : null, revisions: rows.slice(0, VAULT_KEEP).map(r => ({ revision: r.revision, at: r.created, bytes: r.json ? r.json.length : (r.gz ? r.gz.length : 0) })), location: "This artifact's private storage; not shared team storage" });
     }
     if (path === '/api/vault/load') {
       if (!db) return json(500, { error: NEED_DB });
@@ -382,7 +399,7 @@
       if (want) { const s = await db.doc('vault/' + vaultId(Number(want))).get(); row = s.exists ? s.data() : null; }
       else row = (await vaultRows())[0];
       if (!row) return json(404, { error: 'No saved workspace for that revision' });
-      return json(200, { revision: row.revision, savedAt: row.created, data: JSON.parse(row.json) });
+      return json(200, { revision: row.revision, savedAt: row.created, data: JSON.parse(await bodyJson(row)) });
     }
     if (path === '/api/vault/save' && method === 'POST') {
       if (!db) return json(500, { error: NEED_DB });
@@ -390,11 +407,11 @@
       if (!Number.isInteger(item.baseRevision) || item.baseRevision < 0) return json(400, { error: 'Invalid base revision' });
       if (!vaultValid(item.data)) return json(400, { error: 'Invalid workspace format' });
       const content = JSON.stringify(item.data);
-      if (content.length > 240000) return json(413, { error: 'Workspace is too large for one saved revision here (about 240 KB).' });
       const rows = await vaultRows(); const latest = rows[0] ? rows[0].revision : 0;
       if (latest !== item.baseRevision) return json(409, { error: 'Saved data changed since this browser loaded it. Load the vault before saving.', latestRevision: latest });
       const revision = latest + 1, at = new Date().toISOString().replace(/\.\d+Z$/, '+00:00');
-      await db.doc('vault/' + vaultId(revision)).set({ revision, created: at, json: content });
+      let packed; try { packed = await bodyFor(content); } catch (_) { return json(413, { error: 'Workspace is too large for one saved revision here.' }); }
+      await db.doc('vault/' + vaultId(revision)).set({ revision, created: at, ...(packed.gz ? { gz: packed.gz, enc: 'gzip' } : { json: content }) });
       for (const old of rows.slice(VAULT_KEEP - 1)) { try { await db.doc('vault/' + vaultId(old.revision)).delete(); } catch (_) {} }
       return json(200, { ok: true, revision, savedAt: at });
     }

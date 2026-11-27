@@ -6,7 +6,7 @@ const http = require('http'); const fs = require('fs'); const path = require('pa
 const DIST = path.join(__dirname, 'dist'); const SHOTS = process.argv[2] || '';
 const page0 = fs.readFileSync(path.join(DIST, 'RSH Sports Marketing OS.html'), 'utf8');
 const seed = process.env.RSH_SEED ? fs.readFileSync(process.env.RSH_SEED, 'utf8') : fs.existsSync(path.join(DIST, 'seed.json')) ? fs.readFileSync(path.join(DIST, 'seed.json'), 'utf8') : 'null';
-const mock = `<script>window.RSH_RB_FROM='2099-01-01';window.RSH_FACTS_OFF=true;window.RSH_DYK_KIT={version:'test',files:{'01_AI_INSTRUCTIONS.txt':'KIT RULES: You write Did You Know video packs (a complete PRODUCTION PACK).','06_Output_Template.txt':'PART 1 KEY FACTS ... PART 7 CHECK','09_Topics_Already_Done.txt':'WRESTLING - ankle bands'}};(function(){const store={'bots/dailyRun':{date:new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York'}).format(new Date())},'live/comments':{fetchedAt:new Date().toISOString(),posts:JSON.stringify([['INSTAGRAM',Number(new Date().toISOString().slice(0,10).replace(/-/g,'')),'https://www.instagram.com/p/x/','Coach question post',3],['TIKTOK',20200101,'https://www.tiktok.com/x','Older clip',2]])}};const seed=${seed};if(seed&&!location.search.includes('empty'))store['workspace/main']=seed;Object.assign(store,window.__preStore||{});window.__store=store;window.__saves=[];window.__uploads=[];
+const mock = `<script>window.RSH_RB_FROM='2099-01-01';window.RSH_FACTS_OFF=true;window.RSH_DYK_KIT={version:'test',files:{'01_AI_INSTRUCTIONS.txt':'KIT RULES: You write Did You Know video packs (a complete PRODUCTION PACK).','06_Output_Template.txt':'PART 1 KEY FACTS ... PART 7 CHECK','09_Topics_Already_Done.txt':'WRESTLING - ankle bands'}};(function(){const store={'bots/dailyRun':{date:new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York'}).format(new Date())},'live/comments':{fetchedAt:new Date().toISOString(),posts:JSON.stringify([['INSTAGRAM',Number(new Date().toISOString().slice(0,10).replace(/-/g,'')),'https://www.instagram.com/p/x/','Coach question post',3],['TIKTOK',20200101,'https://www.tiktok.com/x','Older clip',2]])}};const seed=${seed};if(seed&&!location.search.includes('empty'))store['workspace/main']=seed;Object.assign(store,window.__preStore||{});window.__store=store;if(location.search.includes('gz'))window.__RSH_TEST_GZ_FROM=1000;window.__saves=[];window.__uploads=[];
 const snap=(p)=>({id:p.split('/').pop(),exists:p in store,data:()=>store[p],metadata:{fromCache:false,hasPendingWrites:false}});
 const subs={};const tell=p=>(subs[p]||[]).forEach(f=>setTimeout(()=>f(snap(p)),0));window.__remoteSet=(p,d)=>{store[p]=d;tell(p)};
 const doc=p=>({id:p.split('/').pop(),path:p,get:async()=>snap(p),onSnapshot:(f)=>{(subs[p]=subs[p]||[]).push(f);return()=>{}},set:async d=>{store[p]=JSON.parse(JSON.stringify(d));tell(p)},update:async d=>{Object.assign(store[p],d)},delete:async()=>{delete store[p]}});window.__RSH_TEST_PART_BYTES=40000;
@@ -55,10 +55,19 @@ const out = []; const ok = (n, c, d) => { out.push(c); console.log((c ? 'PASS  '
     for (let i = 0; i < 2; i++) { await e.setInputFiles('#importJson', { name: 'rsh-backup.json', mimeType: 'application/json', buffer: Buffer.from(file) }); await e.waitForTimeout(500); }
     await e.waitForFunction(n => JSON.parse(localStorage.getItem('rsh_growth_command_v1') || '{"posts":[]}').posts.length === n, before.posts.length, { timeout: 8000 }).catch(() => {});
     await e.waitForFunction(() => !!window.__store['workspace/main'], null, { timeout: 15000 }).catch(() => {});
-    const after = await WS(e), cloud = await e.evaluate(() => window.__store['workspace/main'] ? JSON.parse(window.__store['workspace/main'].json) : null);
+    const after = await WS(e), cloud = await e.evaluate(async () => window.__store['workspace/main'] ? JSON.parse(await window.RSH_WS_CODEC.bodyJson(window.__store['workspace/main'])) : null);
     const sig = w => JSON.stringify((w.posts || []).map(x => [x.id, x.title, x.status, x.date, (x.creativeAssets || []).length, (x.revisionHistory || []).length]).sort());
     const res = { campaigns: before.posts.length, restored: after.posts.length, same: sig(before) === sig(after), shared: !!cloud && sig(cloud) === sig(before), bytes: file.length };
     await e.close(); return res;
+  }
+  if (!process.env.RSH_RESTORE_ONLY) {   // large workspaces are saved gzip-compressed and load back unchanged
+    const g = await open(1300, 900, '?gz');
+    await g.evaluate(() => { const A = window.RSH_APP; A.data().posts[0].title = 'Compressed save check'; A.save(); });
+    await g.waitForFunction(() => window.__store['workspace/main'] && window.__store['workspace/main'].gz, null, { timeout: 15000 }).catch(() => {});
+    const saved = await g.evaluate(() => ({ gz: !!window.__store['workspace/main'].gz, plain: 'json' in window.__store['workspace/main'], n: window.RSH_APP.data().posts.length }));
+    const back = await g.evaluate(async () => { const t = JSON.parse(await window.RSH_WS_CODEC.bodyJson(window.__store['workspace/main'])); return { n: t.posts.length, title: t.posts[0].title }; });
+    await g.close();
+    ok('A large workspace is saved gzip-compressed (room for months of campaigns) and reads back unchanged', saved.gz && !saved.plain && back.n === saved.n && back.title === 'Compressed save check', JSON.stringify({ saved, back }));
   }
   if (!process.env.RSH_RESTORE_ONLY) { const r = await restoreDrill(); ok('Restore drill (backup → empty copy) keeps every campaign', r.same && r.shared && r.restored === r.campaigns, JSON.stringify(r)); }
   if (process.env.RSH_RESTORE_ONLY) { const r = await restoreDrill(); ok('Restore drill: every campaign comes back unchanged, and saves to shared storage', r.same && r.shared && r.restored === r.campaigns, JSON.stringify(r)); await b.close(); srv.close(); process.exit(r.same && r.shared ? 0 : 1); }
@@ -563,6 +572,23 @@ const out = []; const ok = (n, c, d) => { out.push(c); console.log((c ? 'PASS  '
     return { lesson: L.some(x => /Number hook.*beat.*Question hook.{0,2} by 50%/.test(x.text)), inPrompt: /TESTED LESSONS/.test(tl) && /TESTED LESSONS/.test(pr), cites: !!(tk.ex && tk.ex.length) && /\(\w{3} \d+, [\d,]+\)/.test(B.cite(tk.ex)), marks: Object.values(window.RSH_SEASON_MARKS()).flat().filter(m => m.order).length, rivals: /Their top posts/.test(document.getElementById('rshLive').innerText) && /Team order drop day/.test(document.getElementById('rshLive').innerText) };
   });
   ok('Test winners go into a tested playbook that Sage and Quill read; advice names the posts behind it; season dates and order windows reach the calendar; rivals’ top posts show', ad.lesson && ad.inPrompt && ad.cites && ad.marks >= 5 && ad.rivals, JSON.stringify(ad));
+  // Direct posting, phase 1 (Bluesky): an approved post goes to RSH's own gateway queue instead of Metricool
+  const dpx = await p.evaluate(async () => {
+    const B = window.RSH_BOTS, A = window.RSH_APP, wait = ms => new Promise(z => setTimeout(z, ms)), ps = A.data().posts.slice(0, 3);
+    const saved = ps.map(p => p.creativeAsset); ps.forEach((p, i) => { p.creativeAsset = { id: 'img0000000000000000000000000000' + i, mime: 'image/jpeg', name: 'still-bluesky.jpg' }; p.creativeAssets = (p.creativeAssets || []).filter(a => /^image\//.test(a.mime || '')); });
+    const mk = (i, extra) => ({ postId: ps[i].id, channel: 'bluesky', date: '2099-01-0' + (5 + i), time: '09:00', ready: true, placed: true, caption: 'Two colors in one singlet. Home and away covered: rshsports.com', rb: false, ...extra });
+    const a = mk(0); await B.__directTest(a); const offQueued = Object.keys(window.__store).some(k => k.startsWith('publishQueue/'));
+    window.__store['config/direct'] = { bluesky: true }; await B.loadDirect();
+    const b = mk(1); const r = await B.__directTest(b); await wait(200);
+    const qk = Object.keys(window.__store).find(k => k.startsWith('publishQueue/')), q = qk && window.__store[qk];
+    if (qk) window.__store[qk] = { ...q, status: 'posted', url: 'https://bsky.app/profile/rshsports.bsky.social/post/3abc', postedAt: new Date().toISOString() };
+    await B.reconcileDirect(); const after = { ...b.sent };
+    const c = mk(2, { caption: 'x'.repeat(320) }); const rl = await B.__directTest(c);
+    for (const x of [a, b, c]) await B.__directDone(x);
+    ps.forEach((p, i) => { p.creativeAsset = saved[i]; }); A.save(); delete window.__store['config/direct']; await B.loadDirect();
+    return { offViaMetricool: !offQueued, ok: !!(r && r.ok && r.direct), queued: !!q && q.channel === 'bluesky' && q.status === 'queued' && !!q.image.assetId && /rshsports\.com/.test(q.text) && q.postId === ps[1].id, posted: after.status === 'posted' && /bsky\.app/.test(after.url || ''), tooLong: !!(rl && !rl.ok && /300/.test(rl.reason)), rl };
+  });
+  ok('Direct posting (Bluesky): off by default; when the owner switches it on, approved posts queue for RSH’s gateway (text + still image), come back as posted with their link, and over-long text is stopped', dpx.offViaMetricool && dpx.ok && dpx.queued && dpx.posted && dpx.tooLong, JSON.stringify(dpx));
   // Competitors inside the app: list, add/remove, research request, monthly digest, idea → A/B test
   await p.evaluate(() => document.querySelector('[data-view="competitors"]').click()); await p.waitForTimeout(400);
   const rvx = await p.evaluate(async () => {
