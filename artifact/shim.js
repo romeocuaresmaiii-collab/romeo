@@ -16,7 +16,7 @@
   const WEEKLY_PACKS = __WEEKLY_PACKS__;         // read-only weekly evidence packs shipped with the app
   const MEDIA_TYPES = { 'image/jpeg': 12e6, 'image/png': 12e6, 'image/webp': 12e6, 'video/mp4': 120e6, 'video/webm': 120e6 };
   // The file store takes at most 20 MiB per file, so larger videos are stored in parts and joined for playback.
-  const PART_BYTES = window.__RSH_TEST_PART_BYTES || 16 * 1024 * 1024;
+  const PART_BYTES = window.__RSH_TEST_PART_BYTES || 19 * 1024 * 1024;   // under the 20 MiB file limit: a video up to 19 MB stays one playable file (split pieces cannot pass the sharing review)
   const VAULT_KEEP = 12;
 
   let db = null, assets = null, downloads = null;
