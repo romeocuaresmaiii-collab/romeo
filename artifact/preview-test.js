@@ -503,6 +503,12 @@ const out = []; const ok = (n, c, d) => { out.push(c); console.log((c ? 'PASS  '
     window.RSH_TRACKER.render(); await new Promise(r => setTimeout(r, 100)); const row = document.querySelector(`#rshTracker [data-track-row="${id}"]`);
     return { job: /VOICE-OVER REQUIRED/.test(job) && /1920×1080/.test(job) && !/Make one vertical 9:16/.test(job), prompt: /voiceover is always included/.test(pr), state: B.voState(id), chip: !!row && /Voiceover needed/.test(row.textContent), other: B.voState(window.RSH_APP.data().posts.find(x => !/dyk|did you know/i.test(x.title)).id) }; });
   ok('Every Did You Know video has a voiceover: Sage writes it, the editor job requires it, and the Checklist asks for it until the audio is in the asset box', vo.job && vo.prompt && vo.state === 'missing' && vo.chip && vo.other === '', JSON.stringify(vo));
+  const fo = await p.evaluate(async () => { document.querySelector('.nav button[data-view="market"]').click(); await new Promise(r => setTimeout(r, 400)); window.RSH_FOLD.run();
+    const v = document.getElementById('view-market'), heads = [...v.querySelectorAll('.rsh-fold-head')], closed = heads.find(h => h.dataset.rshOpen === '0');
+    const hiddenBefore = closed ? [...v.querySelectorAll('[data-rsh-folded]')].length : 0; if (closed) closed.querySelector('.rsh-fold-btn').click();
+    const opened = closed && closed.dataset.rshOpen === '1'; v.querySelector('[data-fold-all="0"]').click(); const allClosed = heads.every(h => h.dataset.rshOpen === '0'); v.querySelector('[data-fold-all="1"]').click();
+    return { heads: heads.length, hiddenBefore, opened, allClosed, allOpen: heads.every(h => h.dataset.rshOpen === '1') }; });
+  ok('Long pages fold into sections: the first is open, the rest open on Show, and Open all / Close all work', fo.heads >= 2 && fo.hiddenBefore > 0 && fo.opened && fo.allClosed && fo.allOpen, JSON.stringify(fo));
   const hc = await p.evaluate(async () => { const hdr = document.querySelector('header.top'), vis = el => !!(el && (el.offsetWidth || el.offsetHeight));
     const shown = [...hdr.querySelectorAll('button')].filter(vis).map(b => b.id).filter(Boolean);
     document.querySelector('.topmore > summary').click(); await new Promise(r => setTimeout(r, 100)); const menu = vis(document.getElementById('rshHealthButton'));
