@@ -33,7 +33,7 @@
     const drafts = posts.filter(p => p.status === 'Draft').length;
     const open = window.RSH_TRACKER ? window.RSH_TRACKER.openCount() : 0;
     const vids = window.RSH_BOTS ? window.RSH_BOTS.freshVideos() : [];
-    bar.innerHTML = (vids.length ? `<button type="button" class="newvid" data-quick-video="${vids[0].postId}">▶ ${vids.length} new video${vids.length === 1 ? '' : 's'} to review</button>` : '') + `<button type="button" class="primary" data-quick="studio">＋ Create a post</button>
+    bar.innerHTML = (vids.length ? `<button type="button" class="newvid" data-quick-video="${vids[0].postId}">▶ ${(() => { const B = window.RSH_BOTS, ks = [...new Set(vids.map(v => B.deliveryKind ? B.deliveryKind(v) : 'video'))], k = ks.length === 1 ? ks[0] : 'file'; return vids.length + ' new ' + k + (vids.length === 1 ? '' : 's'); })()} to review</button>` : '') + `<button type="button" class="primary" data-quick="studio">＋ Create a post</button>
       <button type="button" data-quick="tracker">Checklist${open ? `<span class="count">${open} need work</span>` : ''}</button>
       <button type="button" data-quick="approvals">Reviews${mine ? `<span class="count">${mine} ready to review</span>` : ''}${needFiles ? `<span class="count" style="background:#fef3c7;color:#92400e">${needFiles} need files</span>` : ''}</button>
       <button type="button" data-quick="calendar">Calendar${drafts ? `<span class="count">${drafts} draft${drafts === 1 ? '' : 's'}</span>` : ''}</button>
