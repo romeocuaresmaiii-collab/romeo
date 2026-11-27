@@ -572,6 +572,17 @@ const out = []; const ok = (n, c, d) => { out.push(c); console.log((c ? 'PASS  '
     return { lesson: L.some(x => /Number hook.*beat.*Question hook.{0,2} by 50%/.test(x.text)), inPrompt: /TESTED LESSONS/.test(tl) && /TESTED LESSONS/.test(pr), cites: !!(tk.ex && tk.ex.length) && /\(\w{3} \d+, [\d,]+\)/.test(B.cite(tk.ex)), marks: Object.values(window.RSH_SEASON_MARKS()).flat().filter(m => m.order).length, rivals: /Their top posts/.test(document.getElementById('rshLive').innerText) && /Team order drop day/.test(document.getElementById('rshLive').innerText) };
   });
   ok('Test winners go into a tested playbook that Sage and Quill read; advice names the posts behind it; season dates and order windows reach the calendar; rivals’ top posts show', ad.lesson && ad.inPrompt && ad.cites && ad.marks >= 5 && ad.rivals, JSON.stringify(ad));
+  const pq = await open(1300, 900); await pq.waitForFunction(() => window.RSH_BOTS && window.RSH_BOTS.postComment && window.RSH_APP, null, { timeout: 15000 }).catch(() => {});
+  const rvq = await pq.evaluate(async () => { const B = window.RSH_BOTS, A = window.RSH_APP, post = A.data().posts[2]; post.creativeAsset = { id: 'vid00000000000000000000000000001', mime: 'video/mp4', name: 'test-tiktok.mp4' }; post.creativeAssets = [post.creativeAsset]; A.save();
+    await B.postComment(post.id, 'First note: make the choice clearer.', true); await new Promise(z => setTimeout(z, 200));
+    const k = Object.keys(window.__store).find(x => x === 'editJobs/' + post.id), j1 = k && { ...window.__store[k] };
+    if (j1) window.__store[k] = { ...j1, status: 'sent' };
+    let err = ''; try { await B.postComment(post.id, 'Second note: slower text.', true); } catch (e) { err = e.message; }
+    await new Promise(z => setTimeout(z, 200)); const j2 = window.__store['editJobs/' + post.id];
+    return { queued: !!j1 && /queued|sent/.test(j1.status) && j1.source === 'revision', merged: !err && /First note/.test(j2.notes) && /ALSO .*Second note/.test(j2.notes), err };
+  });
+  await pq.close();
+  ok('A “changes needed” comment sends the video straight back to the editor; a second comment during the revision is added to it, not lost', rvq.queued && rvq.merged, JSON.stringify(rvq));
   const aex = await p.evaluate(async () => { const B = window.RSH_BOTS;
     const a = B.aiFail('Sage', { code: 'rate_limited', reason: 'usage_limit', message: 'limit' }, 'Quote: Hand Raised'), b = B.aiFail('Sage', { code: 'upstream_error' }, 'X'), c = B.aiFail('Quill', { code: 'session_expired' }, 'Y');
     await new Promise(z => setTimeout(z, 200)); const d = window.__store['diagnostics/ai'];

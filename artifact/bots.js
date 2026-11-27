@@ -1522,9 +1522,14 @@ Add PART 8 — PLATFORM VERSIONS: one block for each of ${t.map(c => NAME[c]).jo
   const cmtCount = id => (comments[id] || []).length;
   async function whoIs(ids) { const need = ids.filter(i => i && !names[i]); if (!need.length) return; try { const u = await use('user'); if (u && u.profiles) { const ps = await u.profiles(need); for (const i of need) names[i] = (ps && ps[i] && ps[i].name) || 'Teammate'; } } catch (_) {} }
   function queueRevision(id, notes) {
-    const p = (app().data().posts || []).find(x => x.id === id), prev = jobs[id], vid = fileFor({ postId: id, channel: 'tiktok' });
-    if (!p || !vid || !/^video\//.test(vid.mime || '')) throw new Error('This campaign has no video yet, so there is nothing to revise.');
-    if (prev && (prev.status === 'queued' || prev.status === 'sent')) throw new Error('Reel is already working on this video. Your comment is saved; add it again after the new cut arrives.');
+    const p = (app().data().posts || []).find(x => x.id === id), prev = jobs[id], vid = fileFor({ postId: id, channel: 'tiktok' }) || [p && p.creativeAsset].concat((p && p.creativeAssets) || []).filter(a => a && /^(video|image)\//.test(a.mime || '')).pop();
+    if (!p || !vid || !/^(video|image)\//.test(vid.mime || '')) throw new Error('This campaign has no video or image yet, so there is nothing to revise. Your comment is saved for the first version.');
+    if (prev && (prev.status === 'queued' || prev.status === 'sent')) {   // a revision is already under way: add this note to it instead of losing it
+      const more = String(notes).slice(0, 1500), job = { ...prev, notes: (String(prev.notes || '') + '\n\nALSO (added ' + new Date().toISOString().slice(0, 16).replace('T', ' ') + ' UTC): ' + more).slice(0, 6000), addedNotesAt: new Date().toISOString() };
+      jobs[id] = job; if (db) db.doc('editJobs/' + id).set(job).catch(() => {});
+      use('mcp').then(m => m && toEditor(m, `[RSH Sports Marketing OS: an extra review note for the revision already in progress. Sent by the app on behalf of the team.]\n\n“${String(p.title || '').slice(0, 80)}” (editJobs/${id}): ${more}\n\nInclude it in the revision you are making.`)).catch(() => {});
+      return job;
+    }
     const job = { postId: id, title: String(p.title || '').slice(0, 120), status: 'queued', queuedAt: new Date().toISOString(), source: 'revision', notes: String(notes).slice(0, 3000), baseAssetId: vid.id, revision: (Number(prev && prev.revision) || 1) + 1, manifest: (prev && prev.manifest) || '', script: (prev && prev.script) || '', attachedAssetId: (prev && prev.attachedAssetId) || vid.id };
     jobs[id] = job; if (db) db.doc('editJobs/' + id).set(job).catch(() => {}); dispatch(); return job;
   }
