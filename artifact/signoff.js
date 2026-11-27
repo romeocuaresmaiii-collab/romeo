@@ -35,6 +35,34 @@
     try { const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)); return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join(''); }
     catch (_) { let h = 5381; for (let i = 0; i < text.length; i++) h = ((h << 5) + h + text.charCodeAt(i)) >>> 0; return 'x' + h.toString(16) + '-' + text.length; }
   }
+  const FIELDS = [['title', 'title'], ['hook', 'hook'], ['caption', 'caption'], ['video', 'video brief'], ['platform', 'platform']];
+  const snapOf = p => { const o = {}; for (const [k] of FIELDS) o[k] = String(p[k] || '').slice(0, 4000); o.media = [p.creativeAsset].concat(Array.isArray(p.creativeAssets) ? p.creativeAssets : []).filter(Boolean).map(a => a.id).sort().join(','); return o; };
+  /* ---------- edits after a signed approval ----------
+   * A signed campaign whose content changes afterwards (title, hook, caption, video brief, platform or media) is logged
+   * in approvalEdits (what changed, who saved it, when, and whether the old version is already in Metricool) and sent
+   * back to review: its approval is cleared and its history says why. Runs for whoever is signed in and saves. */
+  let watching = false; const edits = [];
+  async function watchEdits() {
+    if (watching || !db || !approverId || !app()) return; watching = true;
+    try {
+      let changed = false;
+      for (const p of (app().data().posts || []).filter(x => x.status === 'Approved')) {
+        if (!(p.id in sigs)) await loadSig(p.id);
+        const sig = sigs[p.id]; if (!sig || !sig.hash) continue;
+        const cur = await fingerprint(p); if (cur === sig.hash) continue;
+        const now = snapOf(p), what = sig.snap ? FIELDS.filter(([k]) => (sig.snap[k] || '') !== now[k]).map(f => f[1]).concat(sig.snap.media !== now.media ? ['photos/videos'] : []) : ['content'];
+        const bots = window.RSH_BOTS, items = bots && bots.planItems ? bots.planItems(p.id) : [], inMc = items.filter(i => i.sent && /scheduled|draft/.test(i.sent.status)).map(i => i.channel);
+        const at = new Date().toISOString(), who = me ? (names[me] || '') : '';
+        const entry = { postId: p.id, title: String(p.title || '').slice(0, 200), signedAt: sig.at, changed: what, by: me || '', byName: who, at, inMetricool: inMc };
+        try { await db.doc('approvalEdits/' + p.id + '_' + Date.parse(at)).set(entry); } catch (_) {}
+        edits.unshift(entry);
+        p.revisionHistory = (p.revisionHistory || []).concat([{ at, type: 'Edited after final approval: sent back for review', reviewNotes: `Changed after ${nameOf(approverId)} signed on ${new Date(sig.at).toLocaleString('en-US')}: ${what.join(', ')}.${inMc.length ? ' The old version is still scheduled in Metricool on ' + inMc.join(', ') + ': update or remove it there.' : ''} It needs a new review and a new signature.`, previousApproval: p.approvalMeta || null }]);
+        p.status = 'Review'; p.approvalMeta = {}; changed = true;
+      }
+      if (changed) { try { app().save(); } catch (_) {} }
+    } finally { watching = false; }
+  }
+  async function loadEdits() { if (!db) return edits; try { const q = await db.collection('approvalEdits').get(); edits.length = 0; for (const d of q.docs) { const x = d.data(); if (x && x.postId) edits.push(x); } edits.sort((a, b) => String(b.at).localeCompare(String(a.at))); } catch (_) {} return edits; }
   async function resolveNames(ids) {
     const need = ids.filter(i => i && !(i in names)); if (!need.length || !user) return;
     try { const ps = await user.profiles(need); for (const i of need) names[i] = (ps[i] && ps[i].name) || ''; } catch (_) {}
@@ -53,7 +81,7 @@
       if (isOwner && !approverId) await loadRequests();
       await resolveNames([approverId, me]);
     }
-    loaded = true; paint();
+    loaded = true; paint(); watchEdits();
   }
   async function loadRequests() {
     requests.length = 0;
@@ -69,8 +97,9 @@
     const p = post(id); if (!p || me !== approverId) return;
     const blocked = app().finalCheck(id); if (blocked && blocked !== 'already') { note = blocked; return; }
     const hash = await fingerprint(p), at = new Date().toISOString();
-    await db.doc('signoffs/' + me + '/posts/' + id).set({ postId: id, title: String(p.title || '').slice(0, 200), hash, at });
-    sigs[id] = { postId: id, hash, at };
+    const snap = snapOf(p);
+    await db.doc('signoffs/' + me + '/posts/' + id).set({ postId: id, title: String(p.title || '').slice(0, 200), hash, at, snap });
+    sigs[id] = { postId: id, hash, at, snap };
     if (!blocked) app().signFinal(id, nameOf(me) === 'the registered approver' ? 'Registered final approver' : nameOf(me), 'Approved in the app from the approver’s own Claude account on ' + new Date(at).toLocaleString('en-US') + '.');
   });
 
@@ -128,5 +157,6 @@
     const p = post(id), sig = sigs[id], cur = sig && p ? await fingerprint(p) : null;
     return { approverId, me, mine: !!me && me === approverId, name: nameOf(approverId), signed: !!(sig && sig.hash === cur), stale: !!(sig && sig.hash !== cur), at: sig ? sig.at : null, note, busy };
   }
-  window.RSH_SIGNOFF = { start, info, sign: id => sign(id) };
+  window.addEventListener('rsh:saved', () => { if (loaded) watchEdits(); });
+  window.RSH_SIGNOFF = { start, info, sign: id => sign(id), watchEdits, edits: loadEdits, snapOf };
 })();

@@ -236,6 +236,13 @@ const out = []; const ok = (n, c, d) => { out.push(c); console.log((c ? 'PASS  '
   await p.waitForFunction(() => /Signed by Test Owner/.test((document.getElementById('rshSign') || {}).textContent || ''), null, { timeout: 8000 });
   const s2 = await p.evaluate(id => { const ws = JSON.parse(localStorage.getItem('rsh_growth_command_v1')), q = ws.posts.find(x => x.id === id); return { sig: window.__store['signoffs/u_owner/posts/' + id], status: q.status, by: q.approvalMeta.signedBy, log: ws.approvalLog[0].action }; }, withMedia);
   ok('The approver’s own click writes a signature under their identity and approves the campaign', !!s2.sig && /^[0-9a-f]{64}$/.test(s2.sig.hash) && s2.status === 'Approved' && s2.by === 'Test Owner' && /signed from the approver/.test(s2.log), JSON.stringify(s2).slice(0, 200));
+  const ae = await p.evaluate(async id => { const A = window.RSH_APP, q = A.data().posts.find(x => x.id === id); const snap = !!(window.__store['signoffs/u_owner/posts/' + id] || {}).snap;
+    const orig = q.caption; q.caption = (q.caption || '') + ' Edited after approval.'; A.save(); window.dispatchEvent(new Event('rsh:saved')); await window.RSH_SIGNOFF.watchEdits(); await new Promise(r => setTimeout(r, 300));
+    const key = Object.keys(window.__store).find(k => k.startsWith('approvalEdits/' + id + '_')), log = key && window.__store[key], last = (q.revisionHistory || []).slice(-1)[0] || {};
+    const res = { snap, status: q.status, cleared: !q.approvalMeta || !q.approvalMeta.anthonyConfirmedAt, changed: log && log.changed, by: log && log.by, history: last.type };
+    q.caption = orig; q.status = 'Approved'; q.approvalMeta = last.previousApproval || {}; q.revisionHistory = q.revisionHistory.slice(0, -1); A.save();   // put the campaign back for the tests that follow
+    return res; }, withMedia);
+  ok('An edit after the signed approval is logged (what changed, who, when) and sends the campaign back for review', ae.snap && ae.status === 'Review' && ae.cleared && Array.isArray(ae.changed) && ae.changed.join() === 'caption' && ae.by === 'u_owner' && /sent back for review/.test(ae.history || ''), JSON.stringify(ae));
   const other = await b.newPage({ viewport: { width: 1300, height: 900 } }); await pinClock(other);
   other.on('pageerror', e => errs.push(e.message));
   await other.addInitScript(s => { window.__preStore = s; }, await p.evaluate(() => window.__store));
