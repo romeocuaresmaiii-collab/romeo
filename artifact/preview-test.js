@@ -583,6 +583,23 @@ const out = []; const ok = (n, c, d) => { out.push(c); console.log((c ? 'PASS  '
   });
   await pq.close();
   ok('A “changes needed” comment sends the video straight back to the editor; a second comment during the revision is added to it, not lost', rvq.queued && rvq.merged, JSON.stringify(rvq));
+  const sl = await p.evaluate(async () => {
+    const S = window.RSH_SALES, wait = ms => new Promise(z => setTimeout(z, ms));
+    const orders = 'Name,Email,Financial Status,Paid at,Subtotal,Total,Discount Code,Created at,Lineitem name,Billing Name,Source\n'
+      + '#1001,coach@example.com,paid,2026-11-03 10:00:00 -0500,100.00,108.00,RSHIG10,2026-11-03 10:00:00 -0500,Reversible singlet,Pat Coach,web\n'
+      + '#1001,,,,,,,2026-11-03 10:00:00 -0500,Headgear,,\n'
+      + '#1002,mom@example.com,paid,2026-11-05 09:00:00 -0500,50.00,54.00,RSHTT10,2026-11-05 09:00:00 -0500,Singlet,Jo Parent,web\n'
+      + '#1003,dad@example.com,paid,2026-11-06 09:00:00 -0500,40.00,40.00,,2026-11-06 09:00:00 -0500,Singlet,Sam Parent,web\n'
+      + '#1004,x@example.com,refunded,2026-11-07 09:00:00 -0500,90.00,90.00,RSHIG10,2026-11-07 09:00:00 -0500,Singlet,Al X,web\n';
+    window.__store['sales/codes'] = { json: JSON.stringify({ instagram: 'RSHIG10', tiktok: 'RSHTT10' }) }; await S.load();
+    const r1 = S.read(orders); await S.saveImport(r1, 'orders_export.csv');
+    const mkt = 'Day,UTM campaign source,UTM campaign medium,UTM campaign name,Orders,Total sales\n2026-11-04,instagram,organic_social,reversible-singlet-show-both-sides,2,180.00\n2026-11-09,pinterest,organic_social,pinterest-team-wrestling-color-guide,1,65.50\n';
+    const r2 = S.read(mkt); await S.saveImport(r2, 'marketing.csv'); await wait(100);
+    const sum = S.summary('2026-11'), raw = JSON.stringify(window.__store['sales/2026-11'] || {});
+    const rep = window.RSH_REPORT.build(202611), txt = window.RSH_REPORT.html(rep, true);
+    return { kinds: [r1 && r1.kind, r2 && r2.kind], orders: sum.orders, revenue: Math.round(sum.revenue), ig: sum.byChannel.instagram && Math.round(sum.byChannel.instagram.revenue), tt: sum.byChannel.tiktok && Math.round(sum.byChannel.tiktok.revenue), pin: sum.byChannel.pinterest && Math.round(sum.byChannel.pinterest.revenue), private: !/@example\.com|Pat Coach|Jo Parent/.test(raw), inReport: /Sales from social/.test(txt) && /\$202\.00/.test(txt), bad: S.read('a,b\n1,2') === null };
+  });
+  ok('Sales from social: a Shopify orders export credits orders to channels by discount code (one per order, refunds dropped), the marketing report by link tags, only totals are saved (no names or emails), and the monthly report shows them', sl.kinds.join() === 'orders,marketing' && sl.orders === 3 && sl.revenue === 202 && sl.ig === 180 && sl.tt === 54 && sl.pin === 66 && sl.private && sl.inReport && sl.bad, JSON.stringify(sl));
   const aex = await p.evaluate(async () => { const B = window.RSH_BOTS;
     const a = B.aiFail('Sage', { code: 'rate_limited', reason: 'usage_limit', message: 'limit' }, 'Quote: Hand Raised'), b = B.aiFail('Sage', { code: 'upstream_error' }, 'X'), c = B.aiFail('Quill', { code: 'session_expired' }, 'Y');
     await new Promise(z => setTimeout(z, 200)); const d = window.__store['diagnostics/ai'];

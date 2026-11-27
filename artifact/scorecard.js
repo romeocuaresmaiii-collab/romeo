@@ -30,15 +30,15 @@
     ['Integrations + publishing', 1, 7, 'Approved posts go to Metricool from the app and video edits come back attached. Nov 27: the app checks Metricool every 15 minutes while open and flags any post that failed or is late.',
       'Results refresh on their own, 99% of scheduled posts publish on time, and failures are flagged within 15 minutes.',
       'Connect Bluesky directly first (no review needed), then YouTube, Pinterest, Meta and TikTok as their reviews pass.'],
-    ['Security + reliability', 4, 7, 'No keys in the page; 141 automated tests. Nov 27: a restore drill put the live workspace backup into an empty copy and all 27 campaigns came back unchanged. The code repository is still public.',
+    ['Security + reliability', 4, 7, 'No keys in the page; 146 automated tests. Nov 27: a restore drill put the live workspace backup into an empty copy and all 27 campaigns came back unchanged. The code repository is still public.',
       'Two-step sign-in on every connected account, no secrets in the workspace, and a restore from backup tested each quarter.',
       'Make the repository private and turn on two-step sign-in on every account.'],
     ['Content experimentation', 5, 7, 'Results fill from live posts. Nov 27: winners go into a tested playbook that Sage and Quill follow, with a “2 tests this month” counter. No test has been logged yet.',
       'Two logged one-variable tests a month, each with a hypothesis, a metric and a result; winners go into a written playbook.',
       'Run two one-variable tests in December (hook and format).'],
-    ['Sales attribution', 3, 4, 'Nov 27: every store link the app sends to Metricool is tagged with its channel and campaign automatically. Store orders are not connected yet.',
+    ['Sales attribution', 3, 6, 'Every store link is tagged by channel and campaign. Nov 27: Revenue → Sales from social reads Shopify’s orders export (credited by one discount code per channel) and its marketing report (credited by the link tags), with no store connection needed; only monthly totals are saved. No sales imported yet.',
       'Every outbound link tagged; monthly revenue by channel and post matches the store within 5%.',
-      'Use one discount code per channel and connect store orders.'],
+      'Create one discount code per channel in Shopify, enter them in the app, and import the November orders export.'],
   ];
   const STEPS = [
     ['Reply to every comment and message', 'Not on the scorecard yet', 'The new posts ask real questions; answering in the first hour is what turns comments into followers.'],
