@@ -39,9 +39,42 @@
     t.source = `Metricool figures read ${today}. A: ${a[2]} (${dayLabel(a[1])}). B: ${b[2]} (${dayLabel(b[1])}).` + (t.kpi === 'engagement' ? ' Interactions per impression; Metricool reports impressions, not reach, for these posts.' : '') + ' One post per side.';
     app().save(); app().notice('Results filled from the two published posts. Add what you learned, then save.');
   }
+  /* December tests, planned on real calendar campaigns (both from the competitor digest). Added once; the team can edit
+   * or delete them like any test. Each side names its campaign, so the result fills itself once both posts are out. */
+  const PLANNED = [
+    { id: 'gx-2026-12-named-colorway', title: 'Named colorway vs explainer carousel', platform: 'Instagram', kpi: 'engagement', owner: 'Project Manager',
+      a: 'Explainer carousel: “Reversible Singlet, Explained” (Dec 10)', b: 'Named-colorway carousel: “Name This Colorway” (Dec 1)', aCampaign: 'decenqg310pyexl', bCampaign: 'decvconwpnqym1x',
+      hypothesis: 'A carousel that invites people to name a colorway earns more interactions per impression than a plain explainer of the same product. One variable: the angle (naming vs explaining); same product, format and slot type.', fromRivalIdea: 'Named colorway reveal vs plain product post', month: '2026-12' },
+    { id: 'gx-2026-12-girls-fit', title: 'Girls’ fit post vs general singlet post', platform: 'Bluesky', kpi: 'engagement', owner: 'Project Manager',
+      a: 'General singlet post: “Bluesky: Reversible Singlets” (Dec 2)', b: 'Girls’ fit post: “Bluesky: Fitted Uniforms for Girls” (Dec 1)', aCampaign: 'decg41n56elueq1', bCampaign: 'deccy8kw7m39a4y',
+      hypothesis: 'A post about properly fitted uniforms for female wrestlers (the NFHS 2026–27 point of emphasis) earns more interactions per impression than a general singlet post. One variable: the topic; same platform, format and 9 AM slot.', fromRivalIdea: 'Girls’ fit post vs general singlet post', month: '2026-12' }];
+  function plan() {
+    const A = app(); if (!A) return; const d = A.data(); d.growthTests = d.growthTests || []; d.plannedTests = d.plannedTests || [];
+    let changed = false;
+    for (const t of PLANNED) { if (d.plannedTests.includes(t.id)) continue; d.plannedTests.push(t.id); changed = true;
+      if (!d.growthTests.some(x => x.id === t.id) && (d.posts || []).some(p => p.id === t.aCampaign) && (d.posts || []).some(p => p.id === t.bCampaign))
+        d.growthTests.push({ ...t, aNumerator: 0, aDenominator: 0, bNumerator: 0, bDenominator: 0, source: '', learning: '', createdAt: new Date().toISOString() }); }
+    if (changed) A.save();
+  }
+  // A test whose sides name campaigns fills itself from those campaigns' published posts (linked automatically from Metricool).
+  function fillFromCampaigns() {
+    const A = app(); if (!A) return false; let changed = false;
+    for (const t of A.data().growthTests || []) {
+      if (!t.aCampaign || !t.bCampaign || !SUPPORTED[t.kpi] || (t.aPost && t.bPost)) continue;
+      const pa = (A.data().posts || []).find(p => p.id === t.aCampaign), pb = (A.data().posts || []).find(p => p.id === t.bCampaign);
+      const la = pa && pa.published && pa.published.link, lb = pb && pb.published && pb.published.link; if (!la || !lb) continue;
+      const a = rows().find(r => r[2] === la), b = rows().find(r => r[2] === lb); if (!a || !b || a[4] == null || b[4] == null) continue;
+      const fa = figures(t, a), fb = figures(t, b), today = new Date().toISOString().slice(0, 10);
+      t.aNumerator = fa[0]; t.aDenominator = fa[1]; t.bNumerator = fb[0]; t.bDenominator = fb[1];
+      t.aPost = { link: a[2], date: a[1], text: a[3] }; t.bPost = { link: b[2], date: b[1], text: b[3] };
+      t.source = `Filled automatically ${today} from the two campaigns’ published posts (Metricool). A: ${a[2]}. B: ${b[2]}.` + (t.kpi === 'engagement' ? ' Interactions per impression.' : '') + ' One post per side, so directional only.';
+      changed = true;
+    }
+    if (changed) A.save(); return changed;
+  }
   // Keep filled results current when fresh figures arrive (only if they changed).
   function sync() {
-    if (!app()) return; let changed = false;
+    if (!app()) return; fillFromCampaigns(); let changed = false;
     for (const t of (app().data().growthTests || [])) {
       if (!t.aPost || !t.bPost || !SUPPORTED[t.kpi]) continue;
       const a = rows().find(r => r[2] === t.aPost.link), b = rows().find(r => r[2] === t.bPost.link); if (!a || !b || a[4] == null || b[4] == null) continue;
@@ -86,12 +119,13 @@
     }
     return out;
   }
+  function plannedThisMonth() { const k = new Date().toISOString().slice(0, 7); return ((app() && app().data().growthTests) || []).filter(t => t.month === k || String(t.createdAt || '').slice(0, 7) === k).length; }
   function month() { const k = new Date().toISOString().slice(0, 7); return ((app() && app().data().growthTests) || []).filter(t => rateOf(t, 'a') !== null && rateOf(t, 'b') !== null && String(t.aPost ? t.aPost.date : t.createdAt || '').replace(/-/g, '').slice(0, 6) === k.replace('-', '')).length; }
   function book() {
     const list = document.getElementById('gxList'); if (!list) return;
     let box = document.getElementById('gxBook'); if (!box) { box = document.createElement('div'); box.id = 'gxBook'; box.className = 'gx-live'; list.parentNode.insertBefore(box, list); }
     const L = lessons(), n = month();
-    box.innerHTML = `<h5>Tested playbook · ${n} of 2 tests with results this month</h5>${L.length ? `<ul class="small" style="margin:4px 0 0 18px;padding:0">${L.map(x => `<li>${esc(x.text)}</li>`).join('')}</ul><div class="small" style="margin-top:6px">Sage and Quill read these when they write scripts and hashtags.</div>` : '<div class="small">No test has results yet. Run one test on a hook and one on a format this month; pick the two published posts on each test to fill the result.</div>'}`;
+    box.innerHTML = `<h5>Tested playbook · ${n} of 2 tests with results this month · ${plannedThisMonth()} planned</h5>${L.length ? `<ul class="small" style="margin:4px 0 0 18px;padding:0">${L.map(x => `<li>${esc(x.text)}</li>`).join('')}</ul><div class="small" style="margin-top:6px">Sage and Quill read these when they write scripts and hashtags.</div>` : '<div class="small">No test has results yet. Run one test on a hook and one on a format this month; pick the two published posts on each test to fill the result.</div>'}`;
   }
 
   function start() {
@@ -102,10 +136,11 @@
       if (!a || !bb) { app().notice('Choose a post for A and for B first.'); return; }
       apply(b.dataset.gxLiveApply, a, bb);
     });
+    plan(); fillFromCampaigns();
     new MutationObserver(() => decorate()).observe(list, { childList: true });
     if (window.RSH_LIVE && window.RSH_LIVE.onData) window.RSH_LIVE.onData(() => { sync(); list.querySelectorAll('article .gx-live').forEach(x => x.remove()); decorate(); book(); });
     decorate(); book();
     new MutationObserver(() => book()).observe(list, { childList: true });
   }
-  window.RSH_EXPERIMENTS = { start, lessons, month };
+  window.RSH_EXPERIMENTS = { start, lessons, month, plan, fillFromCampaigns, planned: () => PLANNED.map(t => t.id) };
 })();

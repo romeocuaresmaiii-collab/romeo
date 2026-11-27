@@ -615,6 +615,22 @@ const out = []; const ok = (n, c, d) => { out.push(c); console.log((c ? 'PASS  '
   });
   if (SHOTS) { await p.evaluate(async () => { const A = window.RSH_APP, post = A.data().posts.find(x => (x.creativeAssets || []).length) || A.data().posts[0]; await window.RSH_CAMPAIGN.open(post.id); }); await p.waitForTimeout(600); await p.screenshot({ path: path.join(SHOTS, 'campaign-page.png'), fullPage: false }); await p.evaluate(() => { const h = document.getElementById('rshCamp'); h.scrollTop = 900; }); await p.waitForTimeout(200); await p.screenshot({ path: path.join(SHOTS, 'campaign-page-2.png') }); await p.evaluate(() => window.RSH_CAMPAIGN.close()); }
   ok('One campaign, one page: brief, facts, script, files (with previews), editor, checks and approval, posts and comments in order, each with its action; opens from a Checklist title', cw.heads.join('|') === 'Brief|Facts|Script · Sage’s production pack|Files|Video editor|Checks & approval|Posts|Comments' && cw.strip && cw.next && cw.posted && cw.closed && cw.viaRow, JSON.stringify(cw));
+  const sc = await p.evaluate(async () => {
+    const A = window.RSH_APP, X = window.RSH_EXPERIMENTS, L = window.RSH_LIVE, wait = ms => new Promise(z => setTimeout(z, ms)), d = A.data();
+    const rows = L.rows().filter(r => r[4] != null && r[2]); const [ra, rb] = [rows.find(r => r[0] === 'TIKTOK'), rows.filter(r => r[0] === 'TIKTOK')[1]];
+    const pa = d.posts[0], pb = d.posts[1], keepA = pa.published, keepB = pb.published;
+    d.growthTests = d.growthTests || []; d.growthTests.push({ id: 'gx-test-auto', title: 'Auto test', platform: 'TikTok', kpi: 'engagement', a: 'A', b: 'B', aCampaign: pa.id, bCampaign: pb.id, aNumerator: 0, aDenominator: 0, bNumerator: 0, bDenominator: 0 });
+    const before = X.fillFromCampaigns(); pa.published = { link: ra[2] }; pb.published = { link: rb[2] }; const after = X.fillFromCampaigns(); const t = d.growthTests.find(x => x.id === 'gx-test-auto');
+    const filled = before === false && after === true && t.aDenominator === ra[4] && t.bNumerator === (rb[5] || 0) && /automatically/.test(t.source);
+    d.growthTests = d.growthTests.filter(x => x.id !== 'gx-test-auto'); pa.published = keepA; pb.published = keepB; if (!keepA) delete pa.published; if (!keepB) delete pb.published; A.save();
+    const planned = X.planned().length === 2 && !d.growthTests.some(x => /^gx-2026-12/.test(x.id));   // the Dec tests need their real campaigns, which the test workspace does not have
+    const roll = window.RSH_REPORT.adviceRolling(L.rows()), rep = window.RSH_REPORT.html(window.RSH_REPORT.build(Math.floor(Number(new Date().toISOString().slice(0, 7).replace('-', '')))), true);
+    window.__store['live/publishAlerts'] = { checkedAt: new Date().toISOString(), checked: 6, problems: '[]' };
+    document.querySelector('.topmore > summary').click(); document.getElementById('rshHealthButton').click(); await wait(1500);
+    const box = document.getElementById('rshHealth'), hrows = [...box.querySelectorAll('[data-h-row]')].map(r => r.dataset.hRow + ':' + r.className.replace('row ', '')); box.style.display = 'none'; if (document.querySelector('.topmore').open) document.querySelector('.topmore > summary').click();
+    return { filled, planned, roll: !!roll && typeof roll.time.n === 'number', inReport: /Rolling check/.test(rep), pub: hrows.includes('Hourly publishing check:ok'), adv: hrows.some(r => /^Bots’ advice vs results:/.test(r)) };
+  });
+  ok('Scorecard work: an A/B test that names its two campaigns fills itself when both are published; the bots’ advice is re-checked on every refresh (rolling); the hourly publishing check shows in the System check', sc.filled && sc.planned && sc.roll && sc.inReport && sc.pub && sc.adv, JSON.stringify(sc));
   const aex = await p.evaluate(async () => { const B = window.RSH_BOTS;
     const a = B.aiFail('Sage', { code: 'rate_limited', reason: 'usage_limit', message: 'limit' }, 'Quote: Hand Raised'), b = B.aiFail('Sage', { code: 'upstream_error' }, 'X'), c = B.aiFail('Quill', { code: 'session_expired' }, 'Y');
     await new Promise(z => setTimeout(z, 200)); const d = window.__store['diagnostics/ai'];

@@ -381,5 +381,5 @@
     if (due()) refresh(false);
     setInterval(() => { if (due()) refresh(false); else if (canRefresh && Date.now() - schedAt > 15 * 60000) refreshSchedule(); }, 5 * 60000);
   }
-  window.RSH_LIVE = { refresh: byClick => refresh(byClick), fetchedAt: () => state.fetchedAt, brief: () => (state.rows && state.rows.length ? briefText(summarise(state.rows, state.fetchedAt)) : ''), rows: () => state.rows, scheduled: () => state.scheduled, rivals: () => state.rivals, rivalPosts: () => state.rivalPosts || [], busy: () => state.busy, fp, onData: fn => listeners.push(fn), start, summarise, compact, findRows };
+  window.RSH_LIVE = { refresh: byClick => refresh(byClick), fetchedAt: () => state.fetchedAt, brief: () => (state.rows && state.rows.length ? briefText(summarise(state.rows, state.fetchedAt)) : ''), rows: () => state.rows, scheduled: () => state.scheduled, rivals: () => state.rivals, rivalPosts: () => state.rivalPosts || [], busy: () => state.busy, fp, onData: fn => listeners.push(fn), start, summarise, compact, findRows, compactScheduled, FIELDS, BRAND_ID };
 })();

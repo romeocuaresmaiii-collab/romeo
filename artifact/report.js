@@ -22,10 +22,19 @@
   const etHour = (d, t) => Number(new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour: 'numeric', hourCycle: 'h23' }).format(new Date(Date.UTC(+String(d).slice(0, 4), +String(d).slice(4, 6) - 1, +String(d).slice(6, 8), +t.slice(0, 2), +t.slice(2, 4)))));
   const money = n => '$' + (Math.round((n || 0) * 100) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const SALESNAME = { instagram: 'Instagram', facebook: 'Facebook', tiktok: 'TikTok', youtube: 'YouTube', pinterest: 'Pinterest', threads: 'Threads', bluesky: 'Bluesky', other: 'Other code', direct: 'Direct or unknown' };
+  const fmtDay = k => new Date(Math.floor(k / 10000), Math.floor(k / 100) % 100 - 1, k % 100).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   const advLine = (nm, a) => a.n ? `${nm}: ${a.won} of ${a.n} posts that followed it beat their channel’s median (${Math.round(a.won / a.n * 100)}%).` : `${nm}: no post this month followed it yet, or there was not enough earlier data to learn from.`;
   const score = r => r[4] != null ? r[4] : r[5];
   function adviceCheck(rows, k) {
-    const before = rows.filter(r => Math.floor(r[1] / 100) < k && score(r) != null), cur = rowsIn(rows, k).filter(r => score(r) != null);
+    return adviceSplit(rows.filter(r => Math.floor(r[1] / 100) < k && score(r) != null), rowsIn(rows, k).filter(r => score(r) != null));
+  }
+  // Rolling check on the loaded results: learn from the first half of the days, test on the second half.
+  function adviceRolling(rows) {
+    const m = (rows || []).filter(r => score(r) != null), days = [...new Set(m.map(r => r[1]))].sort((a, b) => a - b); if (days.length < 8) return null;
+    const cut = days[Math.floor(days.length / 2)], res = adviceSplit(m.filter(r => r[1] < cut), m.filter(r => r[1] >= cut));
+    return { ...res, from: days[0], cut, to: days[days.length - 1] };
+  }
+  function adviceSplit(before, cur) {
     const hours = {}, tags = {};
     for (const r of before) {
       const ch = r[0];
@@ -62,7 +71,7 @@
     const weak = byNet.filter(x => x.measured >= 2 && x.rate < 1); if (weak.length) next.push(`Rethink ${weak.map(x => x.n).join(' and ')}: under 1 interaction per 100 views.`);
     if (links.length && tagged.length < links.length) next.push(`Tag every store link: ${links.length - tagged.length} of ${links.length} posts with a link carried no tracking (the app now tags new posts automatically).`);
     if (!linked.length) next.push('Link each campaign to its published post (Home → Campaign results) so results can be reported by sport and season.');
-    const advice = adviceCheck(rows, k);
+    const advice = adviceCheck(rows, k), rolling = adviceRolling(rows);
     for (const [nm, a] of [['Tempo’s posting times', advice.time], ['Quill’s hashtags', advice.tag]]) if (a.n >= 3 && a.won * 2 < a.n) next.push(`${nm} did not beat the median this month (${a.won} of ${a.n}); treat that advice as a test, not a rule.`);
     // Rivals: the app's own monthly digest (researched on the web); Metricool's competitor data only as a fallback.
     const RV = window.RSH_RIVALS, dgs = RV && RV.digest(), mk = Math.floor(k / 100) + '-' + String(k % 100).padStart(2, '0');
@@ -70,7 +79,7 @@
     const rivalIdeas = dgs && dgs.month === mk ? (dgs.ideas || []).map(x => x.title) : [];
     const sales = window.RSH_SALES ? window.RSH_SALES.summary(mk) : null;
     if (!sales) next.push('Import this month’s Shopify orders export (Revenue → Sales from social) so the report shows sales by channel.');
-    return { k, fetched, T, P, byNet, top, groups, advice, rivals, rivalIdeas, sales, planned: planned.length, approved: approved.length, links: links.length, tagged: tagged.length, next, empty: !cur.length };
+    return { k, fetched, T, P, byNet, top, groups, advice, rolling, rivals, rivalIdeas, sales, planned: planned.length, approved: approved.length, links: links.length, tagged: tagged.length, next, empty: !cur.length };
   }
 
   function html(R, standalone) {
@@ -83,7 +92,7 @@
       <h3>By sport and season phase</h3>${Object.keys(R.groups).length ? `<table><thead><tr><th>Group</th><th>Campaigns</th><th>Views</th><th>Interactions</th></tr></thead><tbody>${Object.entries(R.groups).sort((a, b) => b[1].views - a[1].views).map(([g, x]) => `<tr><td>${esc(g)}</td><td>${x.n}</td><td>${fmt(x.views)}</td><td>${fmt(x.inter)}</td></tr>`).join('')}</tbody></table>` : '<p class="s">No campaign from this month is linked to its published post yet, so results cannot be split by sport and season.</p>'}
       <h3>Sales from social</h3>${R.sales ? `<p>${money(R.sales.revenue)} in store sales from ${R.sales.orders} orders; ${money(R.sales.social)} (${R.sales.revenue ? Math.round(R.sales.social / R.sales.revenue * 100) : 0}%) came through a channel's discount code or tagged link.</p><table><thead><tr><th>Channel</th><th>Orders</th><th>Sales</th></tr></thead><tbody>${Object.entries(R.sales.byChannel).sort((a, b) => b[1].revenue - a[1].revenue).map(([c, x]) => `<tr><td>${esc(SALESNAME[c] || c)}</td><td>${x.orders}</td><td>${money(x.revenue)}</td></tr>`).join('')}</tbody></table>${R.sales.campaigns.length ? `<p class="s">Top campaigns: ${esc(R.sales.campaigns.map(c => c.name + ' ' + money(c.revenue)).join(' · '))}.</p>` : ''}<p class="s">Source: Shopify ${esc(R.sales.sources.join(' and '))} imported ${esc(String(R.sales.importedAt || '').slice(0, 10))}.</p>` : '<p class="s">No Shopify export imported for this month yet (Revenue → Sales from social).</p>'}
       <h3>Rivals’ standout posts</h3>${R.rivals.length ? `<table><thead><tr><th>Competitor</th><th>Post</th><th>Why it worked / interactions</th></tr></thead><tbody>${R.rivals.map(r => `<tr><td>${esc(r[0])}</td><td>${esc(r[1] || 'Post')}</td><td>${r[3] == null ? esc(r[4] || '') : fmt(r[3])}</td></tr>`).join('')}</tbody></table>${R.rivalIdeas.length ? `<p class="s">Ideas to test from them: ${esc(R.rivalIdeas.join(' · '))}.</p>` : ''}` : '<p class="s">No competitor digest for this month yet (Competitors → Research now).</p>'}
-      <h3>Did the bots’ advice work?</h3><p>${esc(advLine('Tempo’s posting times', R.advice.time))}<br>${esc(advLine('Quill’s hashtags', R.advice.tag))}</p><p class="s">Learned only from the ${fmt(R.advice.learnedFrom)} measured posts before this month, then checked on this month’s posts. The goal is at least half.</p>
+      <h3>Did the bots’ advice work?</h3><p>${esc(advLine('Tempo’s posting times', R.advice.time))}<br>${esc(advLine('Quill’s hashtags', R.advice.tag))}</p><p class="s">Learned only from the ${fmt(R.advice.learnedFrom)} measured posts before this month, then checked on this month’s posts. The goal is at least half.</p>${R.rolling ? `<p class="s">Rolling check on the loaded results (learned from ${fmtDay(R.rolling.from)}–${fmtDay(R.rolling.cut)}, tested on the days after): times ${R.rolling.time.won} of ${R.rolling.time.n}, hashtags ${R.rolling.tag.won} of ${R.rolling.tag.n} beat their channel’s median.</p>` : ''}
       <h3>Pipeline and tracking</h3><p>${R.planned} campaigns planned for the month, ${R.approved} approved. ${R.links ? `${R.tagged} of ${R.links} posts with a store link carried tracking tags.` : 'No post linked to the store this month.'}</p>`;
     const inner = `<div class="eyebrow">RSH SPORTS · MONTHLY SOCIAL REPORT</div><h2>${esc(label(R.k))}</h2>${body}<h3>Next month</h3><ul>${R.next.map(x => `<li>${esc(x)}</li>`).join('') || '<li>Keep the current plan.</li>'}</ul><p class="src">${esc(src)}</p>`;
     const style = `.rep{font:14px/1.5 system-ui,-apple-system,Segoe UI,sans-serif;color:#0f172a}.rep h2{margin:4px 0 12px;font-size:24px}.rep h3{margin:18px 0 6px;font-size:15px}.rep .eyebrow{font-size:11px;letter-spacing:.08em;color:#64748b;font-weight:700}
@@ -130,5 +139,5 @@
     if (ins && !document.getElementById('rshReportCard')) { const c = document.createElement('div'); c.className = 'card'; c.id = 'rshReportCard'; c.style.marginBottom = '16px'; c.innerHTML = '<div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center"><div><div class="eyebrow">MONTHLY REPORT</div><h2 style="margin-top:4px">One page for Anthony, ready in seconds</h2><p class="small" style="margin-top:4px">Views, interactions, channels, top posts, results by sport and season, link tracking and what to do next month, straight from Metricool. Download it or copy it as text.</p></div><button type="button" class="btn" data-rep-open>▤ Open the monthly report</button></div>'; c.querySelector('[data-rep-open]').addEventListener('click', () => open()); ins.insertBefore(c, ins.firstChild); }
   }
   start(); document.addEventListener('DOMContentLoaded', start); setTimeout(start, 1500);
-  window.RSH_REPORT = { build, open, text, html, adviceCheck };
+  window.RSH_REPORT = { build, open, text, html, adviceCheck, adviceRolling };
 })();

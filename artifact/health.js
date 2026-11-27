@@ -36,6 +36,12 @@
     out.push(!drill ? ['warn', 'Backup restore drill', 'No restore drill is on record.', 'Ask Claude to run the restore drill (it restores the live workspace into an empty copy and compares every campaign).']
       : (Date.now() - Date.parse(drill.at)) > 35 * 864e5 ? ['warn', 'Backup restore drill', `Last passed ${ago(drill.at)} (${drill.campaigns} campaigns). Run one a month.`, 'Ask Claude to run the restore drill again.']
       : drill.ok ? ['ok', 'Backup restore drill', `Passed ${ago(drill.at)}: all ${drill.campaigns} campaigns came back unchanged from a downloaded backup.`, ''] : ['bad', 'Backup restore drill', `Failed ${ago(drill.at)}: ${drill.note || 'the restored copy did not match'}.`, 'Tell Claude in the chat.']);
+    // The hourly Claude check looks at Metricool too, so a failed post is caught even when nobody has the app open.
+    let pa = null; try { if (db) { const sn = await Promise.race([db.doc('live/publishAlerts').get(), new Promise(r => setTimeout(() => r(null), 4000))]); pa = sn && sn.exists ? sn.data() : null; } } catch (_) {}
+    if (pa) { const probs = (() => { try { return JSON.parse(pa.problems || '[]'); } catch (_) { return []; } })(), fresh = (Date.now() - Date.parse(pa.checkedAt || 0)) < 3 * 3600e3;
+      out.push(!fresh ? ['warn', 'Hourly publishing check', `Last run ${ago(pa.checkedAt)}.`, 'The hourly Claude check has not run lately; tell Claude in the chat.']
+        : probs.length ? ['bad', 'Hourly publishing check', `${probs.length} post${probs.length === 1 ? '' : 's'} did not go out: ${list(probs.map(x => `${x.title} (${x.net}, ${x.at})`), 3)}.`, 'Open Metricool → Planning, fix the post (usually a reconnect or a media problem) and publish it again.']
+        : ['ok', 'Hourly publishing check', `Every post due in the last 24 hours went out (checked ${ago(pa.checkedAt)}, ${pa.checked || 0} posts).`, '']); }
     const M = window.RSH_MWATCH, mw = M && M.check();
     if (mw) {
       const lbl = a => list(a.map(M.label), 2), rateTxt = mw.due ? `${mw.onTime} of ${mw.due} posts due in the last 3 days went out (${Math.round(mw.onTime / mw.due * 100)}%).` : 'No post was due in the last 3 days.';
@@ -54,6 +60,9 @@
     out.push(!dir.bluesky ? ['warn', 'Direct posting (Bluesky)', gw && gw.ok ? `RSH’s posting gateway is live (${gw.handle || 'Bluesky'}), but direct posting is not switched on yet, so Bluesky still goes through Metricool.` : 'Bluesky still goes through Metricool. RSH’s own posting gateway is built but not set up yet.', gw && gw.ok ? 'Ask Claude to switch Bluesky to direct posting.' : 'Follow gateway/README.md (about 15 minutes, once), then tell Claude.']
       : gw && gw.ok && (Date.now() - Date.parse(gw.checkedAt || 0)) < 26 * 3600e3 ? ['ok', 'Direct posting (Bluesky)', `Bluesky posts go straight from the app through RSH’s gateway (${gw.handle || ''}, checked ${ago(gw.checkedAt)}). No Metricool.`, '']
       : ['bad', 'Direct posting (Bluesky)', `Switched on, but the gateway ${gw && gw.error ? 'reported: ' + gw.error : 'has not been checked in the last day'}.`, 'Tell Claude in the chat; until it is fixed, queued Bluesky posts wait.']);
+    const RR = window.RSH_REPORT && window.RSH_REPORT.adviceRolling && L && L.rows ? window.RSH_REPORT.adviceRolling(L.rows() || []) : null;
+    if (RR) { const pc = a => a.n ? Math.round(a.won / a.n * 100) : null, t = pc(RR.time), g = pc(RR.tag), okk = (t == null || t >= 50) && (g == null || g >= 50);
+      out.push([okk ? 'ok' : 'warn', 'Bots’ advice vs results', `Learned from the first half of the loaded results, tested on the second half: Tempo’s times ${RR.time.won}/${RR.time.n}${t != null ? ` (${t}%)` : ''}, Quill’s hashtags ${RR.tag.won}/${RR.tag.n}${g != null ? ` (${g}%)` : ''} beat their channel’s median.`, okk ? '' : 'Treat the advice that is under 50% as a test, not a rule, until it improves.']); }
     const SL = window.RSH_SALES, sm = SL ? Object.keys(SL.months()).sort().pop() : null, ss = sm ? SL.summary(sm) : null, codesSet = SL && Object.values(SL.codes()).some(Boolean);
     out.push(!ss ? ['warn', 'Sales from social', 'No Shopify sales imported yet, so the app cannot say which posts sell.', 'Revenue → Sales from social: set one discount code per channel, then import the Shopify orders export each month.']
       : (Date.now() - Date.parse(ss.importedAt || 0)) > 35 * 864e5 ? ['warn', 'Sales from social', `Last import ${ago(ss.importedAt)} (${ss.month}).`, 'Import this month’s Shopify orders export.']
