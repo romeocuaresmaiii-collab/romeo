@@ -565,9 +565,13 @@
   // Pinterest: keywords in title/description, no hashtags; Threads: one topic tag; Bluesky: 1–3 hashtags feed custom feeds.
   const MAXTAGS = { instagram: 5, tiktok: 5, facebook: 3, youtube: 3, threads: 1, bluesky: 3, pinterest: 0 };
   function seasonOf(d) { const m = new Date((d || iso(new Date())) + 'T12:00:00').getMonth() + 1; return [m >= 11 || m <= 2 ? 'wrestling season (Nov–Feb)' : '', m >= 11 || m <= 3 ? 'basketball season (Nov–Mar)' : '', m >= 10 || m <= 3 ? 'hockey season (Oct–Mar)' : '', m >= 2 && m <= 5 ? 'softball season (Feb–May)' : '', [3, 4, 5, 8, 9, 10, 11].includes(m) ? 'soccer season' : ''].filter(Boolean).join(', ') || 'off-season / preseason planning'; }
+  function testedLessons() {
+    const L = (window.RSH_EXPERIMENTS && window.RSH_EXPERIMENTS.lessons && window.RSH_EXPERIMENTS.lessons()) || [];
+    return L.length ? `TESTED LESSONS (RSH Sports' own A/B tests; follow the winners where they fit this post):\n${L.map(x => '- ' + x.text).join('\n')}\n` : '';
+  }
   function resultsForPrompt() {
     const L = learnedTags(), lines = Object.entries(L).map(([ch, x]) => `${NAME[ch]}: strongest ${x.best.map(b => `${b.tag} (avg ${b.avg} views, ${b.n} posts)`).join(', ')}${x.weak.length ? `; weakest ${x.weak.map(b => b.tag).join(', ')}` : ''}`);
-    return lines.length ? `RSH SPORTS' OWN RESULTS, last 28 days (real Metricool numbers; prefer what worked, drop what did not, but stay relevant to this post):\n${lines.join('\n')}` : '';
+    return (lines.length ? `RSH SPORTS' OWN RESULTS, last 28 days (real Metricool numbers; prefer what worked, drop what did not, but stay relevant to this post):\n${lines.join('\n')}\n` : '') + testedLessons();
   }
   function seoPrompt(p) {
     return `You are a senior social media SEO strategist (10+ years, search and recommendation systems on Instagram, Facebook, TikTok, YouTube, Pinterest, Threads, Bluesky). You work for RSH Sports (rshsports.com), a US maker of custom team uniforms and apparel: wrestling singlets, basketball, softball, soccer and hockey uniforms, and online team stores. Buyers: high school and club coaches, athletic directors, team parents, athletes.
@@ -789,7 +793,7 @@ Visual concept / storyboard: ${p.visualConcept || ''}
 Caption: ${p.captionBody || p.caption || ''}
 Call to action: ${p.cta || ''}
 Hashtags: ${p.hashtags || ''}
-${p.source ? 'Source: ' + p.source + '\n' : ''}${factBlock(p)}${isDyk(p) ? 'This is a Tuesday Did You Know post.\n' : ''}${productBlock(p) ? productBlock(p) + '\nThis campaign shows a real RSH product: route the product shots through these real photos (the reference image), never a text-to-image product; list the colorway, the reference photos and the vendor-mark check in TO CONFIRM.\n' : ''}${seasonContext()}`;
+${p.source ? 'Source: ' + p.source + '\n' : ''}${testedLessons()}${factBlock(p)}${isDyk(p) ? 'This is a Tuesday Did You Know post.\n' : ''}${productBlock(p) ? productBlock(p) + '\nThis campaign shows a real RSH product: route the product shots through these real photos (the reference image), never a text-to-image product; list the colorway, the reference photos and the vendor-mark check in TO CONFIRM.\n' : ''}${seasonContext()}`;
   }
   function rbPackRules(p) {
     const t = rbTargets(p), home = rbHome(p);
@@ -969,17 +973,19 @@ Add PART 8 — PLATFORM VERSIONS: one block for each of ${t.map(c => NAME[c]).jo
     const d = new Date(Date.UTC(+String(yyyymmdd).slice(0, 4), +String(yyyymmdd).slice(4, 6) - 1, +String(yyyymmdd).slice(6, 8), +hhmm.slice(0, 2), +hhmm.slice(2, 4)));
     return Number(new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour: 'numeric', hourCycle: 'h23' }).format(d));
   }
+  // The posts behind a recommendation: “opening words…” (Nov 12, 1,234)
+  const cite = ex => (ex || []).filter(e => e && e.day).map(e => `“${String(e.text || 'untitled post').slice(0, 40)}${String(e.text || '').length > 40 ? '…' : ''}” (${new Date(Math.floor(e.day / 10000), Math.floor(e.day / 100) % 100 - 1, e.day % 100).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}, ${Math.round(e.score).toLocaleString('en-US')})`).join(' and ');
   function learnedTimes() {
-    const rows = (window.RSH_LIVE && window.RSH_LIVE.rows && window.RSH_LIVE.rows()) || [], by = {};
+    const rows = (window.RSH_LIVE && window.RSH_LIVE.rows && window.RSH_LIVE.rows()) || [], by = {}, ex = {};
     for (const r of rows) {
       if (!r || !r[7] || !/^\d{4}$/.test(r[7])) continue;
       const ch = String(r[0]).toLowerCase(), score = r[4] != null ? r[4] : r[5]; if (score == null || !NAME[ch]) continue;
-      const h = etHour(r[1], r[7]); (by[ch] = by[ch] || {}); (by[ch][h] = by[ch][h] || []).push(score);
+      const h = etHour(r[1], r[7]); (by[ch] = by[ch] || {}); (by[ch][h] = by[ch][h] || []).push(score); ((ex[ch] = ex[ch] || {})[h] = ex[ch][h] || []).push({ score, text: r[3], day: r[1] });
     }
     const out = {};
     for (const ch of Object.keys(by)) {
       const hours = Object.entries(by[ch]).filter(([, v]) => v.length >= 2).map(([h, v]) => ({ h: +h, n: v.length, avg: v.reduce((a, b) => a + b, 0) / v.length })).sort((a, b) => b.avg - a.avg);
-      if (hours.length) out[ch] = { time: String(hours[0].h).padStart(2, '0') + ':00', n: hours[0].n, avg: Math.round(hours[0].avg), tried: hours.length, metric: by[ch] && rows.some(r => String(r[0]).toLowerCase() === ch && r[4] != null) ? 'views' : 'interactions' };
+      if (hours.length) out[ch] = { time: String(hours[0].h).padStart(2, '0') + ':00', n: hours[0].n, avg: Math.round(hours[0].avg), tried: hours.length, ex: (ex[ch][hours[0].h] || []).slice().sort((a, b) => b.score - a.score).slice(0, 2), metric: by[ch] && rows.some(r => String(r[0]).toLowerCase() === ch && r[4] != null) ? 'views' : 'interactions' };
     }
     return out;
   }
@@ -988,11 +994,11 @@ Add PART 8 — PLATFORM VERSIONS: one block for each of ${t.map(c => NAME[c]).jo
     const rows = (window.RSH_LIVE && window.RSH_LIVE.rows && window.RSH_LIVE.rows()) || [], by = {};
     for (const r of rows) {
       const ch = String(r[0]).toLowerCase(), score = r[4] != null ? r[4] : r[5]; if (score == null || !NAME[ch] || !r[8]) continue;
-      for (const t of String(r[8]).split(' ').filter(Boolean)) { const k = t.toLowerCase(); ((by[ch] = by[ch] || {})[k] = by[ch][k] || { tag: t, v: [] }).v.push(score); }
+      for (const t of String(r[8]).split(' ').filter(Boolean)) { const k = t.toLowerCase(), e = ((by[ch] = by[ch] || {})[k] = by[ch][k] || { tag: t, v: [], ex: [] }); e.v.push(score); e.ex.push({ score, text: r[3], day: r[1] }); }
     }
     const out = {};
     for (const ch of Object.keys(by)) {
-      const l = Object.values(by[ch]).filter(x => x.v.length >= 2).map(x => ({ tag: x.tag, n: x.v.length, avg: Math.round(x.v.reduce((a, b) => a + b, 0) / x.v.length) })).sort((a, b) => b.avg - a.avg);
+      const l = Object.values(by[ch]).filter(x => x.v.length >= 2).map(x => ({ tag: x.tag, n: x.v.length, avg: Math.round(x.v.reduce((a, b) => a + b, 0) / x.v.length), ex: x.ex.slice().sort((a, b) => b.score - a.score).slice(0, 2) })).sort((a, b) => b.avg - a.avg);
       if (l.length >= 2) out[ch] = { best: l.slice(0, 6), weak: l.length > 6 ? l.slice(-3) : [] };
     }
     return out;
@@ -1008,7 +1014,7 @@ Add PART 8 — PLATFORM VERSIONS: one block for each of ${t.map(c => NAME[c]).jo
       if (it.edited && it.time) { used.add(`${it.date}|${it.time}|${it.channel}`); continue; }
       if (it.rb && it.rbTimes && it.rbTimes.length) { it.time = it.rbTimes.find(t => free(it, t)) || it.rbTimes[0]; it.why = it.rbWhy; used.add(`${it.date}|${it.time}|${it.channel}`); continue; }   // Posting Rulebook slots win over learned hours
       const L = learned[it.channel];
-      if (L && free(it, L.time)) { it.time = L.time; it.why = `Best hour in your own ${NAME[it.channel]} posts: ${L.n} posts around ${clockTxt(L.time)} averaged ${L.avg.toLocaleString('en-US')} ${L.metric}${L.tried === 1 ? ' (all recent posts went out at this hour, so other hours are untested)' : ` (best of ${L.tried} hours tried)`}.`; }
+      if (L && free(it, L.time)) { it.time = L.time; it.why = `Best hour in your own ${NAME[it.channel]} posts: ${L.n} posts around ${clockTxt(L.time)} averaged ${L.avg.toLocaleString('en-US')} ${L.metric}${L.tried === 1 ? ' (all recent posts went out at this hour, so other hours are untested)' : ` (best of ${L.tried} hours tried)`}.${L.ex && L.ex.length ? ' Based on posts like ' + cite(L.ex) + '.' : ''}`; }
       else {
         // No data for this channel yet: spread channels across the posting times so they don't all land at once.
         const order = slots.length ? slots.map((_, i) => slots[(i + CHANNELS.findIndex(c => c[0] === it.channel)) % slots.length]) : ['18:00'];
@@ -1308,7 +1314,7 @@ Add PART 8 — PLATFORM VERSIONS: one block for each of ${t.map(c => NAME[c]).jo
     if (!db || !plan) return; let changed = false;
     try { const q = await db.collection('scheduleJobs').get();
       for (const d of q.docs) { const j = d.data() || {}, it = find(j.key || (j.postId + '|' + j.channel)); if (!it) continue;
-        if (j.status === 'sent' && !(it.sent && /scheduled|draft/.test(it.sent.status))) { it.sent = { status: j.mode === 'draft' ? 'draft' : 'scheduled', at: j.sentAt || new Date().toISOString(), plannerUrl: j.plannerUrl || '', by: 'Claude session' }; changed = true; }
+        if (j.status === 'sent' && !(it.sent && /scheduled|draft/.test(it.sent.status))) { it.sent = { status: j.mode === 'draft' ? 'draft' : 'scheduled', at: j.sentAt || new Date().toISOString(), plannerUrl: j.plannerUrl || '', by: 'Claude session', textSig: it.sent && it.sent.textSig, commentSig: it.sent && it.sent.commentSig }; changed = true; }
         if (j.status === 'failed' && it.sent && it.sent.status === 'queued') { it.sent = { status: 'error', at: j.sentAt || new Date().toISOString(), reason: String(j.error || 'Metricool did not accept it.').slice(0, 240) }; changed = true; } } } catch (_) {}
     if (changed) { await save(); render(); notify(); }
   }
@@ -2408,6 +2414,9 @@ Add PART 8 — PLATFORM VERSIONS: one block for each of ${t.map(c => NAME[c]).jo
     return { ok: true };
   }
 
+  // Fingerprint of the exact text and first comment sent to Metricool, so a later edit made inside Metricool can be spotted.
+  const fp = t => { let h = 2166136261; for (const c of String(t || '').replace(/\s+/g, ' ').trim()) { h ^= c.codePointAt(0); h = Math.imul(h, 16777619) >>> 0; } return h.toString(36); };
+  const sentSig = args => { try { const i = JSON.parse(args.info); return { textSig: fp(i.text), commentSig: fp(i.firstCommentText) }; } catch (_) { return {}; } };
   async function sendToMetricool(key, mode, ai, step) {
     const it = find(key); if (!it || !it.ready || !it.placed) return { ok: false, reason: 'Only a ready post placed on a day can be sent.' };
     if (`${it.date}T${it.time}` <= new Date(Date.now() + 10 * 60000).toISOString().slice(0, 16) && it.date <= todayIso()) return { ok: false, reason: 'That time has passed or is less than 10 minutes away. Pick a later time.' };
@@ -2421,14 +2430,14 @@ Add PART 8 — PLATFORM VERSIONS: one block for each of ${t.map(c => NAME[c]).jo
     if (res) {
       const txt = JSON.stringify(res.payload !== undefined ? res.payload : res), url = (txt.match(/https:\/\/[^"\\\s]*metricool[^"\\\s]*/) || [''])[0];
       if (/"isError"\s*:\s*true|error/i.test(txt) && !url) { it.sent = { status: 'error', at: new Date().toISOString(), reason: txt.slice(0, 240) }; await save(); render(); notify(); return { ok: false, reason: 'Metricool did not accept it: ' + txt.slice(0, 200) + (/drive/i.test(txt) ? ' (Metricool can read Google Drive links only after Google Drive is connected inside Metricool: Settings → Connections.)' : '') }; }
-      it.sent = { status: mode === 'draft' ? 'draft' : 'scheduled', at: new Date().toISOString(), plannerUrl: url }; await save(); render(); notify(); return { ok: true };
+      it.sent = { status: mode === 'draft' ? 'draft' : 'scheduled', at: new Date().toISOString(), plannerUrl: url, ...sentSig(args) }; await save(); render(); notify(); return { ok: true };
     }
     const code = (err && err.code) || 'no_connection';
     if (err && err.code === 'tool_error') { it.sent = { status: 'error', at: new Date().toISOString(), reason: String(err.message || '').slice(0, 240) }; await save(); render(); notify(); return { ok: false, reason: 'Metricool did not accept it: ' + String(err.message || '').slice(0, 200) }; }
     // This view cannot reach Metricool: leave the post with everything ready for a Claude session to send.
     const id = (it.postId + '_' + it.channel).replace(/[^A-Za-z0-9_-]/g, '');
     if (db) { try { await db.doc('scheduleJobs/' + id).set({ key, postId: it.postId, channel: it.channel, mode, status: 'queued', queuedAt: new Date().toISOString(), args: JSON.stringify(args), lastError: code }); } catch (_) {} }
-    it.sent = { status: 'queued', at: new Date().toISOString(), mode }; await save(); render(); notify();
+    it.sent = { status: 'queued', at: new Date().toISOString(), mode, ...sentSig(args) }; await save(); render(); notify();
     return { ok: true, queued: true };
   }
 
@@ -2445,6 +2454,8 @@ Add PART 8 — PLATFORM VERSIONS: one block for each of ${t.map(c => NAME[c]).jo
     if (so.ch.description) rows.push(`<div><b>Pin description:</b> ${esc(so.ch.description)}</div>`);
     if (so.ch.tags && so.ch.tags.length) rows.push(`<div><b>Tags:</b> ${esc(so.ch.tags.join(', '))}</div>`);
     if (so.ch.hashtags && so.ch.hashtags.length) rows.push(`<div><b>Hashtags:</b> ${esc(so.ch.hashtags.join(' '))} ${tags.length ? `<button type="button" class="btn ghost smallbtn" data-bot-addtags="${esc(key)}">Add hashtags</button>` : '<span class="small">✓ in caption</span>'}</div>`);
+    { const T = (learnedTags()[it.channel] || {}).best || [], why = (so.ch.hashtags || []).map(h => T.find(b => b.tag.toLowerCase() === String(h).toLowerCase())).filter(Boolean);
+      rows.push(why.length ? `<div><b>Why these hashtags:</b> ${why.map(b => esc(`${b.tag}: ${b.avg.toLocaleString('en-US')} average over your ${b.n} posts with it, e.g. ${cite(b.ex)}`)).join('; ')}.</div>` : `<div><b>Why these hashtags:</b> none of them has 2+ measured ${esc(NAME[it.channel] || it.channel)} posts yet, so they are Quill’s judgement, not proven by your results.</div>`); }
     if (so.keywords.length) rows.push(`<div><b>Keywords:</b> ${esc(so.keywords.join(', '))}</div>`);
     if (so.altText) rows.push(`<div><b>Alt text:</b> ${esc(so.altText)}</div>`);
     if (so.notes) rows.push(`<div><b>Senior note:</b> ${esc(so.notes)}</div>`);
@@ -2594,5 +2605,5 @@ Add PART 8 — PLATFORM VERSIONS: one block for each of ${t.map(c => NAME[c]).jo
     __linkTest: async () => {   // test hook: a viewer whose Claude Code Remote offers fire_trigger only
       const calls = [], fake = { listTools: async () => ({ servers: [{ server: REMOTE, tools: [{ name: 'fire_trigger' }, { name: 'list_triggers' }] }] }), callTool: async (sv, tool, input) => { calls.push({ tool, input }); return { payload: {} }; } };
       const keep = editorTools; editorTools = null; const via = await toEditor(fake, 'job text'); editorTools = keep;
-      return { via, trigger: calls[0] && calls[0].input.trigger_id, text: calls[0] && calls[0].input.text, n: calls.length }; }, heroBrief, loadDykKit, packMap, voState: id => { const p = (app().data().posts || []).find(x => x.id === id); return !p || !dykVideo(p) ? '' : hasVO(p) ? 'ok' : 'missing'; }, factState: id => { const p = (app().data().posts || []).find(x => x.id === id); return p ? factState(p) : null; }, factDocs: () => factDocs, factText, refreshFacts: async () => { await loadFacts(); }, requestFacts: ids => requestFacts((app().data().posts || []).filter(p => ids.includes(p.id))), sizePlan, isBusy: () => busy, sageState: id => scripts[id] ? 'done' : sageBusy === id ? 'writing' : freshIds.includes(id) ? 'next' : 'todo', isNew, planItems: id => ((plan && plan.items) || []).filter(i => i.postId === id), commentsFor: id => (comments[id] || []).slice(), whoIs: async ids => { await whoIs(ids); return Object.fromEntries(ids.map(i => [i, names[i] || 'Teammate'])); }, mealNow, rbOn, rbHome, rbTargets, rbPlace, rbCaption, rbChecks, rbFileFor, rbYouTubeTitle, manila, TAGLINE, RB_SLOTS, aiOf, SPECS, sizePlan, sizeLines, specFor, kindOf, ratioOf, productJob, readyRefs, POST_SIZE, catalog: () => catalog, refs: () => refs, productsFor, productBlock, searchCatalog, requestPhotos, loadCatalog, scripts: () => scripts, scriptPrompt, writeScript, scriptRun, saveScript, packPart, packHtml, conns: () => conns, viaOf, engineFor, HOUSE, music: () => MUSIC, musicStart, musicStop, match: () => ISO.match, startMatch: (a, b) => startMatch(ISO.people[a], ISO.people[b], performance.now()), zoneAt, addIdea, IDEAS: () => IDEAS, postComment, loadAllComments, cmtCount, ctaFor, withCta, isoPeople: () => ISO.people, aoCycle, aoStart, aoBeat, aoAlive, reviseFromNotes, shrinkVideo, nightOwl, weeklyReport, learnedTags, resultsForPrompt, openRaw, addRaw, sendRaw, rawCount, loadRaw, dayFor, isDyk, targets, sendText, autoSend, seoFor, seoRun, learnedTimes, schedule, attachForPost, driveUpload, fileFor, autoLink, needsFile, readyItems, placedOn, place, unplace, setMediaUrl, sendToMetricool, metricoolPost, NAME, freshVideos, watch, onChange: f => listeners.push(f), handoff, collect, start, captionFor, assetNeeds, imagePrompt, videoBrief, editJob };
+      return { via, trigger: calls[0] && calls[0].input.trigger_id, text: calls[0] && calls[0].input.text, n: calls.length }; }, heroBrief, loadDykKit, packMap, fp, cite, testedLessons, playbook: () => PLAYBOOK, learnedTimesX: () => learnedTimes(), sentItems: () => ((plan && plan.items) || []).filter(i => i.sent && /scheduled|draft|queued/.test(i.sent.status)).map(i => ({ ...i, title: ((app().data().posts || []).find(p => p.id === i.postId) || {}).title || '' })), voState: id => { const p = (app().data().posts || []).find(x => x.id === id); return !p || !dykVideo(p) ? '' : hasVO(p) ? 'ok' : 'missing'; }, factState: id => { const p = (app().data().posts || []).find(x => x.id === id); return p ? factState(p) : null; }, factDocs: () => factDocs, factText, refreshFacts: async () => { await loadFacts(); }, requestFacts: ids => requestFacts((app().data().posts || []).filter(p => ids.includes(p.id))), sizePlan, isBusy: () => busy, sageState: id => scripts[id] ? 'done' : sageBusy === id ? 'writing' : freshIds.includes(id) ? 'next' : 'todo', isNew, planItems: id => ((plan && plan.items) || []).filter(i => i.postId === id), commentsFor: id => (comments[id] || []).slice(), whoIs: async ids => { await whoIs(ids); return Object.fromEntries(ids.map(i => [i, names[i] || 'Teammate'])); }, mealNow, rbOn, rbHome, rbTargets, rbPlace, rbCaption, rbChecks, rbFileFor, rbYouTubeTitle, manila, TAGLINE, RB_SLOTS, aiOf, SPECS, sizePlan, sizeLines, specFor, kindOf, ratioOf, productJob, readyRefs, POST_SIZE, catalog: () => catalog, refs: () => refs, productsFor, productBlock, searchCatalog, requestPhotos, loadCatalog, scripts: () => scripts, scriptPrompt, writeScript, scriptRun, saveScript, packPart, packHtml, conns: () => conns, viaOf, engineFor, HOUSE, music: () => MUSIC, musicStart, musicStop, match: () => ISO.match, startMatch: (a, b) => startMatch(ISO.people[a], ISO.people[b], performance.now()), zoneAt, addIdea, IDEAS: () => IDEAS, postComment, loadAllComments, cmtCount, ctaFor, withCta, isoPeople: () => ISO.people, aoCycle, aoStart, aoBeat, aoAlive, reviseFromNotes, shrinkVideo, nightOwl, weeklyReport, learnedTags, resultsForPrompt, openRaw, addRaw, sendRaw, rawCount, loadRaw, dayFor, isDyk, targets, sendText, autoSend, seoFor, seoRun, learnedTimes, schedule, attachForPost, driveUpload, fileFor, autoLink, needsFile, readyItems, placedOn, place, unplace, setMediaUrl, sendToMetricool, metricoolPost, NAME, freshVideos, watch, onChange: f => listeners.push(f), handoff, collect, start, captionFor, assetNeeds, imagePrompt, videoBrief, editJob };
 })();

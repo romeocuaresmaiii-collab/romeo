@@ -10,7 +10,7 @@
   const SERVER = 'Metricool Social Media Management', TOOL = 'getAnalyticsDataByMetrics';
   const BRAND_ID = '5695688';                      // RSH Sports brand in Metricool
   const FIELDS = ['BSPO01', 'BSPO02', 'BSPO03', 'BSPO05', 'BSPO06', 'BSPO07', 'BSPO09'];
-  const DOC = 'live/metricool', DAYS = 14, STALE_MS = 3 * 3600 * 1000;
+  const DOC = 'live/metricool', DAYS = 14, STALE_MS = 3600 * 1000;
   const SCHED_TOOL = 'getScheduledPosts', FOLLOW_FIELDS = ['IGEV01', 'FBEV17', 'TKEV07', 'YTEV01', 'PIEV09', 'THEV01', 'BKEV01'], FOLLOW_NETS = ['INSTAGRAM', 'FACEBOOK', 'TIKTOK', 'YOUTUBE', 'PINTEREST', 'THREADS', 'BLUESKY'];
   const NETS = { INSTAGRAM: 'Instagram', FACEBOOK: 'Facebook', TIKTOK: 'TikTok', YOUTUBE: 'YouTube', PINTEREST: 'Pinterest', THREADS: 'Threads', BLUESKY: 'Bluesky', TWITTER: 'X', LINKEDIN: 'LinkedIn' };
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -202,7 +202,8 @@
   function rivalBox() {
     const r = state.rivals; if (!r || !r.length) return '';
     const rows = r.slice().sort((a, b) => (b[2] || 0) - (a[2] || 0)).map(x => `<tr><td><strong>${esc(x[1])}</strong><div class="small">${esc(NETS[x[0]] || x[0])}</div></td><td>${x[2] == null ? '—' : fmt(x[2])}</td><td>${x[3] == null ? '—' : fmt(x[3])}</td><td>${x[4] == null ? '—' : fmt(x[4])}</td></tr>`).join('');
-    return `<div class="live-box"><h3>Competitors tracked in Metricool · last ${DAYS} days</h3><div class="scroll"><table><thead><tr><th>Account</th><th>Followers</th><th>Posts</th><th>Avg. interactions per post</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+    const tp = state.rivalPosts || [], top = tp.length ? `<h3 style="margin-top:12px">Their top posts · last ${DAYS} days (Instagram)</h3>${tp.map(p => `<div class="top"><div class="what">${p[4] ? `<a href="${esc(p[4])}" target="_blank" rel="noopener noreferrer">${esc(p[1] || 'Post')}</a>` : esc(p[1] || 'Post')}<span class="small">${esc(p[0])}${p[2] ? ' · ' + esc(shortDate(p[2])) : ''}</span></div><div class="num">${fmt(p[3])} <span class="small">interactions</span></div></div>`).join('')}<div class="small" style="margin-top:6px">Pick one idea a month from these, turn it into an A/B test on Growth Experiments, and keep what wins.</div>` : '';
+    return `<div class="live-box"><h3>Competitors tracked in Metricool · last ${DAYS} days</h3><div class="scroll"><table><thead><tr><th>Account</th><th>Followers</th><th>Posts</th><th>Avg. interactions per post</th></tr></thead><tbody>${rows}</tbody></table></div>${top}</div>`;
   }
 
   const listeners = [];
@@ -267,6 +268,7 @@
     FOLLOW_NETS.forEach((net, i) => { const have = sorted.filter(x => num(x.v[i]) !== null); if (have.length) out.push([net, have[0].day, num(have[0].v[i]), have[have.length - 1].day, num(have[have.length - 1].v[i])]); });
     return out.length ? out : null;
   }
+  const fp = t => { let h = 2166136261; for (const c of String(t || '').replace(/\s+/g, ' ').trim()) { h ^= c.codePointAt(0); h = Math.imul(h, 16777619) >>> 0; } return h.toString(36); };
   function compactScheduled(result) {
     let x = result && (result.payload !== undefined ? result.payload : result);
     if (typeof x === 'string') { try { x = JSON.parse(x); } catch (_) { return null; } }
@@ -279,11 +281,24 @@
       const title = only('youtube') && p.youtubeData && p.youtubeData.title ? p.youtubeData.title : (p.facebookData && p.facebookData.title) || text;
       const reel = (has('instagram') && p.instagramData && p.instagramData.type === 'REEL') || (has('facebook') && p.facebookData && p.facebookData.type === 'REEL');
       const kind = reel ? 'Reel' : only('youtube') && p.youtubeData && p.youtubeData.type === 'short' ? 'Short' : p.videoThumbnailUrl ? 'Video' : only('pinterest') ? 'Pin' : 'Post';
-      return [String((p.publicationDate && p.publicationDate.dateTime) || '').slice(0, 16), nets.join(','), String(title).slice(0, 90), kind, p.draft ? 1 : 0];
+      // 5: Metricool id · 6: [network, status, public link] per network · 7/8: fingerprints of the text and first comment
+      const st = (p.providers || []).map(v => [String(v.network || '').toLowerCase(), String(v.status || '').toUpperCase(), /^https:\/\//.test(v.publicUrl || '') ? String(v.publicUrl).slice(0, 200) : '']);
+      return [String((p.publicationDate && p.publicationDate.dateTime) || '').slice(0, 16), nets.join(','), String(title).slice(0, 90), kind, p.draft ? 1 : 0, p.id || '', st, fp(p.text), fp(p.firstCommentText)];
     }).filter(p => p[0]).sort((a, b) => a[0] < b[0] ? -1 : 1);
   }
 
   /* ---------- loading ---------- */
+  // Metricool's schedule from 3 days ago (did those posts go out?) to 14 days ahead. Also pulled on its own every 15 minutes.
+  let schedAt = 0;
+  async function pullSchedule(mcp) {
+    const w = windows(Date.now()), until = new Date(w.curTo); until.setDate(until.getDate() + 14);
+    const since = new Date(w.curTo); since.setDate(since.getDate() - 3);
+    const sp = compactScheduled(await mcp.callTool(SERVER, SCHED_TOOL, { brandId: BRAND_ID, fromDate: iso(since, '00:00:00'), toDate: iso(until, '23:59:59'), timezone: 'America/New_York' }));
+    if (sp) { state.scheduled = sp; schedAt = Date.now(); if (db) await db.doc('live/scheduled').set({ fetchedAt: new Date().toISOString(), posts: JSON.stringify(sp).slice(0, 230000) }); }
+  }
+  async function refreshSchedule() {
+    if (state.busy) return; try { const mcp = await use('mcp'); if (!mcp) return; state.busy = true; await pullSchedule(mcp); } catch (_) {} finally { state.busy = false; render(); }
+  }
   async function refresh(byClick) {
     if (state.busy) return; state.busy = true; state.note = ''; render();
     try {
@@ -301,9 +316,7 @@
         if (fr) { state.followers = fr; if (db) await db.doc('live/followers').set({ fetchedAt: state.fetchedAt, followers: JSON.stringify(fr) }); }
       } catch (_) {}
       try {
-        const until = new Date(w.curTo); until.setDate(until.getDate() + 14);
-        const sp = compactScheduled(await mcp.callTool(SERVER, SCHED_TOOL, { brandId: BRAND_ID, fromDate: iso(w.curTo, '00:00:00'), toDate: iso(until, '23:59:59'), timezone: 'America/New_York' }));
-        if (sp) { state.scheduled = sp; if (db) await db.doc('live/scheduled').set({ fetchedAt: state.fetchedAt, posts: JSON.stringify(sp).slice(0, 230000) }); }
+        await pullSchedule(mcp);
       } catch (_) {}
       try {
         // Competitors added in Metricool (Competitors section). Row: [net, name, followers, posts in period, avg interactions per post]
@@ -320,7 +333,16 @@
             const name = String(v[0] || v[1] || '').slice(0, 60); if (name) rv.push([net, name, num(v[2]), posts, avg === null ? null : Math.round(avg)]);
           }
         }
-        state.rivals = rv; if (db) await db.doc('live/rivals').set({ fetchedAt: state.fetchedAt, rivals: JSON.stringify(rv) });
+        // Their posts (Instagram): [competitor, text, yyyymmdd, interactions, link]; the digest shows each one's top three.
+        let rp = [];
+        if (rv.length) { try {
+          const res = await mcp.callTool(SERVER, TOOL, { brandId: BRAND_ID, from: iso(w.curFrom, '00:00:00'), to: iso(w.curTo, '23:59:59'), metrics: ['IGCP01', 'IGCP04', 'IGCP05', 'IGCP09', 'IGCP11'] });
+          let x = res && (res.payload !== undefined ? res.payload : res); if (typeof x === 'string') { try { x = JSON.parse(x); } catch (_) { x = null; } }
+          if (x && Array.isArray(x.content) && x.content[0] && typeof x.content[0].text === 'string') { try { x = JSON.parse(x.content[0].text); } catch (_) { x = null; } }
+          rp = (x && Array.isArray(x.rows) ? x.rows : []).filter(r => Array.isArray(r) && r[0]).map(r => [String(r[0]).split(':').pop().slice(0, 60), String(r[1] || '').replace(/\s+/g, ' ').trim().slice(0, 140), Number(String(r[2] || '').replace(/-/g, '').slice(0, 8)) || 0, num(r[3]) || 0, /^https:\/\//.test(String(r[4] || '')) ? String(r[4]).slice(0, 200) : '']);
+          const by = {}; for (const r of rp.sort((a, b) => b[3] - a[3])) (by[r[0]] = by[r[0]] || []).length < 3 && by[r[0]].push(r); rp = [].concat(...Object.values(by));
+        } catch (_) {} }
+        state.rivals = rv; state.rivalPosts = rp; if (db) await db.doc('live/rivals').set({ fetchedAt: state.fetchedAt, rivals: JSON.stringify(rv), posts: JSON.stringify(rp).slice(0, 60000) });
       } catch (_) {}
       if (db) { try { await db.doc(DOC).set({ fetchedAt: state.fetchedAt, days: DAYS, rows: JSON.stringify(state.rows).slice(0, 230000) }); } catch (_) { state.note = 'Loaded, but the results could not be saved for other viewers.'; } }
     } catch (e) {
@@ -347,14 +369,17 @@
       const read = async (path) => { try { const snap = await Promise.race([db.doc(path).get(), new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 10000))]); return snap.exists ? snap.data() : null; } catch (_) { return null; } };
       const [posts, fol, sch, com, riv] = await Promise.all([read(DOC), read('live/followers'), read('live/scheduled'), read('live/comments'), read('live/rivals')]);
       try { if (com) state.comments = JSON.parse(com.posts); } catch (_) {}
-      try { if (riv) state.rivals = JSON.parse(riv.rivals); } catch (_) {}
+      try { if (riv) { state.rivals = JSON.parse(riv.rivals); state.rivalPosts = riv.posts ? JSON.parse(riv.posts) : []; } } catch (_) {}
       try { if (posts) { state.rows = JSON.parse(posts.rows); state.fetchedAt = posts.fetchedAt; } } catch (_) {}
       try { if (fol) state.followers = JSON.parse(fol.followers); } catch (_) {}
       try { if (sch) state.scheduled = JSON.parse(sch.posts); } catch (_) {}
     }
     render();
-    // With the connector available, refresh on open when results are missing or older than three hours.
-    if (canRefresh && (!state.fetchedAt || Date.now() - new Date(state.fetchedAt).getTime() > STALE_MS)) refresh(false);
+    // With the connector available, refresh on open when results are missing or over an hour old, and keep refreshing
+    // every hour while the page stays open (the 24/7 computer keeps the numbers and the publish check current).
+    const due = () => canRefresh && !state.busy && (!state.fetchedAt || Date.now() - new Date(state.fetchedAt).getTime() > STALE_MS);
+    if (due()) refresh(false);
+    setInterval(() => { if (due()) refresh(false); else if (canRefresh && Date.now() - schedAt > 15 * 60000) refreshSchedule(); }, 5 * 60000);
   }
-  window.RSH_LIVE = { refresh: byClick => refresh(byClick), fetchedAt: () => state.fetchedAt, brief: () => (state.rows && state.rows.length ? briefText(summarise(state.rows, state.fetchedAt)) : ''), rows: () => state.rows, scheduled: () => state.scheduled, rivals: () => state.rivals, onData: fn => listeners.push(fn), start, summarise, compact, findRows };
+  window.RSH_LIVE = { refresh: byClick => refresh(byClick), fetchedAt: () => state.fetchedAt, brief: () => (state.rows && state.rows.length ? briefText(summarise(state.rows, state.fetchedAt)) : ''), rows: () => state.rows, scheduled: () => state.scheduled, rivals: () => state.rivals, rivalPosts: () => state.rivalPosts || [], busy: () => state.busy, fp, onData: fn => listeners.push(fn), start, summarise, compact, findRows };
 })();

@@ -62,7 +62,8 @@
     if (!linked.length) next.push('Link each campaign to its published post (Home → Campaign results) so results can be reported by sport and season.');
     const advice = adviceCheck(rows, k);
     for (const [nm, a] of [['Tempo’s posting times', advice.time], ['Quill’s hashtags', advice.tag]]) if (a.n >= 3 && a.won * 2 < a.n) next.push(`${nm} did not beat the median this month (${a.won} of ${a.n}); treat that advice as a test, not a rule.`);
-    return { k, fetched, T, P, byNet, top, groups, advice, planned: planned.length, approved: approved.length, links: links.length, tagged: tagged.length, next, empty: !cur.length };
+    const rivals = ((L && L.rivalPosts && L.rivalPosts()) || []).slice(0, 15);
+    return { k, fetched, T, P, byNet, top, groups, advice, rivals, planned: planned.length, approved: approved.length, links: links.length, tagged: tagged.length, next, empty: !cur.length };
   }
 
   function html(R, standalone) {
@@ -73,6 +74,7 @@
       <h3>By channel</h3><table><thead><tr><th>Channel</th><th>Posts</th><th>Views</th><th>Interactions</th><th>Per 100 views</th></tr></thead><tbody>${R.byNet.map(x => `<tr><td>${esc(x.n)}</td><td>${fmt(x.posts)}</td><td>${fmt(x.views)}${x.prevViews ? ` <span class="s">${esc(chg(x.views, x.prevViews))}</span>` : ''}</td><td>${fmt(x.inter)}</td><td>${x.rate.toFixed(1)}</td></tr>`).join('')}</tbody></table>
       <h3>Top posts</h3><ol>${R.top.map(r => `<li><strong>${esc(NETS[r[0]] || r[0])}</strong> · ${esc(String(r[1]).replace(/(\d{4})(\d{2})(\d{2})/, '$2/$3'))} · ${fmt(r[5])} interactions, ${fmt(r[4])} views · “${esc(r[3] || 'no text')}”${/^https:\/\//.test(r[2]) ? ` · <a href="${esc(r[2])}" target="_blank" rel="noopener noreferrer">open</a>` : ''}</li>`).join('')}</ol>
       <h3>By sport and season phase</h3>${Object.keys(R.groups).length ? `<table><thead><tr><th>Group</th><th>Campaigns</th><th>Views</th><th>Interactions</th></tr></thead><tbody>${Object.entries(R.groups).sort((a, b) => b[1].views - a[1].views).map(([g, x]) => `<tr><td>${esc(g)}</td><td>${x.n}</td><td>${fmt(x.views)}</td><td>${fmt(x.inter)}</td></tr>`).join('')}</tbody></table>` : '<p class="s">No campaign from this month is linked to its published post yet, so results cannot be split by sport and season.</p>'}
+      <h3>Rivals’ top posts</h3>${R.rivals.length ? `<table><thead><tr><th>Competitor</th><th>Post</th><th>Interactions</th></tr></thead><tbody>${R.rivals.map(r => `<tr><td>${esc(r[0])}</td><td>${esc(r[1] || 'Post')}</td><td>${fmt(r[3])}</td></tr>`).join('')}</tbody></table>` : '<p class="s">No competitors are set up in Metricool yet (Metricool → Competitors), so there is nothing to compare.</p>'}
       <h3>Did the bots’ advice work?</h3><p>${esc(advLine('Tempo’s posting times', R.advice.time))}<br>${esc(advLine('Quill’s hashtags', R.advice.tag))}</p><p class="s">Learned only from the ${fmt(R.advice.learnedFrom)} measured posts before this month, then checked on this month’s posts. The goal is at least half.</p>
       <h3>Pipeline and tracking</h3><p>${R.planned} campaigns planned for the month, ${R.approved} approved. ${R.links ? `${R.tagged} of ${R.links} posts with a store link carried tracking tags.` : 'No post linked to the store this month.'}</p>`;
     const inner = `<div class="eyebrow">RSH SPORTS · MONTHLY SOCIAL REPORT</div><h2>${esc(label(R.k))}</h2>${body}<h3>Next month</h3><ul>${R.next.map(x => `<li>${esc(x)}</li>`).join('') || '<li>Keep the current plan.</li>'}</ul><p class="src">${esc(src)}</p>`;

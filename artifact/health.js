@@ -35,6 +35,18 @@
     out.push(!drill ? ['warn', 'Backup restore drill', 'No restore drill is on record.', 'Ask Claude to run the restore drill (it restores the live workspace into an empty copy and compares every campaign).']
       : (Date.now() - Date.parse(drill.at)) > 35 * 864e5 ? ['warn', 'Backup restore drill', `Last passed ${ago(drill.at)} (${drill.campaigns} campaigns). Run one a month.`, 'Ask Claude to run the restore drill again.']
       : drill.ok ? ['ok', 'Backup restore drill', `Passed ${ago(drill.at)}: all ${drill.campaigns} campaigns came back unchanged from a downloaded backup.`, ''] : ['bad', 'Backup restore drill', `Failed ${ago(drill.at)}: ${drill.note || 'the restored copy did not match'}.`, 'Tell Claude in the chat.']);
+    const M = window.RSH_MWATCH, mw = M && M.check();
+    if (mw) {
+      const lbl = a => list(a.map(M.label), 2), rateTxt = mw.due ? `${mw.onTime} of ${mw.due} posts due in the last 3 days went out (${Math.round(mw.onTime / mw.due * 100)}%).` : 'No post was due in the last 3 days.';
+      out.push(mw.failed.length ? ['bad', 'Published on time', `${rateTxt} Failed in Metricool: ${lbl(mw.failed)}.`, 'Open Metricool → Planning, fix the post (usually a reconnect or a media problem) and publish it again.']
+        : mw.late.length ? ['warn', 'Published on time', `${rateTxt} Past their time but not published: ${lbl(mw.late)}.`, 'Check the post in Metricool → Planning; if the account needs reconnecting, reconnect it there.']
+        : ['ok', 'Published on time', rateTxt + ' The app checks Metricool every 15 minutes while it is open.', '']);
+      const issues = mw.edited.length + mw.missing.length;
+      out.push(mw.edited.length ? ['bad', 'Metricool matches the approval', `Changed inside Metricool after the app sent the approved version: ${lbl(mw.edited.map(x => ({ ...x, title: x.title + ' — ' + x.what })))}.`, 'Make the change in the campaign instead (it goes back to review), or undo it in Metricool.']
+        : mw.missing.length ? ['warn', 'Metricool matches the approval', `Sent from the app but no longer in Metricool: ${lbl(mw.missing)}.`, 'If it was removed on purpose, nothing to do; otherwise send it again from the Calendar.']
+        : ['ok', 'Metricool matches the approval', 'Every post the app sent is in Metricool exactly as approved.', '']);
+      if (mw.outside.length) out.push(['warn', 'Posts added outside the app', `${mw.outside.length} upcoming post${mw.outside.length === 1 ? ' was' : 's were'} added in Metricool directly, so no approval is on record: ${lbl(mw.outside)}.`, 'Create them as campaigns so Anthony can sign them, or leave them if they were agreed another way.']);
+    }
     const rv = L && L.rivals && L.rivals();
     out.push(rv && rv.length ? ['ok', 'Competitors', `${rv.length} competitor account${rv.length === 1 ? '' : 's'} tracked from Metricool (Insights → live results).`, '']
       : ['warn', 'Competitors', 'No competitors are set up in Metricool, so the app cannot compare RSH with rivals.', 'In Metricool, open Competitors and add 5–8 similar-sized team-apparel accounts on Instagram and Facebook. The next “Refresh from Metricool” brings them in.']);

@@ -42,10 +42,26 @@
   #rshDay .st.sch{background:#eaf7ee;color:#1a7f37}#rshDay .st.que{background:#fff3e0;color:#b45309}#rshDay .st.err{background:#fdecea;color:#b42318}
   #rshDay .opts{border:1px solid #e5e5ea;border-radius:12px;padding:10px 12px;margin-top:12px;font-size:12.5px;display:grid;gap:8px;background:#fbfbfd}
   .calday.mc-empty{background:#fff6e3!important;border-color:#f3d9a8!important}
+  .calday .mcseason{font-size:10.5px;color:#5b21b6;font-weight:700;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.calday .mcseason.order{color:#b45309}
   .calday .mcnone{font-size:10.5px;color:#92400e;font-weight:700;margin-top:3px}
   #calendarGrid.mc-live .nov-embed-count{display:none}`;
   document.head.appendChild(css);
 
+  // Season dates from the researched Playbook (only exact, confirmed dates) and an order reminder 6 weeks before each.
+  // Six weeks is a planning default, not RSH's confirmed production time.
+  const MON = { Jan: 0, Feb: 1, Mar: 2, Apr: 3, Oct: 9, Nov: 10, Dec: 11 };
+  window.RSH_SEASON_MARKS = () => seasonMarks();
+  function seasonMarks() {
+    const B = window.RSH_BOTS, pb = B && B.playbook ? B.playbook() : null, out = {}; if (!pb) return out;
+    const add = (d, m) => { const k = iso(d); (out[k] = out[k] || []).push(m); };
+    for (const [when, what, note] of pb.calendar || []) {
+      const m = String(when).match(/^(Jan|Feb|Mar|Apr|Oct|Nov|Dec) (\d{1,2})\b/); if (!m || /not confirmed|not yet|tentative|confirm/i.test(note + ' ' + what)) continue;
+      const mo = MON[m[1]], d = new Date(mo >= 9 ? 2026 : 2027, mo, +m[2]), o = new Date(d); o.setDate(o.getDate() - 42);
+      add(d, { text: '🏆 ' + what.split(',')[0].slice(0, 22), tip: `${what} (${when}). From the Season Playbook.` });
+      add(o, { order: true, text: '⏱ Order window: ' + what.split(',')[0].slice(0, 14), tip: `Six weeks before ${what} (${when}): remind teams to order uniforms now. Six weeks is a planning default; confirm RSH’s real production time before saying it in a post.` });
+    }
+    return out;
+  }
   function coverage() {
     const sched = live().scheduled(); if (!sched) return null;
     const today = new Date(); today.setHours(0, 0, 0, 0);
@@ -75,8 +91,10 @@
     const pubByDay = {}; for (const r of rows) { const k = String(r[1]); const key = k.slice(0, 4) + '-' + k.slice(4, 6) + '-' + k.slice(6, 8); pubByDay[key] = (pubByDay[key] || 0) + 1; }
     const emptySet = new Set(cov ? cov.empty : []);
     grid.classList.toggle('mc-live', !!cov);   // live Metricool data replaces the older dated snapshot counts
+    const marks = seasonMarks();
     grid.querySelectorAll('.calday[data-date]').forEach(day => {
       if (day.dataset.mc) return; day.dataset.mc = '1';
+      for (const m of marks[day.dataset.date] || []) { const el = document.createElement('div'); el.className = 'mcseason' + (m.order ? ' order' : ''); el.title = m.tip; el.textContent = m.text; day.appendChild(el); }
       const k = day.dataset.date, list = (cov && cov.byDay[k]) || [];
       list.slice().sort((a, b) => a[0] < b[0] ? -1 : 1).slice(0, 3).forEach(p => {
         const el = document.createElement('div'); el.className = 'calevent mc' + (p[4] ? ' draft' : '');

@@ -74,6 +74,26 @@
     });
   }
 
+  /* ---------- tested playbook: what the tests showed, kept in one place and given to Sage and Quill ---------- */
+  const rateOf = (t, k) => { const n = Number(t[k + 'Numerator']), d = Number(t[k + 'Denominator']); return d > 0 && isFinite(n) ? n / d : null; };
+  function lessons() {
+    const out = [];
+    for (const t of (app() && app().data().growthTests) || []) {
+      const a = rateOf(t, 'a'), b = rateOf(t, 'b'); if (a === null || b === null || (!a && !b)) continue;
+      const m = Math.abs(b - a) / Math.max(Math.min(a, b), 1e-7); if (m < 0.1) { out.push({ t, tie: true, text: `${t.title}: no clear winner (${t.platform}, under 10% apart).` }); continue; }
+      const win = b > a ? 'b' : 'a', lose = win === 'a' ? 'b' : 'a';
+      out.push({ t, win, text: `${t.title} (${t.platform}, ${t.kpi === 'views' ? 'views' : 'interactions per impression'}): “${String(t[win] || 'version ' + win.toUpperCase()).slice(0, 120)}” beat “${String(t[lose] || 'version ' + lose.toUpperCase()).slice(0, 120)}” by ${Math.round(m * 100)}%.${t.learning ? ' Learned: ' + String(t.learning).slice(0, 200) : ''}${t.aPost ? ' One post per side, so directional only.' : ''}` });
+    }
+    return out;
+  }
+  function month() { const k = new Date().toISOString().slice(0, 7); return ((app() && app().data().growthTests) || []).filter(t => rateOf(t, 'a') !== null && rateOf(t, 'b') !== null && String(t.aPost ? t.aPost.date : t.createdAt || '').replace(/-/g, '').slice(0, 6) === k.replace('-', '')).length; }
+  function book() {
+    const list = document.getElementById('gxList'); if (!list) return;
+    let box = document.getElementById('gxBook'); if (!box) { box = document.createElement('div'); box.id = 'gxBook'; box.className = 'gx-live'; list.parentNode.insertBefore(box, list); }
+    const L = lessons(), n = month();
+    box.innerHTML = `<h5>Tested playbook · ${n} of 2 tests with results this month</h5>${L.length ? `<ul class="small" style="margin:4px 0 0 18px;padding:0">${L.map(x => `<li>${esc(x.text)}</li>`).join('')}</ul><div class="small" style="margin-top:6px">Sage and Quill read these when they write scripts and hashtags.</div>` : '<div class="small">No test has results yet. Run one test on a hook and one on a format this month; pick the two published posts on each test to fill the result.</div>'}`;
+  }
+
   function start() {
     const list = document.getElementById('gxList'); if (!list || !app() || list.dataset.gxLive) return; list.dataset.gxLive = '1';
     list.addEventListener('click', e => {
@@ -83,8 +103,9 @@
       apply(b.dataset.gxLiveApply, a, bb);
     });
     new MutationObserver(() => decorate()).observe(list, { childList: true });
-    if (window.RSH_LIVE && window.RSH_LIVE.onData) window.RSH_LIVE.onData(() => { sync(); list.querySelectorAll('.gx-live').forEach(x => x.remove()); decorate(); });
-    decorate();
+    if (window.RSH_LIVE && window.RSH_LIVE.onData) window.RSH_LIVE.onData(() => { sync(); list.querySelectorAll('article .gx-live').forEach(x => x.remove()); decorate(); book(); });
+    decorate(); book();
+    new MutationObserver(() => book()).observe(list, { childList: true });
   }
-  window.RSH_EXPERIMENTS = { start };
+  window.RSH_EXPERIMENTS = { start, lessons, month };
 })();

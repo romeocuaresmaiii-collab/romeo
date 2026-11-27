@@ -67,10 +67,11 @@
   }
 
   /* ---------- data changes (always through the app, so they are saved like any other edit) ---------- */
-  function link(id, url) {
-    const d = app().data(), p = d.posts.find(x => x.id === id), r = rows().find(x => x[2] === url); if (!p || !r) return;
+  function link(id, url, quiet) {
+    const d = app().data(), p = d.posts.find(x => x.id === id), r = rows().find(x => x[2] === url); if (!p || !r) return false;
     p.published = { link: r[2], network: r[0], date: r[1], text: r[3], format: r[6], impressions: r[4], interactions: r[5], linkedAt: new Date().toISOString(), seenAt: new Date().toISOString() };
-    app().save(); app().notice('Campaign linked to its published post.'); render();
+    if (quiet) p.published.auto = true;
+    app().save(); if (!quiet) app().notice('Campaign linked to its published post.'); render(); return true;
   }
   function unlink(id) { const p = app().data().posts.find(x => x.id === id); if (!p || !p.published) return; delete p.published; app().save(); app().notice('Link removed. The campaign itself is unchanged.'); render(); }
   // When fresh Metricool figures arrive, update the stored results of linked campaigns (only if they changed).
@@ -135,5 +136,5 @@
     document.querySelectorAll('.nav button[data-view="overview"]').forEach(b => b.addEventListener('click', () => setTimeout(render, 0)));
     render();
   }
-  window.RSH_CAMPAIGNS = { start, seasonPhase, render };
+  window.RSH_CAMPAIGNS = { start, seasonPhase, render, link };
 })();
