@@ -11,7 +11,7 @@
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const PIECE = 180000, MAX_BYTES = 8e6, REST_DAYS = 21;
   const MOODS = ['hype', 'epic', 'driving', 'confident', 'uplifting', 'calm', 'emotional', 'playful', 'dark', 'corporate'];
-  const FX = ['whoosh', 'swoosh', 'hit', 'impact', 'riser', 'crowd', 'whistle', 'buzzer', 'click', 'tapestop'];
+  const FX = ['whoosh', 'swoosh', 'hit', 'impact', 'riser', 'crowd', 'whistle', 'buzzer', 'click', 'tapestop', 'ding', 'wrong'];
   const SPORTS = ['wrestling', 'basketball', 'football', 'soccer', 'volleyball', 'baseball', 'softball', 'track', 'mma', 'any'];
   const SOURCES = [['Pixabay Music', 'https://pixabay.com/music/', 'Free for commercial use under the Pixabay Content License, no credit needed.'],
     ['Pixabay sound effects', 'https://pixabay.com/sound-effects/', 'Free whooshes, hits, risers and crowd sounds under the same license.'],
