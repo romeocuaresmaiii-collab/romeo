@@ -34,6 +34,7 @@
   let db = null, settings = { ...DEFAULTS }, plan = null, busy = false, note = '', log = [], openItem = null;
   let phase = null, wake = '', assetSig = null, queued = '', drop = { msg: '', busy: false };
   let tab = 'office', filter = 'all';
+  let jobsLoaded = false;   // edit jobs are read from the database before the bots may add any, so a fresh page never re-sends a job that exists
   let jobs = {}, editorState = 'unknown', dispatching = false, sendRetries = 0, retryTimer = 0; const RETRY_WAIT = [30e3, 120e3, 300e3, 600e3];      // edit jobs by campaign id; whether the editor can be reached from this view                 // which section of the screen is showing; which campaigns the plan lists
   const openCamps = new Set();
   const slotName = t => (settings.labels && settings.labels[t]) ? `${clock(t)} · ${settings.labels[t]}` : clock(t);      // which bot is at work right now; why the team started; attachments seen so far
@@ -348,11 +349,14 @@
   const needsMedia = p => { const n = assetNeeds(p).needs[0]; return !!n && n.state === 'miss' && kindOf(p) !== 'text'; };
   const settled = p => /approved|posted|published|scheduled/i.test(String(p.status || ''));
   const designable = p => /^\s*quote\b/i.test(p.title || '') || (/image|carousel|graphic/i.test(String(p.postType || '')) && !!String(p.onImageText || '').trim() && !/footage|film|record|clip|behind the scenes|bts|interview/i.test(String(p.video || p.visualConcept || '')));
-  function queueEdits(campaigns) {
-    if (!settings.autoEdit || !db) return; let added = 0; const wantPhotos = new Set();
+  // A job is only created when the database has none for that campaign (another open page may have made it a moment ago).
+  async function freshJob(id) { try { const s = await db.doc('editJobs/' + id).get(); if (s.exists) { jobs[id] = { ...s.data() }; return false; } return true; } catch (_) { return false; } }
+  async function queueEdits(campaigns) {
+    if (!settings.autoEdit || !db || !jobsLoaded) return; let added = 0; const wantPhotos = new Set();
     for (const p of campaigns) {
       if (added >= 3) break;
       if (jobs[p.id] || settled(p) || !needsMedia(p) || !factState(p).ok || (dykVideo(p) && !hasVO(p))) continue;
+      if (!(await freshJob(p.id))) continue;
       if (rawCount(p.id)) { jobs[p.id] = { postId: p.id, title: String(p.title || '').slice(0, 120), status: 'queued', queuedAt: new Date().toISOString(), auto: true }; added++; db.doc('editJobs/' + p.id).set(jobs[p.id]).catch(() => {}); continue; }
       const prods = productsFor(p);
       if (prods.length && readyRefs(p).length) { productJob(p.id, kindOf(p) === 'video' ? 'video' : 'image'); added++; continue; }
@@ -387,7 +391,7 @@
   async function collect() {
     if (!db) return; let changed = false;
     { const before = JSON.stringify(Object.values(factDocs).map(f => [f.postId, f.status, f.at])); await loadFacts(); if (JSON.stringify(Object.values(factDocs).map(f => [f.postId, f.status, f.at])) !== before) { try { window.RSH_TRACKER && window.RSH_TRACKER.render(); } catch (_) {} if (Object.values(factDocs).some(f => f.status !== 'pending') && !busy) { const p0 = Object.values(factDocs).sort((a, b) => String(b.at || '').localeCompare(String(a.at || '')))[0]; if (p0 && p0.status !== 'pending') { const t = p0.title || 'a campaign'; setTimeout(() => { if (!busy) work(`Fact check back for “${cut(t, 40)}”. The team got to work.`); }, 0); } } } }
-    try { const q = await db.collection('editJobs').get(); const next = {}; for (const s of q.docs) { const d = s.data(); if (d && d.postId) next[d.postId] = { ...d }; } jobs = next; } catch (_) { return; }
+    try { const q = await db.collection('editJobs').get(); const next = {}; for (const s of q.docs) { const d = s.data(); if (d && d.postId) next[d.postId] = { ...d }; } jobs = next; jobsLoaded = true; } catch (_) { return; }
     for (const j of Object.values(jobs)) {
       if (j.status !== 'done' || !j.assetId) continue;
       const prev = j.attachedAssetId && j.attachedAssetId !== j.assetId ? j.attachedAssetId : undefined;   // a revision replaces the cut attached before
@@ -1195,7 +1199,7 @@ Add PART 8 — PLATFORM VERSIONS: one block for each of ${t.map(c => NAME[c]).jo
     const stops = {}; for (const i of items) for (const c of i.checks) if (c[0] === 'stop') stops[c[1]] = (stops[c[1]] || 0) + 1;
     const top = Object.keys(stops).sort((a, b) => stops[b] - stops[a])[0];
     const needing = inRange.filter(q => assetNeeds(q).missing);
-    queueEdits(inRange);
+    (jobsLoaded ? queueEdits(inRange) : collect().then(() => queueEdits(inRange))).catch(() => {});   // only after the saved jobs are read
     const jl = Object.values(jobs), jq = jl.filter(j => j.status === 'queued' || j.status === 'sent').length;
     const link = editorLink.route ? ` Direct link to the editor works (${editorLink.route === 'fire_trigger' ? 'instant check' : 'message'}, ${editorLink.at.slice(11, 16)} UTC).` : Object.keys(editorLink.errors).length ? ` Direct link to the editor failed (${Object.entries(editorLink.errors).map(([k, v]) => k + ': ' + v).join('; ')}): jobs go out with the hourly check.` : '';
     log = [['reel', (!settings.autoEdit ? 'Automatic editing is off.' : jq ? `${jq} edit job${jq === 1 ? '' : 's'} with the RSH SPORTS editor${jl.filter(j => j.status === 'attached').length ? `, ${jl.filter(j => j.status === 'attached').length} finished and attached` : ''}.` : 'No video is waiting to be edited.') + link], ['pixel', !inRange.length ? 'No campaigns in the window.' : needing.length ? `${needing.length} of ${inRange.length} campaigns need files. Next up: “${cut(needing[0].title, 40)}” needs ${assetNeeds(needing[0]).needs.filter(n => n.state === 'miss').map(n => n.label).join(' and ')}. Briefs and prompts are in the plan.` : `All ${inRange.length} campaigns have their files.`], ['quill', items.length ? `${items.length} captions for ${inRange.length} campaign${inRange.length === 1 ? '' : 's'}. First one: ${sample}` : 'No campaigns in the window, so nothing to write.'],

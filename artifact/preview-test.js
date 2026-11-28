@@ -676,11 +676,13 @@ const out = []; const ok = (n, c, d) => { out.push(c); console.log((c ? 'PASS  '
     const quote = mk('hfQuote', { title: 'Quote: Hands Free Test', postType: 'Image', onImageText: 'NEVER QUIT' });
     const done = mk('hfDone', { title: 'Quote: Already Approved', postType: 'Image', onImageText: 'X', status: 'Approved' });
     const foot = mk('hfFoot', { title: 'Behind the scenes at practice', postType: 'Reel', video: 'Film the team warming up: real footage of the drills' });
-    B.queueEdits([quote, done, foot]); await new Promise(r => setTimeout(r, 300));
+    const pre = { ...window.__store['editJobs/hfQuote'] }; window.__store['editJobs/hfQuote'] = { postId: 'hfQuote', status: 'attached', assetId: 'x' };   // a job that exists in the database is never re-created
+    await B.queueEdits([quote]); const kept = (window.__store['editJobs/hfQuote'] || {}).status === 'attached'; delete window.__store['editJobs/hfQuote']; await B.collect();
+    await B.queueEdits([quote, done, foot]); await new Promise(r => setTimeout(r, 300));
     const jq = window.__store['editJobs/hfQuote'] || {}, jd = window.__store['editJobs/hfDone'], jf = window.__store['editJobs/hfFoot'];
     const draftCap = B.withTags({ ...quote, status: 'Draft' }, 'instagram', 'Caption'), apprCap = B.withTags({ ...quote, status: 'Approved' }, 'instagram', 'Caption');
     posts.splice(posts.indexOf(quote), 1); posts.splice(posts.indexOf(done), 1); posts.splice(posts.indexOf(foot), 1);
-    return { designJob: jq.source === 'design' && /queued|sent/.test(jq.status), skipApproved: !jd, footageWaits: !jf, approvedTagsUntouched: apprCap === 'Caption', draftTagsOk: typeof draftCap === 'string' };
+    return { kept, designJob: jq.source === 'design' && /queued|sent/.test(jq.status), skipApproved: !jd, footageWaits: !jf, approvedTagsUntouched: apprCap === 'Caption', draftTagsOk: typeof draftCap === 'string' };
   });
   ok('Hands-free bots: a quote/text post with no files goes to the editor as a design job; footage posts wait for files; approved campaigns are never touched; Quill hashtags only go onto drafts', Object.values(hf).every(v => v === true), JSON.stringify(hf));
   const snd = await p.evaluate(async () => {
