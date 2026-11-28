@@ -326,12 +326,12 @@
     if (j && (j.source === 'product-image' || j.source === 'product-video')) return productHandoff(p, j);
     if (j && j.source === 'revision') {
       let files = []; try { files = JSON.parse(j.manifest || '[]'); } catch (_) {}
-      const list = files.map((f, n) => `${n + 1}. ${f.name} (${f.mime}, ${Math.round(f.bytes / 1024)} KB${f.encoding === 'base64' ? ', stored base64-encoded: decode after joining' : ''}) asset${f.parts.length > 1 ? 's in order' : ''}: ${f.parts.map(x => x.id).join(' + ')}`).join('\n');
+      const list = files.map((f, n) => `${n + 1}. ${f.name} (${f.mime}, ${Math.round(f.bytes / 1024)} KB${f.encoding === 'base64' ? ', stored base64-encoded: decode after joining' : ''}) ${partList(f)}`).join('\n');
       return `[RSH Sports Marketing OS: automatic REVISION job. Sent by the app on behalf of the team after the manager's review.]\n\nREVISION ${j.revision || 2} — ${p.title}\nCampaign for ${p.platform || 'social media'}, planned ${p.date || 'no date yet'}.\n\nThe current video is asset ${j.baseAssetId} (fetch it with the Artifact tool: action read, url ${APP_URL}, path ${j.baseAssetId}). Apply ONLY these review notes and keep everything else as it is:\n\n"${j.notes}"\n\nKeep 1080×1920, MP4 (H.264 + AAC), under 15 MB. No third-party logos, no stock, price or delivery claims. If a note asks for something you cannot do (for example new footage), do the rest and say so in one line.${list ? '\n\nORIGINAL FILES, if you need them (same Artifact read, path = asset id):\n' + list : ''}${j.script ? '\n\nSCRIPT:\n' + String(j.script).slice(0, 6000) : ''}\n\n${RETURN_STEPS(p.id)}`;
     }
     if (j && (j.source === 'zip' || j.source === 'campaign')) {
       let files = []; try { files = JSON.parse(j.manifest || '[]'); } catch (_) {}
-      const list = files.map((f, n) => `${n + 1}. ${f.name} (${f.mime}, ${Math.round(f.bytes / 1024)} KB${f.encoding === 'base64' ? ', stored base64-encoded: decode after joining' : ''}) asset${f.parts.length > 1 ? 's in order' : ''}: ${f.parts.map(x => x.id).join(' + ')}`).join('\n');
+      const list = files.map((f, n) => `${n + 1}. ${f.name} (${f.mime}, ${Math.round(f.bytes / 1024)} KB${f.encoding === 'base64' ? ', stored base64-encoded: decode after joining' : ''}) ${partList(f)}`).join('\n');
       return `[RSH Sports Marketing OS: automatic edit job${j.source === 'zip' ? ' from a zip' : ' from the campaign’s asset box'}. Sent by the app on behalf of the team.]\n\nEDIT JOB — ${p.title}\nCampaign for ${p.platform || 'social media'}, planned ${p.date || 'no date yet'}. Sport: ${p.sport || 'not set'}.\n\n${j.source === 'zip' ? `The team uploaded a zip, "${j.zipName}", with every file for this video.` : `The manager gathered ${j.files} file${j.files === 1 ? '' : 's'} in the campaign’s asset box and marked them ready.`} Edit the full video exactly as the script says, using these files. Keep the finished MP4 1080×1920 and under 15 MB.${seoEditLine(p) ? '\n\n' + seoEditLine(p) : ''}${productBlock(p) ? '\n\n' + productBlock(p) : ''}\n\nGET THE FILES: for each asset id below, use the Artifact tool with action read, url ${APP_URL}, and path set to the asset id; it saves the file locally. Where a file has several asset ids, fetch them in order and join them (cat). Where it says base64, decode after joining (base64 -d).\n${list}\n\nSCRIPT${j.scriptName ? ' (' + j.scriptName + ')' : ''}:\n${j.script || (packFor(p.id) ? '(Production pack written by Sage, the team’s script writer.)\n' + packFor(p.id) : '') || 'No script file was found in the zip. Follow the campaign: hook "' + sentence(p.hook) + '".'}${j.scriptCut ? '\n[The script is longer than shown; the full file is in the list above.]' : ''}\n\nOUTPUT unless the script says otherwise: one vertical 9:16 video, 1080×1920, MP4 (H.264). RULES: ${RULES} RSH branding only in the corner watermark and the end card.\n${LOGO_RULE}\n\nHOUSE STYLE (follow the script where it says otherwise): ${HOUSE}\n${dykVideo(p) ? VO_RULE + '\n' : ''}${endCardLine(p)}\nStart from Video Studio Kit engine ${engineFor(p)}. Check stills of every beat before the full render, and list anything in the images that breaks the brand rules.\n\n${RETURN_STEPS(p.id)}`;
     }
     return `[RSH Sports Marketing OS: automatic edit job. Sent by the app on behalf of the team.]\n\n${editJob(p).replace('under 30 MB', 'under 19 MB if possible')}\n\n${RETURN_STEPS(p.id)}`;
@@ -406,18 +406,41 @@
   const OTHER = { mov: 'video/quicktime', m4v: 'video/mp4', mp3: 'audio/mpeg', wav: 'audio/wav', m4a: 'audio/mp4', aac: 'audio/aac', ogg: 'audio/ogg', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', doc: 'application/msword', heic: 'image/heic', psd: 'image/vnd.adobe.photoshop', ai: 'application/postscript', ttf: 'font/ttf', otf: 'font/otf', zip: 'application/zip' };
   const ZIP_MAX = 400e6, CHUNK = 19 * 1024 * 1024;   // one file up to 19 MB: split pieces cannot pass the sharing review
   function b64(bytes) { let out = ''; for (let i = 0; i < bytes.length; i += 0x8000) out += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000)); return btoa(out); }
+  // Claude's sharing review only reads JPEG, PNG, GIF, WebP, MP4 and WebM files in the file store, and only when the file
+  // really is what its label says. So a file goes to the file store only when its first bytes prove one of those formats;
+  // everything else (scripts, text, PDFs, audio, documents) is kept in the app's database in pieces instead.
+  const sniff = b => b[0] === 0xFF && b[1] === 0xD8 && b[2] === 0xFF ? 'image/jpeg' : b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4E && b[3] === 0x47 ? 'image/png'
+    : b[0] === 0x47 && b[1] === 0x49 && b[2] === 0x46 ? 'image/gif' : b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 && b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50 ? 'image/webp'
+    : b[4] === 0x66 && b[5] === 0x74 && b[6] === 0x79 && b[7] === 0x70 && !/^(M4A |M4B |qt  )/.test(String.fromCharCode(b[8], b[9], b[10], b[11])) ? 'video/mp4' : b[0] === 0x1A && b[1] === 0x45 && b[2] === 0xDF && b[3] === 0xA3 ? 'video/webm' : '';
+  const DB_PIECE = 180000;
   async function storeFile(assets, name, bytes) {
-    const ext = (name.split('.').pop() || '').toLowerCase(), native = NATIVE[ext], parts = [];
-    let data, type, encoding;
-    if (native && !(native.startsWith('text/') && /[\x00]/.test(new TextDecoder().decode(bytes.subarray(0, 512))))) { data = bytes; type = native === 'image/gif' ? 'image/gif' : native; encoding = 'raw'; }
-    else { data = new TextEncoder().encode(b64(bytes)); type = 'text/plain'; encoding = 'base64'; }
-    for (let start = 0; start < data.length || start === 0; start += CHUNK) {
-      const end = Math.min(data.length, start + CHUNK);
-      const r = await assets.upload(new Blob([data.subarray(start, end)], { type }), { type });
-      parts.push({ id: r.id, start, end }); if (end >= data.length) break;
+    const ext = (name.split('.').pop() || '').toLowerCase(), real = sniff(bytes.subarray(0, 16)), parts = [];
+    const label = NATIVE[ext] || OTHER[ext] || 'application/octet-stream';
+    if (real && bytes.length <= CHUNK) {   // a real image or video under 19 MB: one file in the file store, labelled by its real format
+      const r = await assets.upload(new Blob([bytes], { type: real }), { type: real });
+      const fixed = real === label || !NATIVE[ext] ? name : name.replace(/\.[^.]+$/, '') + '.' + { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/gif': 'gif', 'image/webp': 'webp', 'video/mp4': 'mp4', 'video/webm': 'webm' }[real];
+      return { name: fixed, mime: real, bytes: bytes.length, encoding: 'raw', parts: [{ id: r.id, start: 0, end: bytes.length }] };
     }
-    return { name, mime: native || OTHER[ext] || 'application/octet-stream', bytes: bytes.length, encoding, parts };
+    if (real && real.startsWith('video/')) throw new Error(`${name} is ${Math.round(bytes.length / 1e6)} MB. Videos must be 19 MB or smaller: export it smaller (1080p, H.264) and add it again.`);
+    if (!db) throw new Error('Storage is not available in this view.');
+    let isText = false, txt = ''; if (/^text\/|json$/.test(label) && bytes.length < 4e6) { try { txt = new TextDecoder('utf-8', { fatal: true }).decode(bytes); isText = !/\x00/.test(txt); } catch (_) {} }
+    const data = isText ? txt : b64(bytes), key = 'fileStore/' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    if (data.length > 40 * DB_PIECE) throw new Error(`${name} is too large to keep here (${Math.round(bytes.length / 1e6)} MB). Share it from Google Drive instead.`);
+    for (let n = 0, start = 0; start < data.length || start === 0; n++, start += DB_PIECE) {
+      const end = Math.min(data.length, start + DB_PIECE), doc = key + '_' + n;
+      await db.doc(doc).set({ data: data.slice(start, end), name: String(name).slice(0, 200), n, at: new Date().toISOString() });
+      parts.push({ doc, start, end }); if (end >= data.length) break;
+    }
+    return { name, mime: label, bytes: bytes.length, encoding: isText ? 'db-text' : 'db-base64', parts };
   }
+  // Read a stored file back as text (file-store pieces or database pieces).
+  async function readFileText(f) {
+    if (f.encoding === 'db-text' || f.encoding === 'db-base64') { const chunks = []; for (const x of f.parts) { const s = await db.doc(x.doc).get(); chunks.push(s.exists ? String(s.data().data || '') : ''); } const t = chunks.join(''); return f.encoding === 'db-text' ? t : new TextDecoder().decode(Uint8Array.from(atob(t), c => c.charCodeAt(0))); }
+    const blob = new Blob(await Promise.all(f.parts.map(async x => (await fetch('/_blob/' + x.id)).blob()))); let t = await blob.text();
+    if (f.encoding === 'base64') { try { t = new TextDecoder().decode(Uint8Array.from(atob(t), c => c.charCodeAt(0))); } catch (_) {} }
+    return t;
+  }
+  const partList = f => f.encoding === 'db-text' || f.encoding === 'db-base64' ? `kept in the app database: ArtifactData get ${f.parts.map(x => x.doc).join(' + ')} (field "data", join in order${f.encoding === 'db-base64' ? ', then base64-decode' : ''})` : `asset${f.parts.length > 1 ? 's in order' : ''}: ${f.parts.map(x => x.id).join(' + ')}`;
   async function zipJob(file, postId) {
     const p = (app().data().posts || []).find(x => x.id === postId);
     if (!p) { drop.msg = 'Pick the campaign this video is for, then drop the zip again.'; return render(); }
@@ -692,6 +715,7 @@ Answer with JSON only, exactly these keys:
   let dykKit = null;
   async function loadDykKit() {
     if (dykKit) return dykKit; if (window.RSH_DYK_KIT) return (dykKit = window.RSH_DYK_KIT);
+    try { if (db) { const d = await db.doc('kits/dyk').get(); if (d.exists) { const k = JSON.parse(d.data().json || 'null'); if (k && k.files) return (dykKit = k); } } } catch (_) {}   // kept in the database: the sharing review cannot read JSON files
     try { const r = await fetch('/_blob/' + DYK_KIT_ASSET); if (r.ok) { const k = await r.json(); if (k && k.files) dykKit = k; } } catch (_) {}
     return dykKit;
   }
@@ -1453,7 +1477,7 @@ Add PART 8 — PLATFORM VERSIONS: one block for each of ${t.map(c => NAME[c]).jo
     const cur = jobs[id]; if (cur && cur.status === 'sent') throw new Error('The editor already has this campaign. Wait for the video, or ask for a revision when it comes back.');   // a job still waiting in the queue is replaced by this fuller one
     const assets = await use('assets'); let script = '', scriptName = '';
     const sf = box.files.find(f => /^text\//.test(f.mime) && /script/i.test(f.name)) || box.files.find(f => /^text\//.test(f.mime));
-    if (sf) { try { const blob = new Blob(await Promise.all(sf.parts.map(async x => (await fetch('/_blob/' + x.id)).blob()))); let t = await blob.text(); if (sf.encoding === 'base64') { try { t = new TextDecoder().decode(Uint8Array.from(atob(t), c => c.charCodeAt(0))); } catch (_) {} } script = t.replace(/\r\n/g, '\n').trim().slice(0, 30000); scriptName = sf.name; } catch (_) {} }
+    if (sf) { try { let t = await readFileText(sf); script = t.replace(/\r\n/g, '\n').trim().slice(0, 30000); scriptName = sf.name; } catch (_) {} }
     if (!script && packFor(id)) { script = packFor(id).slice(0, 30000); scriptName = 'Production pack by Sage'; }
     if (!script) script = [p.script, p.voiceover ? 'VOICEOVER:\n' + p.voiceover : ''].filter(Boolean).join('\n\n');
     const job = { postId: id, title: String(p.title || '').slice(0, 120), status: 'queued', queuedAt: new Date().toISOString(), source: 'campaign', files: box.files.length, manifest: JSON.stringify(box.files.map(({ addedAt, ...f }) => f)), script, scriptName, ...(cur && cur.status ? { revisionOf: cur.assetId || '' } : {}) };

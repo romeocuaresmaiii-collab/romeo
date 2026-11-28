@@ -304,6 +304,14 @@
   const limit = (promise, ms) => Promise.race([promise, new Promise((_, rej) => setTimeout(() => rej({ code: 'timed_out', message: 'no answer after ' + Math.round(ms / 1000) + ' s' }), ms))]);
 
   async function storeInFileStore(file, mime) {
+    { // the sharing review only reads real JPEG/PNG/GIF/WebP/MP4/WebM files of up to 19 MB: anything else is kept in the database instead
+      const b = new Uint8Array(await file.slice(0, 16).arrayBuffer());
+      const real = b[0] === 0xFF && b[1] === 0xD8 && b[2] === 0xFF ? 'image/jpeg' : b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4E && b[3] === 0x47 ? 'image/png' : b[0] === 0x47 && b[1] === 0x49 && b[2] === 0x46 ? 'image/gif'
+        : b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 && b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50 ? 'image/webp'
+        : b[4] === 0x66 && b[5] === 0x74 && b[6] === 0x79 && b[7] === 0x70 && !/^(M4A |M4B |qt  )/.test(String.fromCharCode(b[8], b[9], b[10], b[11])) ? 'video/mp4' : b[0] === 0x1A && b[1] === 0x45 && b[2] === 0xDF && b[3] === 0xA3 ? 'video/webm' : '';
+      if (!real || file.size > PART_BYTES) throw { code: 'not_reviewable', message: real ? 'over 19 MB' : 'not a JPEG, PNG, GIF, WebP, MP4 or WebM file' };
+      mime = real;
+    }
     if (!assets && window.claude && typeof window.claude.use === 'function') { try { assets = await limit(window.claude.use('assets'), 8000); } catch (_) {} }
     if (!assets) throw { code: 'assets_null', message: 'no file store in this view' };
     const putOne = async blob => {
@@ -312,7 +320,7 @@
         catch (e) { if (attempt === 0 && e && e.code === 'store_unavailable') { await new Promise(res => setTimeout(res, 1500)); continue; } throw e; }
       }
     };
-    if (file.size <= PART_BYTES) { const r = await putOne(new Blob([await file.arrayBuffer()], { type: mime })); return { id: r.id }; }
+    if (file.size <= PART_BYTES) { const r = await putOne(new Blob([await file.arrayBuffer()], { type: mime })); return { id: r.id, mime }; }
     const stored = [];
     try {
       let start = 0;
@@ -421,11 +429,11 @@
       if (mime === 'video/quicktime') return json(415, { error: 'MOV videos cannot be stored in this artifact. Export the video as MP4 and attach that' });
       if (!(file instanceof Blob) || !(mime in MEDIA_TYPES)) return json(415, { error: 'Attach PNG, JPEG, WebP, MP4 or WebM files' });
       if (file.size < 256 || file.size > MEDIA_TYPES[mime]) return json(413, { error: 'File is over the limit: 12 MB per image, 120 MB per video' });
-      const done = r => json(201, { id: r.id, mime, bytes: file.size, name: file.name || 'upload', storage: 'media', ...(r.parts ? { parts: r.parts } : {}), ...(r.store ? { store: r.store } : {}) });
+      const done = r => json(201, { id: r.id, mime: r.mime || mime, bytes: file.size, name: file.name || 'upload', storage: 'media', ...(r.parts ? { parts: r.parts } : {}), ...(r.store ? { store: r.store } : {}) });
       let fileStoreError = null;
       if (!ls.get(SKIP_KEY) || Date.now() - Number(ls.get(SKIP_KEY)) > 86400000) {
         try { return done(await storeInFileStore(file, mime)); }
-        catch (e) { fileStoreError = e; ls.set(SKIP_KEY, String(Date.now())); diag({ stage: 'file store', code: (e && e.code) || 'unknown', message: e && String(e.message || '').slice(0, 300), mime, bytes: file.size }); }
+        catch (e) { fileStoreError = e; if (!(e && e.code === 'not_reviewable')) ls.set(SKIP_KEY, String(Date.now())); diag({ stage: 'file store', code: (e && e.code) || 'unknown', message: e && String(e.message || '').slice(0, 300), mime, bytes: file.size }); }
       }
       try { return done(await storeInDatabase(file, mime)); }
       catch (e) {
