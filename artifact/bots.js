@@ -424,7 +424,9 @@
   const deliveryKind = j => { const p = (app().data().posts || []).find(x => x.id === j.postId) || {}, k = kindOf(p), vid = /^video\//.test(j.mime || '') || /\.(mp4|mov|webm)$/i.test(j.name || '');
     return k === 'carousel' ? 'carousel' : k === 'story' ? 'story' : vid ? 'video' : j.source === 'product-image' || /^image\//.test(j.mime || '') || k === 'image' ? 'post image' : 'video'; };
   const deliveryLabel = j => { const k = deliveryKind(j); return j.revision > 1 ? `Revised ${k}${k === 'video' ? ' (revision ' + j.revision + ')' : ''}` : `New ${k}`; };
-  const freshVideos = () => Object.values(jobs).filter(j => j.status === 'attached' && !j.reviewed).sort((a, b) => String(b.readyAt).localeCompare(String(a.readyAt)));
+  // A delivery leaves the Office once someone has watched it or the campaign has moved past review (approved, scheduled, posted).
+  const reviewedPost = id => { const p = (app().data().posts || []).find(x => x.id === id); return !p || settled(p) || !!((p.approvalMeta || {}).pmReviewedAt || (p.approvalMeta || {}).anthonyConfirmedAt); };
+  const freshVideos = () => Object.values(jobs).filter(j => j.status === 'attached' && !j.reviewed && !reviewedPost(j.postId)).sort((a, b) => String(b.readyAt).localeCompare(String(a.readyAt)));
   async function watch(postId) {
     const j = jobs[postId]; if (!j) return;
     app().openReview(postId, j.assetId);

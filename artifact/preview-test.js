@@ -508,6 +508,13 @@ const out = []; const ok = (n, c, d) => { out.push(c); console.log((c ? 'PASS  '
   ok('Carousels get music when scheduled: TikTok auto-adds a song; Instagram carousels go to the phone to add one (can be switched off); videos keep their own sound', Object.values(cm).every(v => v === true), JSON.stringify(cm));
   const trackBtn = await p.evaluate(() => { document.querySelector('.nav button[data-view="tracker"]') && document.querySelector('.nav button[data-view="tracker"]').click(); return document.querySelectorAll('[data-track-assets]').length; });
   ok('The Checklist shows an Assets button on every campaign', trackBtn > 0, String(trackBtn));
+  const fv = await p.evaluate(async () => { const B = window.RSH_BOTS, posts = window.RSH_APP.data().posts;
+    const a = { id: 'fvDraft', title: 'FV Draft', date: '2026-12-03', status: 'Draft', postType: 'Reel' }, b = { id: 'fvAppr', title: 'FV Approved', date: '2026-12-03', status: 'Approved', postType: 'Reel' }; posts.push(a, b);
+    for (const id of ['fvDraft', 'fvAppr']) window.__store['editJobs/' + id] = { postId: id, title: id, status: 'attached', reviewed: false, assetId: '0123456789abcdef0123456789abcdef', readyAt: new Date().toISOString() };
+    await B.collect(); const ids = B.freshVideos().map(j => j.postId);
+    posts.splice(posts.indexOf(a), 1); posts.splice(posts.indexOf(b), 1); delete window.__store['editJobs/fvDraft']; delete window.__store['editJobs/fvAppr']; await B.collect();
+    return { draftShown: ids.includes('fvDraft'), approvedHidden: !ids.includes('fvAppr') }; });
+  ok('The Office’s “ready to review” list drops a delivery once its campaign is approved, scheduled or posted', fv.draftShown && fv.approvedHidden, JSON.stringify(fv));
   const tord = await p.evaluate(async () => { const A = window.RSH_APP, posts = A.data().posts, day = '2026-12-02';
     const nf = { id: 'trkNoFile', title: 'Zz Needs File Test', date: day, sport: 'Wrestling', platform: 'Instagram', status: 'Draft', postType: 'Reel', hook: 'h', caption: 'c' }; posts.push(nf);
     const sc = { id: 'trkSched', title: 'Aa Scheduled Test', date: day, sport: 'Wrestling', platform: 'Instagram', status: 'Scheduled', postType: 'Image', hook: 'h', caption: 'c', creativeAsset: { id: '0123456789abcdef0123456789abcdef', mime: 'image/jpeg', name: 'x.jpg' } }; posts.push(sc);
