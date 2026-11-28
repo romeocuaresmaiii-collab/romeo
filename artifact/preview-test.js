@@ -634,6 +634,24 @@ const out = []; const ok = (n, c, d) => { out.push(c); console.log((c ? 'PASS  '
     return { filled, planned, roll: !!roll && typeof roll.time.n === 'number', inReport: /Rolling check/.test(rep), pub: hrows.includes('Hourly publishing check:ok'), adv: hrows.some(r => /^Bots’ advice vs results:/.test(r)) };
   });
   ok('Scorecard work: an A/B test that names its two campaigns fills itself when both are published; the bots’ advice is re-checked on every refresh (rolling); the hourly publishing check shows in the System check', sc.filled && sc.planned && sc.roll && sc.inReport && sc.pub && sc.adv, JSON.stringify(sc));
+  const snd = await p.evaluate(async () => {
+    const S = window.RSH_SOUNDS, posts = window.RSH_APP.data().posts, post = posts.find(x => /quote|motivat|tired|grind/i.test(x.title || '')) || posts[0];
+    const empty = S.blockFor(post);
+    const mp3 = n => { const b = new Uint8Array(4000); b.set([0x49, 0x44, 0x33, 3, 0], 0); for (let i = 10; i < b.length; i++) b[i] = (i * n) % 251; return new File([b], 'track' + n + '.mp3', { type: 'audio/mpeg' }); };
+    let bad = ''; try { await S.add(new File([new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])], 'notes.txt'), { source: 'Pixabay Music' }); } catch (e) { bad = e.message; }
+    let nosrc = ''; try { await S.add(mp3(9), { source: '' }); } catch (e) { nosrc = e.message; }
+    const a = await S.add(mp3(3), { kind: 'music', moods: ['hype', 'epic'], sports: ['wrestling'], source: 'Pixabay Music', bpm: 128 });
+    const b = await S.add(mp3(5), { kind: 'music', moods: ['calm'], sports: [], source: 'YouTube Audio Library' });
+    const fx = await S.add(mp3(7), { kind: 'sfx', moods: [], sports: [], source: 'Pixabay sound effects', title: 'Whoosh' });
+    const block = S.blockFor({ ...post, title: 'Quote: Tired Is a Decision', sport: 'Wrestling' });
+    await S.markUsed(post, block);
+    const block2 = S.blockFor({ ...post, title: 'Quote: Tired Is a Decision', sport: 'Wrestling' });
+    const stored = window.__store['sounds/' + a.id], piece = window.__store[a.file.parts[0].doc];
+    return { empty: /library is empty/i.test(empty) && /Do NOT generate/.test(empty), bad: /not an MP3 or WAV/.test(bad), nosrc: /where the track came from/.test(nosrc),
+      first: block.includes('"' + a.title + '"') && /Whoosh/.test(block) && /never generate/i.test(block), rested: block2.includes('"' + b.title + '"') && !block2.includes('"' + a.title + '"'),
+      used: (stored && stored.uses || []).length === 1, inDb: !!piece && typeof piece.data === 'string', btn: /Sounds/.test((document.getElementById('rshSoundsBtn') || {}).textContent || ''), dbg: block.slice(0, 300) + ' || ' + a.title };
+  });
+  ok('Sound Library: only real MP3/WAV with a source; jobs name a library track matched to mood and sport plus sound effects, never generated music; a used track rests 21 days; an empty library tells the editor not to make music', Object.entries(snd).every(([k, v]) => k === 'dbg' || v === true), JSON.stringify(snd));
   const ib = await p.evaluate(async () => {
     const I = window.RSH_INBOX, wait = ms => new Promise(z => setTimeout(z, ms)); window.__ibCounts = { tt: 2, ig: 1 };
     await I.pull(true); const w1 = I.waiting(); const btn = document.getElementById('rshInboxBtn'), b1 = btn && btn.textContent;
@@ -791,7 +809,7 @@ const out = []; const ok = (n, c, d) => { out.push(c); console.log((c ? 'PASS  '
   ok('Quick review: one screen per campaign; ticking the checklist enables Approve, approval moves it to Anthony, and a change request sends it back with the note', qr.skip ? qr.btn : qr.btn && qr.shows && qr.enabled && qr.approved && qr.changed, JSON.stringify(qr));
   ok('Every attached photo or video has a full-quality download button in the campaign’s media gallery', /Download the original file at full quality/.test(await p.evaluate(() => document.documentElement.innerHTML)) || /⬇ Download/.test(require('fs').readFileSync('/home/user/rsh-sports-os/index.html', 'utf8')), 'gallery button');
   const hs = await p.evaluate(() => { const B = window.RSH_BOTS, posts = window.RSH_APP.data().posts, w = posts.find(x => /wrestl/i.test(x.sport || '')) || posts[0], j = B.editJob(w);
-    return { house: /HOUSE STYLE/.test(j) && /at least 2\.5 s/.test(j) && /top 8%/.test(j) && /ducked under the voice/.test(j), card: /official RSH logo file · rshsports\.com/.test(j) && /rsh_cta\.py/.test(j), engine: /Video Studio Kit engine \d\d/.test(j),
+    return { house: /HOUSE STYLE/.test(j) && /at least 2\.5 s/.test(j) && /top 8%/.test(j) && /duck the music about 9 dB under any voice/.test(j), card: /official RSH logo file · rshsports\.com/.test(j) && /rsh_cta\.py/.test(j), engine: /Video Studio Kit engine \d\d/.test(j),
       quiz: B.engineFor({ title: 'Basketball Clocks: Quick Fan Quiz', hook: 'Which one is it?' }), dyk: B.engineFor({ title: 'DYK: The 3-Point Takedown' }), prod: B.engineFor({ title: 'Reversible Singlet: Show Both Sides' }), tag: /Wrestle fearless/.test(B.editJob({ ...w, sport: 'Wrestling' })) }; });
   ok('Every edit job carries the RSH house style, the app end card and the right Video Studio Kit engine', hs.house && hs.card && hs.engine && /^09/.test(hs.quiz) && /^01/.test(hs.dyk) && /^07/.test(hs.prod) && hs.tag, JSON.stringify(hs));
   ok('Channels: each account has a Publish-via choice; Direct unlocks only after all five steps and falls back to Metricool if a step is unticked; no keys in the page', cn.cards === 7 && cn.directOff && cn.directOn && cn.via === 'direct' && cn.keep === 'metricool' && cn.back === 'metricool' && cn.noKeys, JSON.stringify(cn));
