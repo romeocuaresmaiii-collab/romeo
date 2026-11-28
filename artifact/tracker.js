@@ -104,35 +104,48 @@
     return { name: d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }), when: diff === 0 ? 'today' : diff === 1 ? 'tomorrow' : diff > 1 ? `in ${diff} days` : diff === -1 ? 'yesterday' : `${-diff} days ago`, past: diff < 0 };
   }
 
+  // The campaign's current photo or video as a direct full-quality download, so it can be put into Metricool or Drive in one step.
+  function fileLink(p) {
+    const a = p.creativeAsset || (p.creativeAssets || [])[0]; if (!a || !a.id || !window.RSH_HOST || !window.RSH_HOST.mediaUrl) return '';
+    const u = window.RSH_HOST.mediaUrl(a); if (!u || u.indexOf('#rsh-parts-') === 0) return '';
+    const vid = /^video\//.test(a.mime || ''), more = [p.creativeAsset].concat(p.creativeAssets || []).filter((x, i, arr) => x && x.id && arr.findIndex(y => y && y.id === x.id) === i).length - 1;
+    return `<a class="btn ghost smallbtn" href="${esc(u)}" download="${esc(a.name || (vid ? 'video.mp4' : 'image.jpg'))}" title="${esc(a.name || '')}">⬇ ${vid ? 'Video' : 'Photo'}${more > 0 ? ' +' + more : ''}</a>`;
+  }
   function render() {
     const host = document.getElementById('rshTracker'); if (!host || !app()) return;
     const all = (app().data().posts || []).filter(p => p.date);
     if (!range) { try { range = JSON.parse(localStorage.getItem(PREF) || 'null'); } catch (_) {} if (!range || !range.from || !range.to) range = defaultRange(all); }
     const B = window.RSH_BOTS, fresh = (app().data().posts || []).filter(p => B && B.isNew && B.isNew(p)).sort((a, b) => String(b.created).localeCompare(String(a.created)));
     const inRange = all.filter(p => p.date >= range.from && p.date <= range.to && !fresh.includes(p)).sort((a, b) => a.date.localeCompare(b.date) || String(a.title).localeCompare(String(b.title)));
-    const rows = fresh.map(p => ({ p, fresh: true, ...describe(p) })).concat(inRange.map(p => ({ p, ...describe(p) })));
+    // Campaigns already scheduled in Metricool step aside (folded at the bottom); campaigns still missing their file come first.
+    const scheduledIn = p => { if (/^(Scheduled|Published)$/.test(p.status || '') || p.published) return true; const its = (B && B.planItems ? B.planItems(p.id) : []) || []; return its.length > 0 && its.every(i => i.posted || (i.sent && /scheduled|draft|queued|posted/.test(i.sent.status || ''))); };
+    const all0 = fresh.map(p => ({ p, fresh: true, ...describe(p) })).concat(inRange.map(p => ({ p, ...describe(p) })));
+    for (const r of all0) { r.sched = scheduledIn(r.p); r.needsFile = !r.sched && !r.t.assets && r.t.stage !== 'brief'; }
+    const rows = all0.filter(r => r.fresh && !r.sched).concat(all0.filter(r => !r.fresh && r.needsFile).map(r => ({ ...r, top: true })), all0.filter(r => !r.fresh && !r.needsFile && !r.sched)), done = all0.filter(r => r.sched);   // just added first, then needs a file, then the rest
     const counts = {}; for (const r of rows) counts[r.group] = (counts[r.group] || 0) + 1;
     if (only !== 'all' && !counts[only]) only = 'all';
     const shown = rows.filter(r => only === 'all' || r.group === only);
     let html = '', lastDay = '';
     for (const r of shown) {
-      if (r.fresh) { if (lastDay !== 'fresh') { lastDay = 'fresh'; html += `<div class="day">Just added<span class="when">new campaigns from the last 7 days, wherever their date falls</span></div>`; } }
+      if (r.top) { if (lastDay !== 'top') { lastDay = 'top'; html += `<div class="day" style="color:#9a3412">📎 Needs a file: attach these first<span class="when">${rows.filter(x => x.top).length} campaign${rows.filter(x => x.top).length === 1 ? '' : 's'} with no photo or video yet, soonest first</span></div>`; } }
+      else if (r.fresh) { if (lastDay !== 'fresh') { lastDay = 'fresh'; html += `<div class="day">Just added<span class="when">new campaigns from the last 7 days, wherever their date falls</span></div>`; } }
       else if (r.p.date !== lastDay) { lastDay = r.p.date; const d = dayLabel(lastDay); html += `<div class="day">${esc(d.name)}<span class="when">${esc(d.when)}</span></div>`; }
       const late = !!r.p.date && dayLabel(r.p.date).past && r.group !== 'ready';
       let seenNow = false;
       const steps = scriptChip(r.p.id) + STEPS.map(([k, label]) => { const done = r.done[k]; const cls = done ? 'done' : (!seenNow ? 'now' : 'todo'); if (!done) seenNow = true; return `<span class="step ${cls}">${done ? '✓ ' : ''}${esc(label)}</span>`; }).join('');
-      html += `<div class="row" data-track-row="${esc(r.p.id)}"><div><div class="title">${esc(r.p.title)}</div><div class="small">${r.fresh ? (r.p.date ? esc(dayLabel(r.p.date).name) + ' · ' : '<span class="late">no date yet</span> · ') : ''}${esc(r.p.platform || '')} · ${esc(r.p.owner || 'No owner')}${late ? ' · <span class="late">past its date</span>' : ''}</div><div class="steps">${steps}</div></div>
+      html += `<div class="row" data-track-row="${esc(r.p.id)}"><div><div class="title">${esc(r.p.title)}</div><div class="small">${r.fresh || r.top ? (r.p.date ? esc(dayLabel(r.p.date).name) + ' · ' : '<span class="late">no date yet</span> · ') : ''}${esc(r.p.platform || '')} · ${esc(r.p.owner || 'No owner')}${late ? ' · <span class="late">past its date</span>' : ''}</div><div class="steps">${steps}</div></div>
         <div class="next"><strong>Next</strong>${esc(r.next)}</div>
-        <div class="acts"><button type="button" class="btn ${r.group === 'ready' || r.group === 'anthony' ? 'ghost ' : ''}smallbtn" data-track-open="${esc(r.p.id)}">${esc(r.button)} →</button><button type="button" class="btn ghost smallbtn" data-track-details="${esc(r.p.id)}">Details</button><button type="button" class="btn ghost smallbtn" data-track-assets="${esc(r.p.id)}">📁 Assets & 💬 ${window.RSH_BOTS && window.RSH_BOTS.rawCount ? window.RSH_BOTS.rawCount(r.p.id) + ' · ' + window.RSH_BOTS.cmtCount(r.p.id) : ''}</button></div></div>`;
+        <div class="acts"><button type="button" class="btn ${r.group === 'ready' || r.group === 'anthony' ? 'ghost ' : ''}smallbtn" data-track-open="${esc(r.p.id)}">${esc(r.button)} →</button><button type="button" class="btn ghost smallbtn" data-track-details="${esc(r.p.id)}">Details</button>${fileLink(r.p)}<button type="button" class="btn ghost smallbtn" data-track-assets="${esc(r.p.id)}">📁 Assets & 💬 ${window.RSH_BOTS && window.RSH_BOTS.rawCount ? window.RSH_BOTS.rawCount(r.p.id) + ' · ' + window.RSH_BOTS.cmtCount(r.p.id) : ''}</button></div></div>`;
     }
     const rangeLabel = `${at(range.from).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${at(range.to).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
     host.innerHTML = `
-      <div class="head"><div><div class="eyebrow">CAMPAIGN CHECKLIST</div><h2 style="margin-top:6px">What’s done and what’s next</h2><p style="margin-top:6px">${rows.length} campaign${rows.length === 1 ? '' : 's'} planned for ${esc(rangeLabel)}${rows.length ? `, ${counts.ready || 0} approved` : ''}.</p></div>
+      <div class="head"><div><div class="eyebrow">CAMPAIGN CHECKLIST</div><h2 style="margin-top:6px">What’s done and what’s next</h2><p style="margin-top:6px">${rows.length} campaign${rows.length === 1 ? '' : 's'} planned for ${esc(rangeLabel)}${rows.length ? `, ${counts.ready || 0} approved` : ''}${rows.filter(x => x.top).length ? `, <strong style="color:#9a3412">${rows.filter(x => x.top).length} need a file</strong>` : ''}${done.length ? `, ${done.length} already scheduled in Metricool` : ''}.</p></div>
         <div class="controls"><div><label for="rshTrackFrom">From</label><input type="date" id="rshTrackFrom" value="${esc(range.from)}"></div><div><label for="rshTrackTo">To</label><input type="date" id="rshTrackTo" value="${esc(range.to)}"></div>
         <div><label for="rshTrackPreset">Quick range</label><select id="rshTrackPreset"><option value="">Choose…</option><option value="upcoming">Next campaigns (2 weeks)</option><option value="month">This month</option><option value="next">Next month</option><option value="all">All campaigns</option></select></div>
         <button type="button" class="btn ghost smallbtn" data-track-copy>Copy list</button></div></div>
       ${rows.length ? `<div class="sum"><button type="button" data-track-only="all" class="${only === 'all' ? 'on' : ''}">All ${rows.length}</button>${Object.keys(GROUPS).filter(g => counts[g]).map(g => `<button type="button" data-track-only="${g}" class="${only === g ? 'on' : ''}">${esc(GROUPS[g])} ${counts[g]}</button>`).join('')}</div>` : ''}
-      ${rows.length ? html : `<div class="empty">No campaigns are planned between these dates. Change the range, or create a post.</div>`}`;
+      ${rows.length ? html : `<div class="empty">${done.length ? 'Everything in this range is already scheduled in Metricool.' : 'No campaigns are planned between these dates. Change the range, or create a post.'}</div>`}
+      ${done.length ? `<details class="sched" style="margin-top:14px"><summary style="cursor:pointer"><strong>✓ Already scheduled in Metricool · ${done.length}</strong> <span class="small">moved out of the way; open to see them</span></summary>${done.map(r => `<div class="row" data-track-row="${esc(r.p.id)}"><div><div class="title">${esc(r.p.title)}</div><div class="small">${esc(r.p.date ? dayLabel(r.p.date).name : '')} · ${esc(r.p.platform || '')}</div></div><div class="next"><strong>Status</strong>Scheduled in Metricool</div><div class="acts">${fileLink(r.p)}<button type="button" class="btn ghost smallbtn" data-track-details="${esc(r.p.id)}">Details</button></div></div>`).join('')}</details>` : ''}`;
     host._rows = rows; host._label = rangeLabel;
   }
 
