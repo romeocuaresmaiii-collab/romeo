@@ -710,13 +710,11 @@ Answer with JSON only, exactly these keys:
   }
   const isStill = p => /image|photo|carousel|graphic|pin/i.test(String(p.postType || '')) && !/video|reel|short|story/i.test(String(p.postType || ''));
   /* ---------- RSH DYK Video Kit (2026-11-27): every Did You Know pack follows it ----------
-   * The kit's text lives in this artifact's private storage (asset DYK_KIT_ASSET), not in the code. */
-  const DYK_KIT_ASSET = '854c2acd6c5940fd72b43ce4a078731e';
+   * The kit's text lives in this artifact's database (kits/dyk), not in the code. */
   let dykKit = null;
   async function loadDykKit() {
     if (dykKit) return dykKit; if (window.RSH_DYK_KIT) return (dykKit = window.RSH_DYK_KIT);
     try { if (db) { const d = await db.doc('kits/dyk').get(); if (d.exists) { const k = JSON.parse(d.data().json || 'null'); if (k && k.files) return (dykKit = k); } } } catch (_) {}   // kept in the database: the sharing review cannot read JSON files
-    try { const r = await fetch('/_blob/' + DYK_KIT_ASSET); if (r.ok) { const k = await r.json(); if (k && k.files) dykKit = k; } } catch (_) {}
     return dykKit;
   }
   const dykPack = p => isDyk(p) && !isStill(p);
