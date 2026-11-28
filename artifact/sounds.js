@@ -59,6 +59,9 @@
   }
   function moodOf(p) {
     const pl = planOf(p); if (pl && pl.moods.length) return pl.moods;
+    const classify = t => /did you know|dyk|explain|rule|quiz|how to/.test(t) ? ['calm', 'confident', 'corporate'] : /quote|motivat|grind|tired|pressure|champion|hype|game day|tournament/.test(t) ? ['hype', 'epic', 'driving']
+      : /parent|thank|senior|emotional|memor/.test(t) ? ['emotional', 'uplifting'] : /product|singlet|uniform|reversible|colorway|launch/.test(t) ? ['confident', 'driving', 'uplifting'] : null;
+    const head = classify(String(p.title || '').toLowerCase()) || classify(String(p.hook || '').toLowerCase()); if (head) return head;   // the title and hook say what the video is; the brief only breaks ties
     const t = [p.title, p.hook, p.video, p.goal, p.postType].join(' ').toLowerCase();
     return /did you know|dyk|explain|rule|quiz|how to/.test(t) ? ['calm', 'confident', 'corporate'] : /quote|motivat|grind|tired|pressure|champion|hype|game day|tournament/.test(t) ? ['hype', 'epic', 'driving']
       : /parent|thank|senior|emotional|memor/.test(t) ? ['emotional', 'uplifting'] : /product|singlet|uniform|reversible|colorway|launch/.test(t) ? ['confident', 'driving', 'uplifting'] : ['uplifting', 'confident'];

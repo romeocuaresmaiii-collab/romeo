@@ -635,7 +635,7 @@ const out = []; const ok = (n, c, d) => { out.push(c); console.log((c ? 'PASS  '
   });
   ok('Scorecard work: an A/B test that names its two campaigns fills itself when both are published; the bots’ advice is re-checked on every refresh (rolling); the hourly publishing check shows in the System check', sc.filled && sc.planned && sc.roll && sc.inReport && sc.pub && sc.adv, JSON.stringify(sc));
   const snd = await p.evaluate(async () => {
-    const S = window.RSH_SOUNDS, posts = window.RSH_APP.data().posts, post = posts.find(x => /quote|motivat|tired|grind/i.test(x.title || '')) || posts[0];
+    const S = window.RSH_SOUNDS, posts = window.RSH_APP.data().posts, post = { ...(posts.find(x => /quote|motivat|tired|grind/i.test(x.title || '')) || posts[0]), id: 'snd-test-post' };
     const empty = S.blockFor(post);
     const mp3 = n => { const b = new Uint8Array(4000); b.set([0x49, 0x44, 0x33, 3, 0], 0); for (let i = 10; i < b.length; i++) b[i] = (i * n) % 251; return new File([b], 'track' + n + '.mp3', { type: 'audio/mpeg' }); };
     let bad = ''; try { await S.add(new File([new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])], 'notes.txt'), { source: 'Pixabay Music' }); } catch (e) { bad = e.message; }
