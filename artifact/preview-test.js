@@ -462,6 +462,26 @@ const out = []; const ok = (n, c, d) => { out.push(c); console.log((c ? 'PASS  '
     document.querySelector('#rshRaw [data-raw-close]').click(); window.__sent = (window.__sent || []).slice(0, before);
     return { shown, n, count: B.rawCount(q.id), stored: !!window.__store['rawAssets/' + q.id], src: job.source, files: job.files, script: /every wrestler has a ritual/.test(job.script), sent: /asset box/.test(msg.message || '') && /clip1\.mp4/.test(msg.message || '') && /under 15 MB/.test(msg.message || ''), again }; });
   ok('Each campaign has an asset box: files are uploaded and kept, and “Assets ready” sends them with the script to the editor', rawT.shown && rawT.n === 3 && rawT.count === 3 && rawT.stored && rawT.src === 'campaign' && rawT.files === 3 && rawT.script && rawT.sent && /already has this campaign/.test(rawT.again), JSON.stringify(rawT));
+  const ac = await p.evaluate(async () => {
+    const B = window.RSH_BOTS, posts = window.RSH_APP.data().posts, day = new Date(Date.now() + 4 * 864e5).toISOString().slice(0, 10);
+    const mk = (id, extra) => { const q = { id, title: 'AC ' + id, date: day, sport: 'Wrestling', platform: 'Instagram', status: 'Draft', postType: 'Reel', caption: 'x', ...extra }; posts.push(q); return q; };
+    const jpg = n => { const b = new Uint8Array(3000); b.set([0xFF, 0xD8, 0xFF, 0xE0], 0); b[100] = n; return new File([b], 'final' + n + '.jpg', { type: 'image/jpeg' }); };
+    const mp4 = () => { const b = new Uint8Array(6000); b.set([0, 0, 0, 24, 0x66, 0x74, 0x79, 0x70, 0x69, 0x73, 0x6F, 0x6D], 0); return new File([b], 'raw.mp4', { type: 'video/mp4' }); };
+    const e = mk('acEdit'), f = mk('acFinal', { postType: 'Carousel' }), a = mk('acAppr', { status: 'Approved' });
+    await B.addRaw(e.id, [mp4(), new File(['SCRIPT: hello'], 'script.txt', { type: 'text/plain' })]);
+    await B.addRaw(f.id, [jpg(1), jpg(2), new File(['notes'], 'notes.txt', { type: 'text/plain' })]);
+    await B.addRaw(a.id, [jpg(3)]);
+    const m1 = await B.completeAssets(e.id, 'edit'); const je = window.__store['editJobs/' + e.id] || {}, be = B.rawFor(e.id) || {};
+    const m2 = await B.completeAssets(f.id, 'final'); const jf = window.__store['editJobs/' + f.id] || {}, bf = B.rawFor(f.id) || {}, attached = ((posts.find(x => x.id === f.id) || {}).creativeAssets || []).length;
+    let refused = ''; try { await B.completeAssets(a.id, 'edit'); } catch (err) { refused = err.message; }
+    let empty = ''; try { await B.completeAssets('nope', 'edit'); } catch (err) { empty = err.message; }
+    await new Promise(r => setTimeout(r, 300)); for (let k = 0; k < 120 && B.isBusy(); k++) await new Promise(r => setTimeout(r, 250));   // let the background round finish
+    for (const q of [e, f, a]) posts.splice(posts.indexOf(q), 1);
+    return { edit: /queued|sent/.test(je.status) && !!be.completed && /Reel sent the edit job/.test(m1) && /(editor has it now|picks it up by about)/.test(m1),
+      final: jf.source === 'final' && jf.status === 'attached' && attached === 2 && !!bf.final && bf.final.files.length === 2 && /2 final files attached/.test(m2),
+      approvedRefused: /already approved or scheduled/.test(refused), missing: /not found/.test(empty) };
+  });
+  ok('“Assets complete”: edit it for me sends the job and records who pressed it, with the pickup time; “my file is the final post” attaches the box’s photos/videos as they are; approved campaigns are refused', Object.values(ac).every(v => v === true), JSON.stringify(ac));
   const trackBtn = await p.evaluate(() => { document.querySelector('.nav button[data-view="tracker"]') && document.querySelector('.nav button[data-view="tracker"]').click(); return document.querySelectorAll('[data-track-assets]').length; });
   ok('The Checklist shows an Assets button on every campaign', trackBtn > 0, String(trackBtn));
   await p.click('.nav button[data-view="bots"]');

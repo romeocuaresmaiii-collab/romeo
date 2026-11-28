@@ -78,7 +78,11 @@
       <section><header><h3><span class="n">4</span>Files</h3>${pill(st.files, att.length ? `${att.length} attached${t.media ? '' : ' · wrong format'}` : 'Nothing attached yet')}</header>
         ${att.length ? `<div class="files">${att.map(a => `<div class="file">${/^video\//.test(a.mime || '') ? `<video src="${esc(src(a))}" controls preload="metadata" playsinline></video>` : `<img src="${esc(src(a))}" alt="${esc(a.name || 'file')}" loading="lazy">`}<div><strong>${esc(a.name || 'file')}</strong><br>${a.width ? `${a.width}×${a.height} · ` : ''}${kb(a.bytes)}</div></div>`).join('')}</div>` : ''}
         <p class="small" style="margin-top:8px"><strong>Asset box</strong> (raw footage, photos, voiceover and script for the editor): ${(box.files || []).length} file${(box.files || []).length === 1 ? '' : 's'}${(box.files || []).length ? ': ' + esc(box.files.slice(0, 6).map(f => f.name).join(', ')) + (box.files.length > 6 ? '…' : '') : ''}.</p>
-        <div class="acts"><button type="button" class="btn ghost smallbtn" data-c-raw>📁 Open the asset box (add or remove files)</button><button type="button" class="btn ghost smallbtn" data-c-attach>Attach a finished file</button></div></section>
+        <div class="acts"><button type="button" class="btn ghost smallbtn" data-c-raw>📁 Open the asset box (add or remove files)</button><button type="button" class="btn ghost smallbtn" data-c-attach>Attach a finished file</button></div>
+        ${(box.files || []).length && !/approved|posted|published|scheduled/i.test(String(p.status || '')) ? `<div class="done-box" style="margin-top:10px;border:1px solid #bbf7d0;background:#f0fdf4;border-radius:12px;padding:10px 12px"><strong>✅ Assets complete?</strong> <span class="small">Press one when everything for this campaign is in the asset box.</span>
+          <div class="acts" style="margin-top:6px"><button type="button" class="btn smallbtn" data-c-done="edit" ${job && /queued|sent/.test(job.status) ? 'disabled' : ''}>Assets complete: edit it for me</button><button type="button" class="btn ghost smallbtn" data-c-done="final">My file is the final post (no AI edit)</button></div>
+          <div class="small" style="margin-top:4px"><strong>Edit it for me</strong>: Reel edits the files, and Sage, Quill and Ref update this campaign. <strong>Final post</strong>: the photos/videos in the box are attached as they are and go to checks and review.</div></div>` : ''}
+        ${box.completed || box.final ? `<p class="small" style="margin-top:6px">${box.completed ? `✅ Assets completed by <strong>${esc(names[box.completed.by] || 'a teammate')}</strong> · ${esc(when(box.completed.at))}. ` : ''}${box.final ? `🎬 Final file from <strong>${esc(names[box.final.by] || 'a teammate')}</strong> · ${esc(when(box.final.at))}${box.final.files ? ' (' + esc(box.final.files.join(', ')) + ')' : ''}.` : ''}</p>` : ''}</section>
 
       <section><header><h3><span class="n">5</span>Video editor</h3>${st.editor ? pill(st.editor, job.status === 'failed' ? 'Waiting for files' : job.status === 'sent' ? 'Editing now' : job.status === 'queued' ? 'Queued' : 'Delivered') : ''}</header>
         <p class="small">${esc(jobTxt)}</p>
@@ -111,8 +115,12 @@
     }
     host.style.display = 'flex'; render();
     const b = B(); try { await Promise.all([b.loadRaw ? b.loadRaw(id) : null, b.loadAllComments ? b.loadAllComments() : null, b.refreshFacts ? b.refreshFacts() : null]); } catch (_) {}
-    try { const ids = (b.commentsFor ? b.commentsFor(id) : []).map(c => c.by).filter(Boolean); if (ids.length && b.whoIs) Object.assign(names, await b.whoIs(ids)); } catch (_) {}
+    await loadNames(id);
     render(); return true;
+  }
+  // Names for comment authors and for whoever marked the assets complete (account ids, shown by name).
+  async function loadNames(id) {
+    const b = B(); try { const box = (b.rawFor && b.rawFor(id)) || {}; const ids = [...(b.commentsFor ? b.commentsFor(id) : []).map(c => c.by), box.completed && box.completed.by, box.final && box.final.by].filter(Boolean); if (ids.length && b.whoIs) Object.assign(names, await b.whoIs(ids)); } catch (_) {}
   }
   function close() { const h = document.getElementById('rshCamp'); if (h) h.style.display = 'none'; openId = null; }
   async function onClick(e) {
@@ -126,6 +134,7 @@
     if (e.target.closest('[data-c-watch]')) { const id = openId, j = b.jobFor && b.jobFor(id); close(); return b.watch ? b.watch(id) : app().openReview(id, j && j.assetId); }
     if (e.target.closest('[data-c-cal]')) { close(); return app().navigate('calendar'); }
     if (e.target.matches && e.target.matches('[data-c-trend]')) { const q = (window.RSH_APP.data().posts || []).find(x => x.id === openId); if (q) { q.trendingSound = !!e.target.checked; window.RSH_APP.save(); msg = q.trendingSound ? 'Marked: add a trending sound by hand when posting. The editor will also deliver a no-music copy.' : 'Trending-sound note removed.'; } return render(); }
+    const dn = e.target.closest('[data-c-done]'); if (dn) { if (dn.dataset.confirm !== '1' && dn.dataset.cDone === 'final') { dn.dataset.confirm = '1'; dn.textContent = 'Click again: attach the box’s photos/videos as the final post'; return; } dn.disabled = true; msg = 'Working…'; render(); try { msg = await b.completeAssets(openId, dn.dataset.cDone); } catch (err) { msg = (err && err.message) || String(err); } await loadNames(openId); return render(); }
     if (e.target.closest('[data-c-send]')) { try { await b.sendRaw(openId); msg = 'Sent to the editor. The finished file comes back to this campaign.'; } catch (err) { msg = (err && err.message) || String(err); } return render(); }
     const cp = e.target.closest('[data-c-copy]'); if (cp) { e.preventDefault(); const pk = b.scripts()[openId]; const x = b.packPart(pk.text, Number(cp.dataset.cCopy)); try { await navigator.clipboard.writeText(x); cp.textContent = 'Copied'; } catch (_) { cp.textContent = 'Copy failed'; } return; }
     if (e.target.closest('[data-c-packsave]')) { const ta = document.querySelector('#rshCamp [data-c-pack]'); try { await b.saveScript(openId, ta.value); msg = 'Pack saved. Your edits are kept and sent with the next edit job.'; packOpen = true; } catch (err) { msg = 'Could not save: ' + err.message; } return render(); }
