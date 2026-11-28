@@ -72,6 +72,10 @@
 
   async function urlFor(a) {
     if (S.urls[a.id]) return S.urls[a.id];
+    // A file kept as one stored file plays straight from its link (no waiting for the whole video to download first);
+    // only files kept in pieces are joined in memory.
+    const direct = window.RSH_HOST.mediaUrl ? window.RSH_HOST.mediaUrl(a) : '';
+    if (direct && direct.indexOf('#rsh-parts-') !== 0) { S.urls[a.id] = direct; return direct; }
     try { const blob = await window.RSH_HOST.fileBlob(a); S.urls[a.id] = URL.createObjectURL(blob); } catch (_) { S.urls[a.id] = ''; }
     return S.urls[a.id];
   }
@@ -120,6 +124,7 @@
       <div class="chips">${chip('todo', 'All waiting', c.todo)}${chip('mine', 'To check and approve', c.mine)}${chip('anthony', 'Anthony’s final', c.anthony)}${chip('changes', 'Changes requested', c.changes)}${chip('files', 'Needs files', c.files)}</div>
       <button type="button" class="btn ghost smallbtn" data-qr-close aria-label="Close">✕ Close</button></div>
       <div class="qr-body">${body}</div>${foot ? `<div class="qr-foot">${foot}</div>` : ''}</div>`;
+    for (const m of host.querySelectorAll('.stage video, .stage img')) m.addEventListener('error', () => { const st = m.closest('.stage'); if (st) st.innerHTML = '<div class="small" style="color:#cbd5e1">This file could not be loaded. Open the campaign to attach it again.</div>'; }, { once: true });
     paintButton();
   }
   function paintButton() {

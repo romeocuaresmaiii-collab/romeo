@@ -110,7 +110,7 @@ s = once(s, "tracker:['Campaign Checklist',", "bots:['24/7 Bots','Captions, timi
 
 # 4. Wording that would be untrue here.
 s = once(s, f'<strong>LOCAL APP · V{version}</strong><div class="small">Activate the local Data Vault in Setup & Backup to preserve browser work. Export a backup before upgrading. Metricool is connected in ChatGPT only, not this local app.</div>',
-         f'<strong>ARTIFACT EDITION · V{version} · BUILD 110</strong><div class="small">Everything saves automatically to this app’s shared storage. Anthony’s final approval is signed with his own account. Approved posts go to Metricool. Open ⋯ More → System check to see that everything works.</div>')
+         f'<strong>ARTIFACT EDITION · V{version} · BUILD 111</strong><div class="small">Everything saves automatically to this app’s shared storage. Anthony’s final approval is signed with his own account. Approved posts go to Metricool. Open ⋯ More → System check to see that everything works.</div>')
 s = once(s, "'Use python3 server.py in the extracted v%s folder, then open http://127.0.0.1:8765. Buttons and media uploads require the local server.'" % version, "'Open this page from your Claude artifacts.'")
 
 for old, new in (('Local editorial plans are separate from the read-only Metricool monthly archive.', 'Team plans, with what is scheduled and published in Metricool.'), ('Metricool connected to ChatGPT only', 'Live results from Metricool'), ('Local workspace · demo/pilot', 'RSH Sports workspace')):
