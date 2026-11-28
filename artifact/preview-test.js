@@ -634,6 +634,19 @@ const out = []; const ok = (n, c, d) => { out.push(c); console.log((c ? 'PASS  '
     return { filled, planned, roll: !!roll && typeof roll.time.n === 'number', inReport: /Rolling check/.test(rep), pub: hrows.includes('Hourly publishing check:ok'), adv: hrows.some(r => /^Bots’ advice vs results:/.test(r)) };
   });
   ok('Scorecard work: an A/B test that names its two campaigns fills itself when both are published; the bots’ advice is re-checked on every refresh (rolling); the hourly publishing check shows in the System check', sc.filled && sc.planned && sc.roll && sc.inReport && sc.pub && sc.adv, JSON.stringify(sc));
+  const hf = await p.evaluate(async () => {
+    const B = window.RSH_BOTS, A = window.RSH_APP, posts = A.data().posts, today = new Date(Date.now() + 3 * 864e5).toISOString().slice(0, 10);
+    const mk = (id, extra) => { const q = { id, title: 'HF ' + id, date: today, sport: 'Wrestling', platform: 'Instagram', status: 'Draft', postType: 'Carousel', caption: 'Hands-free test caption.', ...extra }; posts.push(q); return q; };
+    const quote = mk('hfQuote', { title: 'Quote: Hands Free Test', postType: 'Image', onImageText: 'NEVER QUIT' });
+    const done = mk('hfDone', { title: 'Quote: Already Approved', postType: 'Image', onImageText: 'X', status: 'Approved' });
+    const foot = mk('hfFoot', { title: 'Behind the scenes at practice', postType: 'Reel', video: 'Film the team warming up: real footage of the drills' });
+    B.queueEdits([quote, done, foot]); await new Promise(r => setTimeout(r, 300));
+    const jq = window.__store['editJobs/hfQuote'] || {}, jd = window.__store['editJobs/hfDone'], jf = window.__store['editJobs/hfFoot'];
+    const draftCap = B.withTags({ ...quote, status: 'Draft' }, 'instagram', 'Caption'), apprCap = B.withTags({ ...quote, status: 'Approved' }, 'instagram', 'Caption');
+    posts.splice(posts.indexOf(quote), 1); posts.splice(posts.indexOf(done), 1); posts.splice(posts.indexOf(foot), 1);
+    return { designJob: jq.source === 'design' && /queued|sent/.test(jq.status), skipApproved: !jd, footageWaits: !jf, approvedTagsUntouched: apprCap === 'Caption', draftTagsOk: typeof draftCap === 'string' };
+  });
+  ok('Hands-free bots: a quote/text post with no files goes to the editor as a design job; footage posts wait for files; approved campaigns are never touched; Quill hashtags only go onto drafts', Object.values(hf).every(v => v === true), JSON.stringify(hf));
   const snd = await p.evaluate(async () => {
     const S = window.RSH_SOUNDS, posts = window.RSH_APP.data().posts, post = { ...(posts.find(x => /quote|motivat|tired|grind/i.test(x.title || '')) || posts[0]), id: 'snd-test-post' };
     const empty = S.blockFor(post);
