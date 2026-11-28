@@ -733,6 +733,8 @@ Answer with JSON only, exactly these keys:
     let ci = h % HERO_COLORS.length; for (let k = 0; k < HERO_COLORS.length && usedTxt.includes(HERO_COLORS[ci].split(' ')[0].toLowerCase()); k++) ci = (ci + 1) % HERO_COLORS.length;
     return { colors: HERO_COLORS[ci], style: HERO_STYLES[Math.floor(h / 7) % HERO_STYLES.length], person: HERO_PEOPLE[Math.floor(h / 13) % HERO_PEOPLE.length], used };
   }
+  // Sage's sound plan (PART 9): what the editor and the Sound Library's shopping list read (sounds.js planOf).
+  const SOUND_PLAN = 'PART 9 — SOUND PLAN — music and sound effects for the editor, matched to this script and edit (the editor picks real licensed tracks from the RSH Sound Library; never write or generate music). Exactly these five lines: "MOOD:" 1–3 of hype, epic, driving, confident, uplifting, calm, emotional, playful, dark, corporate; "TEMPO:" a BPM range; "STYLE:" genre and instruments in a few words (e.g. gritty trap with heavy drums; soft piano with light strings); "SEARCH:" 2–3 short Pixabay Music search phrases; "SFX:" timed cues separated by semicolons, at most one every few seconds, from whoosh, hit, riser, impact, crowd, whistle, buzzer, swoosh, click (e.g. 0:00 whoosh; 0:03 hit; 0:08 riser; 0:12 crowd). No music under narration louder than -9 dB.';
   function dykPrompt(p) {
     const K = dykKit.files, sport = String(p.sport || '').trim(), f = factDocs[p.id];
     const attach = Object.keys(K).filter(n => !/^0[01]_/.test(n)).sort().map(n => `----- ATTACHED FILE: ${n} -----\n${K[n].trim()}`).join('\n\n');
@@ -765,7 +767,7 @@ Sport: ${sport} · Audience: ${p.audience || ''} · Goal: ${p.goal || ''} · Pla
 Hook in the campaign: ${p.hook || ''}
 Caption in the campaign: ${p.captionBody || p.caption || ''}
 Video brief in the campaign: ${p.video || p.visualConcept || ''}
-${p.source ? 'Source: ' + p.source + '\n' : ''}${factBlock(p)}${(() => { const o = (app().data().posts || []).filter(q => q.id !== p.id && isDyk(q)).map(q => `- ${q.title} (${q.date || 'no date'})`); return o.length ? `\nOther DYK campaigns already in the plan (treat as done, do not repeat):\n${o.join('\n')}\n` : ''; })()}`;
+${p.source ? 'Source: ' + p.source + '\n' : ''}${factBlock(p)}${(() => { const o = (app().data().posts || []).filter(q => q.id !== p.id && isDyk(q)).map(q => `- ${q.title} (${q.date || 'no date'})`); return o.length ? `\nOther DYK campaigns already in the plan (treat as done, do not repeat):\n${o.join('\n')}\n` : ''; })()}\n${SOUND_PLAN}`;
   }
   function scriptPrompt(p) {
     if (dykPack(p) && dykKit) return dykPrompt(p);
@@ -808,6 +810,7 @@ End card (about 3 s, last frame softly blurred and darkened): line 1 "RSH SPORTS
 ${isDyk(p) && !still ? 'PART 5 — VOICEOVER (REQUIRED: every Did You Know video has a voiceover) — the full script ready to paste into ElevenLabs: every line with its time range, numbers and rule names written as spoken ("three points", "twenty twenty-four to twenty-five"), about 1.7 words per second or fewer, the fact said clearly in the voice, total words, voice and tone (calm, confident, adult). The on-screen text matches the voice. Music sits about 8 dB under it.' : 'PART 5 — VOICEOVER (optional) — lines with time ranges, total words, tone.' + (still ? ' Write "Not needed for a still post".' : '')}
 PART 6 — CAPTION — the campaign caption unchanged. If there is none, write one: line 1 the hook (no brand); line 2 an optional payoff; a blank line; one easy question to answer in a comment; a blank line; the follow line ("Follow RSH Sports for more ${sport ? sport.toLowerCase() + ' ' : ''}stories, tips and team ideas."); "Tag a teammate who needs this."; then 8 to 12 relevant hashtags including #RSHSports.
 PART 7 — CHECK BEFORE IT GOES TO REVIEW — a tick-box list: product real and available (or no product shown); colours match; no third-party marks; no price, stock or performance claims; no identifiable person; hook readable in the first second; every line up at least 2.5 s; nothing shakes or flashes; end card and website right; caption matches the campaign.
+${still ? '' : SOUND_PLAN}
 
 ${rbOn(p.date) ? rbPackRules(p) : ''}Keep it complete but tight: no introduction or sign-off outside the pack.
 

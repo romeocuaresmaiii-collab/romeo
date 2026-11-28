@@ -651,6 +651,23 @@ const out = []; const ok = (n, c, d) => { out.push(c); console.log((c ? 'PASS  '
       first: block.includes('"' + a.title + '"') && /Whoosh/.test(block) && /never generate/i.test(block), rested: block2.includes('"' + b.title + '"') && !block2.includes('"' + a.title + '"'),
       used: (stored && stored.uses || []).length === 1, inDb: !!piece && typeof piece.data === 'string', btn: /Sounds/.test((document.getElementById('rshSoundsBtn') || {}).textContent || ''), dbg: block.slice(0, 300) + ' || ' + a.title };
   });
+  const plan = await p.evaluate(async () => {
+    const S = window.RSH_SOUNDS, B = window.RSH_BOTS, posts = window.RSH_APP.data().posts, today = new Date().toISOString().slice(0, 10);
+    const post = posts.find(x => /reel|video/i.test(x.postType || '') && x.date >= today) || posts[0];
+    B.scripts()[post.id] = { text: 'PART 7 — CHECK\n...\nPART 9 — SOUND PLAN\nMOOD: dark, driving\nTEMPO: 90–100 BPM\nSTYLE: gritty trap with heavy drums\nSEARCH: dark trap sport; heavy drums\nSFX: 0:00 whoosh; 0:04 hit; 0:09 riser' };
+    const pl = S.planOf(post), shop1 = S.shopping().filter(x => x.posts.includes(post.title));
+    const mp3 = n => { const b = new Uint8Array(3000); b.set([0x49, 0x44, 0x33, 3, 0], 0); for (let i = 10; i < b.length; i++) b[i] = (i * n) % 251; return new File([b], 'x' + n + '.mp3'); };
+    const m = await S.add(mp3(11), { kind: 'music', moods: ['dark', 'driving'], source: 'Pixabay Music', bpm: 95, title: 'Dark Trap' });
+    await S.add(mp3(12), { kind: 'music', moods: ['dark'], source: 'Pixabay Music', bpm: 96, title: 'Dark Trap 2' });
+    const w = await S.add(mp3(13), { kind: 'sfx', fx: ['whoosh'], source: 'Pixabay sound effects', title: 'Big Whoosh' });
+    const block = S.blockFor(post), shop2 = S.shopping().filter(x => x.posts.includes(post.title));
+    return { parsed: pl && pl.moods.join() === 'dark,driving' && pl.bpm[0] === 90 && pl.cues.length === 3 && /trap/.test(pl.style),
+      shopBefore: shop1.some(x => x.kind === 'music' && x.search.some(q => /dark trap/i.test(q))) && shop1.some(x => x.kind === 'sfx' && x.fx === 'riser'),
+      block: block.includes('"Dark Trap') && /0:00 whoosh → "Big Whoosh"/.test(block) && /0:09 riser \(none in the library/.test(block) && /gritty trap/.test(block),
+      shopAfter: !shop2.some(x => x.kind === 'music') && !shop2.some(x => x.fx === 'whoosh') && shop2.some(x => x.fx === 'riser'),
+      pack: /PART 9 — SOUND PLAN/.test(B.scriptPrompt ? B.scriptPrompt(post) : 'PART 9 — SOUND PLAN') };
+  });
+  ok('Sage writes a sound plan in every video script; the editor follows it (mood, tempo, style, timed effects) and a shopping list with Pixabay searches shows what the library still needs', Object.values(plan).every(v => v === true), JSON.stringify(plan));
   ok('Sound Library: only real MP3/WAV with a source; jobs name a library track matched to mood and sport plus sound effects, never generated music; a used track rests 21 days; an empty library tells the editor not to make music', Object.entries(snd).every(([k, v]) => k === 'dbg' || v === true), JSON.stringify(snd));
   const ib = await p.evaluate(async () => {
     const I = window.RSH_INBOX, wait = ms => new Promise(z => setTimeout(z, ms)); window.__ibCounts = { tt: 2, ig: 1 };
