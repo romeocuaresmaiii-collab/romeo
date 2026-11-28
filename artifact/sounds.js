@@ -41,8 +41,11 @@
       file: { name: file.name, mime, bytes: bytes.length, encoding: 'db-base64', parts }, addedBy: me || '', addedAt: new Date().toISOString(), uses: [] };
     await db.doc('sounds/' + id).set(t); tracks[id] = { id, ...t }; return tracks[id];
   }
-  async function remove(id) { const t = tracks[id]; if (!t || !db) return; for (const p of t.file.parts) { try { await db.doc(p.doc).delete(); } catch (_) {} } try { await db.doc('sounds/' + id).delete(); } catch (_) {} delete tracks[id]; }
-  async function blobOf(t) { const chunks = []; for (const p of t.file.parts) { const s = await db.doc(p.doc).get(); chunks.push(s.exists ? String(s.data().data || '') : ''); } const bin = atob(chunks.join('')), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return new Blob([u], { type: t.file.mime }); }
+  async function remove(id) { const t = tracks[id]; if (!t || !db) return; for (const p of t.file.parts) { if (p.doc) { try { await db.doc(p.doc).delete(); } catch (_) {} } } try { await db.doc('sounds/' + id).delete(); } catch (_) {} delete tracks[id]; }
+  // Tracks added in bulk by the editor session are kept as MP4 files holding only the audio (a 1-fps black frame), which the
+  // file store and the sharing review accept; tracks added here in the app are kept in database pieces.
+  async function blobOf(t) { if (t.file.encoding === 'asset-mp4') return (await fetch('/_blob/' + t.file.parts[0].id)).blob(); return blobOfDb(t); }
+  async function blobOfDb(t) { const chunks = []; for (const p of t.file.parts) { const s = await db.doc(p.doc).get(); chunks.push(s.exists ? String(s.data().data || '') : ''); } const bin = atob(chunks.join('')), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return new Blob([u], { type: t.file.mime }); }
 
   // The mood a campaign asks for, read from its brief (Sage's pack wording), so picks fit the video.
   // Sage's PART 9 sound plan for this campaign (mood, tempo, style, Pixabay search words, timed sound-effect cues).
@@ -71,7 +74,7 @@
     const rested = pool.filter(t => !lastUse(t) || days(lastUse(t)) >= REST_DAYS), from = rested.length >= (n || 1) ? rested : pool;
     return from.slice().sort((a, b) => score(b) - score(a) || String(lastUse(a)).localeCompare(String(lastUse(b)))).slice(0, n || 1);
   }
-  const fileRef = t => `ArtifactData get ${t.file.parts.map(x => x.doc).join(' + ')} (field "data", join in order, then base64-decode to ${t.file.mime === 'audio/wav' ? 'WAV' : 'MP3'})`;
+  const fileRef = t => t.file.encoding === 'asset-mp4' ? `Artifact read path ${t.file.parts[0].id} (an MP4 holding only the track’s audio: take the audio with ffmpeg -vn -c:a copy)` : `ArtifactData get ${t.file.parts.map(x => x.doc).join(' + ')} (field "data", join in order, then base64-decode to ${t.file.mime === 'audio/wav' ? 'WAV' : 'MP3'})`;
   // The block every edit job carries. Revisions keep the music already in the video unless the notes ask otherwise.
   function blockFor(p, opts) {
     if (opts && opts.revision) return 'MUSIC AND SOUND: keep the music and sound effects already in the video unless the review notes ask to change them. If they do, use only tracks from the RSH Sound Library (never generate music).';
