@@ -821,6 +821,15 @@ const out = []; const ok = (n, c, d) => { out.push(c); console.log((c ? 'PASS  '
     return { rev: B.productsFor(rev).map(c => c.h)[0], girls: B.productsFor(girls).map(c => c.h)[0], quiz: B.productsFor(quiz).length, blk: /REAL PRODUCT REFERENCE/.test(blk) && /reversible-navy-gold-1\.webp \(asset 0123456789abcdef/.test(blk) && /vendor['’]s logo/.test(blk) && /Never post a store photo/.test(blk) && !/\$\d/.test(blk), img: /REAL PRODUCT REFERENCE/.test(img),
       search: B.searchCatalog('black singlet').map(c => c.h).sort().join(), panel: document.querySelectorAll('#rshBots details.prods').length, media: document.querySelectorAll('#rshBots [data-bot-dlmedia]').length }; });
   ok('Campaigns about a garment are matched to the real rshsports.com products, with downloadable store photos and an exact-garment block in the image prompt', pr.rev === 'rev-navy-gold' && pr.girls === 'girls-black' && pr.quiz === 0 && pr.blk && pr.img && pr.search === 'girls-black,plain-black' && pr.panel >= 1 && pr.media >= 1, JSON.stringify(pr));
+  const rot = await p.evaluate(async () => { const B = window.RSH_BOTS, cat = B.catalog(), R = B.refs();
+    const mk = (h, t) => ({ h, t, ty: 'Sublimated singlets', sp: 'Wrestling', col: '', f: '', url: 'https://www.rshsports.com/products/' + h, o: {}, b: [], i: [{ src: h + '.jpg' }] });
+    cat.push(mk('rot-lion', "Men's Sublimated Wrestling Singlets (Lion)"), mk('rot-samurai', "Men's Sublimated Wrestling Singlets (Samurai)"), mk('rot-boys', 'Boys Youth Sublimated Wrestling Singlets (Spider)'));
+    for (const h of ['rot-lion', 'rot-samurai', 'rot-boys']) R[h] = { h, status: 'ready', assets: [{ id: '0123456789abcdef0123456789abcdef', name: h + '-1.jpg' }] };
+    const q = { id: 'rotQ1', title: 'Quote: Rotation Test', sport: 'Wrestling', postType: 'Reel', onImageText: 'GO' };
+    const first = B.featureFor(q); window.__store['editJobs/rotUse'] = { postId: 'rotUse', status: 'attached', queuedAt: new Date().toISOString(), feature: first && first.h }; await B.collect();
+    const second = B.featureFor({ ...q, id: 'rotQ1' }); delete window.__store['editJobs/rotUse']; await B.collect();
+    return { adult: !!first && !/boys|youth/i.test(first.t), rotates: !!second && second.h !== first.h, uses: (B.productUses()[first && first.h] || 0) === 0 }; });
+  ok('Store designs rotate: a no-files post features an adult store design with photos in the app, and the next post gets a different one (no youth-model products)', Object.values(rot).every(v => v === true), JSON.stringify(rot));
   const pj = await p.evaluate(async () => { const B = window.RSH_BOTS, posts = window.RSH_APP.data().posts, rev = posts.find(x => /Reversible Singlet/.test(x.title)); if (!rev) return { none: true };
     const calls = []; const cap = B.captionFor(rev, 'pinterest');
     const err = await B.productJob(rev.id, 'image', [['rev-navy-gold', 0]]); await new Promise(r => setTimeout(r, 200));
