@@ -482,6 +482,22 @@ const out = []; const ok = (n, c, d) => { out.push(c); console.log((c ? 'PASS  '
       approvedRefused: /already approved or scheduled/.test(refused), missing: /not found/.test(empty) };
   });
   ok('“Assets complete”: edit it for me sends the job and records who pressed it, with the pickup time; “my file is the final post” attaches the box’s photos/videos as they are; approved campaigns are refused', Object.values(ac).every(v => v === true), JSON.stringify(ac));
+  const cm = await p.evaluate(() => {
+    const B = window.RSH_BOTS, posts = window.RSH_APP.data().posts, day = new Date(Date.now() + 5 * 864e5).toISOString().slice(0, 10);
+    const img = n => ({ id: 'img' + n, mime: 'image/jpeg', name: 'f' + n + '.jpg' });
+    const car = { id: 'cmCar', title: 'Which singlet color wins?', date: day, sport: 'Wrestling', platform: 'Instagram', status: 'Draft', postType: 'Carousel', caption: 'x', creativeAsset: img(1), creativeAssets: [img(2), img(3)] };
+    const reel = { id: 'cmReel', title: 'Quote reel', date: day, sport: 'Wrestling', platform: 'Instagram', status: 'Draft', postType: 'Reel', caption: 'x', creativeAsset: { id: 'v1', mime: 'video/mp4', name: 'v.mp4' } };
+    posts.push(car, reel);
+    const it = ch => ({ postId: 'cmCar', channel: ch, date: '2030-01-01', time: '18:00', caption: 'x', checks: [] });
+    const ig = JSON.parse(B.metricoolPost(it('instagram'), 'schedule', false).info), tt = JSON.parse(B.metricoolPost(it('tiktok'), 'schedule', false).info);
+    const off = JSON.parse(B.metricoolPost({ ...it('instagram'), noMusic: true }, 'schedule', false).info);
+    const rv = JSON.parse(B.metricoolPost({ ...it('instagram'), postId: 'cmReel' }, 'schedule', false).info), rvt = JSON.parse(B.metricoolPost({ ...it('tiktok'), postId: 'cmReel' }, 'schedule', false).info);
+    const note = B.carouselMusic(it('instagram'));
+    posts.splice(posts.indexOf(car), 1); posts.splice(posts.indexOf(reel), 1);
+    return { igPhone: ig.autoPublish === false && /Add music/.test(note.text) && /search “/.test(note.text), tiktokAuto: tt.tiktokData.autoAddMusic === true && tt.autoPublish === true, optOut: off.autoPublish === true,
+      reelUntouched: rv.autoPublish === true && rvt.tiktokData.autoAddMusic === undefined && B.carouselMusic({ ...it('instagram'), postId: 'cmReel' }) === null };
+  });
+  ok('Carousels get music when scheduled: TikTok auto-adds a song; Instagram carousels go to the phone to add one (can be switched off); videos keep their own sound', Object.values(cm).every(v => v === true), JSON.stringify(cm));
   const trackBtn = await p.evaluate(() => { document.querySelector('.nav button[data-view="tracker"]') && document.querySelector('.nav button[data-view="tracker"]').click(); return document.querySelectorAll('[data-track-assets]').length; });
   ok('The Checklist shows an Assets button on every campaign', trackBtn > 0, String(trackBtn));
   await p.click('.nav button[data-view="bots"]');
