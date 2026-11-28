@@ -109,7 +109,7 @@ s = once(s, "tracker:['Campaign Checklist',", "bots:['24/7 Bots','Captions, timi
 
 # 4. Wording that would be untrue here.
 s = once(s, f'<strong>LOCAL APP · V{version}</strong><div class="small">Activate the local Data Vault in Setup & Backup to preserve browser work. Export a backup before upgrading. Metricool is connected in ChatGPT only, not this local app.</div>',
-         f'<strong>ARTIFACT EDITION · V{version} · BUILD 105</strong><div class="small">Everything saves automatically to this app’s shared storage. Anthony’s final approval is signed with his own account. Approved posts go to Metricool. Open ⋯ More → System check to see that everything works.</div>')
+         f'<strong>ARTIFACT EDITION · V{version} · BUILD 106</strong><div class="small">Everything saves automatically to this app’s shared storage. Anthony’s final approval is signed with his own account. Approved posts go to Metricool. Open ⋯ More → System check to see that everything works.</div>')
 s = once(s, "'Use python3 server.py in the extracted v%s folder, then open http://127.0.0.1:8765. Buttons and media uploads require the local server.'" % version, "'Open this page from your Claude artifacts.'")
 
 for old, new in (('Local editorial plans are separate from the read-only Metricool monthly archive.', 'Team plans, with what is scheduled and published in Metricool.'), ('Metricool connected to ChatGPT only', 'Live results from Metricool'), ('Local workspace · demo/pilot', 'RSH Sports workspace')):
@@ -157,6 +157,15 @@ s = once(s, '<button class="btn smallbtn" id="topPitch">◉ Present to Anthony</
          '<button class="btn ghost smallbtn" id="openCommandPalette">⌘ Search</button><details class="topmore"><summary class="btn ghost smallbtn">⋯ More</summary><div class="topmore-menu"><button type="button" class="btn ghost smallbtn" id="rshHealthButton">✓ System check</button><button class="btn ghost smallbtn" id="topPitch">◉ Present to Anthony</button><button class="btn ghost smallbtn" id="quickExport">↧ Backup data</button><button class="btn ghost smallbtn" id="beginnerToggle" aria-pressed="true">Beginner guide: On</button></div></details>')
 s = once(s, '<div class="sidebar-paused small">Cloud team login is paused until Anthony approves the app.</div>', '')
 s = once(s, '<header class="top">', '<style>.topmore{position:relative}.topmore>summary{list-style:none;cursor:pointer}.topmore>summary::-webkit-details-marker{display:none}.topmore:not([open]) .topmore-menu{display:none}.topmore-menu{position:absolute;right:0;top:calc(100% + 6px);z-index:50;display:grid;gap:6px;min-width:210px;padding:10px;background:var(--card,#fff);border:1px solid #e5e7eb;border-radius:14px;box-shadow:0 14px 40px rgba(15,23,42,.18)}.topmore-menu .btn{justify-content:flex-start;width:100%;text-align:left}</style><header class="top">')
+# Claude's sharing review must check every image or video the page can show, and it cannot check files hosted on
+# other sites. Old snapshot data in the page holds such links (Metricool CDN covers, YouTube and Pinterest thumbnails),
+# so external photo and video URLs are removed from the built page. Links to posts and web pages stay.
+import re as _re
+_media = _re.compile(r"https?://[^\s\"'<>()\\]+?\.(?:jpe?g|png|gif|webp|avif|heic|bmp|svg|mp4|mov|m4v|webm|mp3|wav|m4a)(?:\?[^\s\"'<>()\\]*)?(?=[\s\"'<>()\\,]|$)", _re.I)
+_n = len(_media.findall(s)); s = _media.sub('', s)
+_left = [u for u in _re.findall(r"https?://(?:i\.ytimg\.com|i\.pinimg\.com|static\.metricool\.com|metricool-download)[^\s\"'<>]*", s)]
+assert not _left, _left[:5]
+print('external media links removed:', _n)
 (OUT / 'RSH Sports Marketing OS.html').write_text(s, encoding='utf-8')
 print('built', len(s), 'bytes; bundled media:', len(bundled), '; weekly packs:', len(packs))
 
