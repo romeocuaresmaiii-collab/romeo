@@ -2496,7 +2496,7 @@ Add PART 8 — PLATFORM VERSIONS: one block for each of ${t.map(c => NAME[c]).jo
   }
   // Make the public link for the post's attached file by itself: upload it to the viewer's Google Drive,
   // share it as "anyone with the link" and keep the link, so nobody has to paste one.
-  const GD = 'Google Drive', DRIVE_MAX = 16 * 1024 * 1024;
+  const GD = 'Google Drive', DRIVE_MAX = 16 * 1024 * 1024, INLINE_MAX = 700 * 1024;   // base64 grows a file by a third; 700 KB stays inside the 1 MiB call limit
   function fileFor(it) {
     const p = (app().data().posts || []).find(x => x.id === it.postId) || {};
     if (it.rb) return rbFileFor(it, p);
@@ -2538,18 +2538,33 @@ Add PART 8 — PLATFORM VERSIONS: one block for each of ${t.map(c => NAME[c]).jo
     } catch (e) { return { ok: false, reason: (e && e.message) || String(e) }; }
     finally { cleanup(); }
   }
+  // Re-save a photo as a JPEG under the inline limit (same pixels up to 2160 px on the long side; quality stepped down only as needed).
+  async function fitJpeg(blob) {
+    try {
+      const bmp = await createImageBitmap(blob), k = Math.min(1, 2160 / Math.max(bmp.width, bmp.height));
+      const c = document.createElement('canvas'); c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+      const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(bmp, 0, 0, c.width, c.height);
+      for (const q of [0.92, 0.86, 0.8, 0.72, 0.64]) { const b = await new Promise(r => c.toBlob(r, 'image/jpeg', q)); if (b && b.size <= INLINE_MAX) return b; }
+    } catch (_) {}
+    return null;
+  }
   async function driveUpload(blob, fname, mime, step) {
     const mcp = await use('mcp'); if (!mcp) return { ok: false, reason: 'This view cannot reach Google Drive. Paste a public link to the file in the box above, then send again.' };
-    let fileArgs = false; try { const lt = await mcp.listTools(); fileArgs = !!lt.fileArgs && (lt.servers || []).some(x => x.server === GD); } catch (_) {}
-    if (!fileArgs) return { ok: false, reason: 'Google Drive is not allowed for this page yet (or this browser cannot send files to it). Allow Google Drive when asked, or paste a public link in the box above.' };
+    let fileArgs = false, hasDrive = false; try { const lt = await mcp.listTools(); hasDrive = (lt.servers || []).some(x => x.server === GD); fileArgs = !!lt.fileArgs && hasDrive; } catch (_) {}
+    // Photos go inside the request as base64 (the call allows 1 MiB): a big photo is first saved as a high-quality JPEG that fits.
+    // Videos use the file route.
+    if (/^image\//.test(mime || blob.type || '') && blob.size > INLINE_MAX) { step && step('Preparing the photo…'); const j = await fitJpeg(blob); if (j) { blob = j; mime = 'image/jpeg'; } }
+    const inline = blob.size <= INLINE_MAX;
+    if (!hasDrive || (!fileArgs && !inline)) return { ok: false, reason: 'Google Drive is not allowed for this page yet (or this browser cannot send files to it). Allow Google Drive when asked, or paste a public link in the box above.' };
     const type = mime || blob.type || 'video/mp4', ext = (type.split('/')[1] || 'mp4').replace('quicktime', 'mov').replace('jpeg', 'jpg');
     const name = (String(fname || 'rsh-post').replace(/\.[A-Za-z0-9]+$/, '').replace(/[^A-Za-z0-9 _()-]/g, '').trim() || 'rsh-post') + '.' + ext;
     step && step('Uploading to Google Drive…');
     let id = '';
     try {
-      const r = await mcp.callTool(GD, 'create_file', { title: 'RSH Sports · ' + name, contentMimeType: type, disableConversionToGoogleType: true, base64Content: { $file: { data: blob, name, type } } });
+      const b64 = inline ? await new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(',')[1] || ''); fr.onerror = () => rej(new Error('The file could not be read.')); fr.readAsDataURL(blob); }) : null;
+      const r = await mcp.callTool(GD, 'create_file', { title: 'RSH Sports · ' + name, contentMimeType: type, disableConversionToGoogleType: true, base64Content: inline ? b64 : { $file: { data: blob, name, type } } });
       const pl = r && r.payload !== undefined ? r.payload : r; id = (pl && (pl.id || (pl.file && pl.file.id))) || ((JSON.stringify(pl).match(/"id"\s*:\s*"([A-Za-z0-9_-]{10,})"/) || [])[1]) || '';
-    } catch (e) { return { ok: false, reason: 'Google Drive did not take the file: ' + String((e && e.message) || e).slice(0, 160) }; }
+    } catch (e) { const m = String((e && e.message) || e); return { ok: false, reason: /must be one of/.test(m) ? `This file (${(blob.size / 1048576).toFixed(1)} MB ${type}) is too big to send to Google Drive from the app, which can only send files over 700 KB as documents. Use ⬇ in the Checklist to download it, put it in Google Drive yourself and paste its link in the box above.` : 'Google Drive did not take the file: ' + m.slice(0, 160) }; }
     if (!id) return { ok: false, reason: 'Google Drive did not return the file. Paste a public link in the box above instead.' };
     step && step('Making the share link…');
     let link = '';
