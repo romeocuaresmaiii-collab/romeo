@@ -109,7 +109,21 @@
     const a = p.creativeAsset || (p.creativeAssets || [])[0]; if (!a || !a.id || !window.RSH_HOST || !window.RSH_HOST.mediaUrl) return '';
     const u = window.RSH_HOST.mediaUrl(a); if (!u || u.indexOf('#rsh-parts-') === 0) return '';
     const vid = /^video\//.test(a.mime || ''), more = [p.creativeAsset].concat(p.creativeAssets || []).filter((x, i, arr) => x && x.id && arr.findIndex(y => y && y.id === x.id) === i).length - 1;
-    return `<a class="btn ghost smallbtn" href="${esc(u)}" download="${esc(a.name || (vid ? 'video.mp4' : 'image.jpg'))}" title="${esc(a.name || '')}">⬇ ${vid ? 'Video' : 'Photo'}${more > 0 ? ' +' + more : ''}</a>`;
+    return `<button type="button" class="btn ghost smallbtn" data-track-dl="${esc(p.id)}" title="Save ${esc(a.name || '')} at full quality">⬇ ${vid ? 'Video' : 'Photo'}${more > 0 ? ' +' + more : ''}</button>`;
+  }
+  // Save the campaign's files through the app's own save dialog (a plain download link is blocked inside the app):
+  // the main file first, then any other frames or versions, one prompt each.
+  async function saveFiles(btn) {
+    const p = (app().data().posts || []).find(x => x.id === btn.dataset.trackDl); if (!p) return;
+    const files = [p.creativeAsset].concat(p.creativeAssets || []).filter((x, i, arr) => x && x.id && arr.findIndex(y => y && y.id === x.id) === i);
+    const old = btn.textContent; btn.disabled = true;
+    try {
+      const dlc = window.claude && window.claude.use ? await window.claude.use('downloads') : null; if (!dlc) throw new Error('Saving files is not available in this view');
+      for (let k = 0; k < files.length; k++) { const a = files[k]; btn.textContent = files.length > 1 ? `Saving ${k + 1} of ${files.length}…` : 'Preparing…';
+        const blob = await window.RSH_HOST.fileBlob(a); await dlc.save({ filename: a.name || `rsh-${k + 1}${/^video\//.test(a.mime || '') ? '.mp4' : '.jpg'}`, data: blob }); }
+      btn.textContent = 'Saved ✓';
+    } catch (err) { btn.textContent = (err && err.code) === 'declined' ? 'Not saved' : 'Could not save'; }
+    setTimeout(() => { btn.textContent = old; btn.disabled = false; }, 2500);
   }
   function render() {
     const host = document.getElementById('rshTracker'); if (!host || !app()) return;
@@ -219,6 +233,7 @@
     const card = document.createElement('div'); card.className = 'card'; card.id = 'rshTracker';
     view.appendChild(card);
     card.addEventListener('click', e => {
+      const dl = e.target.closest('[data-track-dl]'); if (dl) { saveFiles(dl); return; }
       const ra = e.target.closest('[data-track-assets]'); if (ra) { if (window.RSH_BOTS && window.RSH_BOTS.openRaw) window.RSH_BOTS.openRaw(ra.dataset.trackAssets); return; }
       const o = e.target.closest('[data-track-open]'); if (o) return app().openNext(o.dataset.trackOpen);
       const dt = e.target.closest('[data-track-details]'); if (dt) return openDetail(dt.dataset.trackDetails);
